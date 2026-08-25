@@ -1,0 +1,93 @@
+/* Conversa com o servidor e guarda a identidade no navegador.
+   Sem senha: o token devolvido no cadastro é a credencial. Perdeu o
+   localStorage, virou outro jogador. */
+
+const CHAVE_TOKEN = "roubodopolis.token";
+const CHAVE_NOME = "roubodopolis.nome";
+const CHAVE_SOM = "roubodopolis.som";
+
+function ler(chave, padrao = "") {
+  // Aba anônima e navegador com dados bloqueados fazem isto lançar.
+  try {
+    return localStorage.getItem(chave) ?? padrao;
+  } catch {
+    return padrao;
+  }
+}
+
+function gravar(chave, valor) {
+  try {
+    localStorage.setItem(chave, valor);
+  } catch {
+    /* sem armazenamento: o jogo funciona, só não lembra da pessoa */
+  }
+}
+
+function apagar(chave) {
+  try {
+    localStorage.removeItem(chave);
+  } catch {
+    /* idem */
+  }
+}
+
+export const guardado = {
+  token: () => ler(CHAVE_TOKEN),
+  nome: () => ler(CHAVE_NOME),
+  som: () => ler(CHAVE_SOM, "1") === "1",
+  salvarToken: (valor) => gravar(CHAVE_TOKEN, valor),
+  salvarNome: (valor) => gravar(CHAVE_NOME, valor),
+  salvarSom: (ligado) => gravar(CHAVE_SOM, ligado ? "1" : "0"),
+  esquecer: () => {
+    apagar(CHAVE_TOKEN);
+    apagar(CHAVE_NOME);
+  },
+};
+
+export class ErroDaApi extends Error {
+  constructor(mensagem, status = 0) {
+    super(mensagem);
+    this.status = status;
+  }
+}
+
+async function pedir(caminho, { metodo = "GET", corpo } = {}) {
+  const cabecalhos = { "Content-Type": "application/json" };
+  const token = guardado.token();
+  if (token) cabecalhos["X-Jogador-Token"] = token;
+
+  let resposta;
+  try {
+    resposta = await fetch(caminho, {
+      method: metodo,
+      headers: cabecalhos,
+      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+    });
+  } catch {
+    throw new ErroDaApi("Não alcancei o servidor. Ele está rodando?", 0);
+  }
+
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) {
+    throw new ErroDaApi(dados.erro || `Deu erro ${resposta.status}.`, resposta.status);
+  }
+  return dados;
+}
+
+export const api = {
+  /** Menu: manda o nome, recebe e guarda o token. */
+  async identificar(nome) {
+    const jogador = await pedir("/api/jogador", { metodo: "POST", corpo: { nome } });
+    guardado.salvarToken(jogador.token);
+    guardado.salvarNome(jogador.nome);
+    return jogador;
+  },
+  criarSala: () => pedir("/api/salas", { metodo: "POST", corpo: {} }),
+  entrarNaSala: (codigo) => pedir(`/api/salas/${codigo}/entrar`, { metodo: "POST", corpo: {} }),
+  verSala: (codigo) => pedir(`/api/salas/${codigo}`),
+  escolherPersonagem: (codigo, personagem) =>
+    pedir(`/api/salas/${codigo}/personagem`, { metodo: "POST", corpo: { personagem } }),
+  marcarPronto: (codigo, pronto) =>
+    pedir(`/api/salas/${codigo}/pronto`, { metodo: "POST", corpo: { pronto } }),
+  sairDaSala: (codigo) => pedir(`/api/salas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
+};

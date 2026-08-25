@@ -1,0 +1,57 @@
+/* Toda cor e todo espaçamento do jogo saem daqui.
+   Trocar a identidade visual é mexer neste arquivo, não nas telas. */
+
+:root {
+  /* --- paleta base ------------------------------------------------ */
+  --amarelo: #ffd93d;
+  --amarelo-escuro: #e8a80f;
+  --roxo: #7b2fbf;
+  --roxo-claro: #a855f7;
+  --verde-neon: #39ff14;
+  --rosa: #ff4d84;
+  --branco: #fdfdfd;
+  --preto: #16101f;
+  --cinza: #6b6478;
+
+  /* --- grupos de propriedade (regras, seção 4) --------------------- */
+  --grupo-extremamente-cara: #7b2fbf;
+  --grupo-muito-cara: #d6336c;
+  --grupo-cara: #f76707;
+  --grupo-media: #f2b705;
+  --grupo-barata: #40c057;
+  --grupo-morro: #2b8a3e;
+
+  /* --- espaçamento ------------------------------------------------- */
+  --e1: 4px;
+  --e2: 8px;
+  --e3: 16px;
+  --e4: 24px;
+  --e5: 40px;
+  --e6: 64px;
+
+  /* --- traço pixelado ---------------------------------------------- */
+  --borda: 4px;
+  --sombra-dura: 0 6px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* --- tema do menu: a vila verde (página 3 da arte) ----------------- */
+.tema-verde {
+  --fundo-topo: #f2fff4;
+  --fundo-meio: #b6f5c6;
+  --fundo-baixo: #3fd977;
+  --predio: #4fce7d;
+  --predio-fundo: #8ce8ab;
+  --janela: #f6ffd0;
+  --texto: var(--preto);
+}
+
+/* --- tema do lobby: a cidade laranja (páginas 1, 2 e 4) ------------ */
+.tema-laranja {
+  --fundo-topo: #ff7a18;
+  --fundo-meio: #ffb01f;
+  --fundo-baixo: #ff8a1e;
+  --predio: #d63a12;
+  --predio-fundo: #ef5a24;
+  --janela: #ffd25e;
+  --texto: var(--branco);
+}

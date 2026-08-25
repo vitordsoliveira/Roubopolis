@@ -1,0 +1,78 @@
+{
+  "versao": 1,
+  "_nota": "Fonte da verdade dos personagens. server/db/criar_banco.py copia isto para a tabela `personagem`. A chave `passiva` fica nula até as habilidades serem definidas em passivas.json. A `paleta` desenha o boneco em CSS enquanto a arte final não entra em client/assets/personagens/.",
+  "personagens": [
+    {
+      "slug": "vitinhoxd",
+      "nome": "VitinhoXD",
+      "descricao": "Touca verde e sorriso de quem nunca foi pego.",
+      "cor": "#7cb342",
+      "sprite": null,
+      "passiva": null,
+      "ordem": 1,
+      "paleta": {
+        "chapeu": "#7cb342",
+        "cabelo": "#5d4037",
+        "pele": "#f3c08b",
+        "roupa": "#dbe9f4",
+        "detalhe": "#6f9dc4",
+        "calca": "#2b3550",
+        "sapato": "#f0f0f0"
+      }
+    },
+    {
+      "slug": "andinho",
+      "nome": "Andinho",
+      "descricao": "Sem camisa, sem medo, sem plano B.",
+      "cor": "#ffd83d",
+      "sprite": null,
+      "passiva": null,
+      "ordem": 2,
+      "paleta": {
+        "chapeu": "#ffd83d",
+        "cabelo": "#ffd83d",
+        "pele": "#f3c08b",
+        "roupa": "#f3c08b",
+        "detalhe": "#e04a3f",
+        "calca": "#2f7fd0",
+        "sapato": "#e6b478"
+      }
+    },
+    {
+      "slug": "loh",
+      "nome": "Loh",
+      "descricao": "Chapéu roxo, olho no terreno caro.",
+      "cor": "#d94ac9",
+      "sprite": null,
+      "passiva": null,
+      "ordem": 3,
+      "paleta": {
+        "chapeu": "#8e3fbf",
+        "cabelo": "#141414",
+        "pele": "#f3c08b",
+        "roupa": "#8e3fbf",
+        "detalhe": "#ffffff",
+        "calca": "#8e3fbf",
+        "sapato": "#151515"
+      }
+    },
+    {
+      "slug": "festa",
+      "nome": "Festa",
+      "descricao": "Chega atrasado e sai com o aluguel de todo mundo.",
+      "cor": "#7b3fbf",
+      "sprite": null,
+      "passiva": null,
+      "ordem": 4,
+      "paleta": {
+        "chapeu": "#1c1c1c",
+        "cabelo": "#141414",
+        "pele": "#f3c08b",
+        "roupa": "#7b3fbf",
+        "detalhe": "#e8e8e8",
+        "calca": "#1c1c1c",
+        "sapato": "#e04a3f"
+      }
+    }
+  ]
+}

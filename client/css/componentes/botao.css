@@ -1,0 +1,92 @@
+/* Dois formatos: o bloco branco (JOGAR da arte) e o item de menu só texto. */
+
+.botao {
+  display: inline-block;
+  padding: var(--e3) var(--e5);
+  background: var(--branco);
+  color: var(--amarelo);
+  font-size: clamp(0.7rem, 1.9vw, 1.1rem);
+  text-transform: uppercase;
+  border: var(--borda) solid var(--preto);
+  box-shadow: var(--sombra-dura);
+  text-shadow:
+    2px 0 0 var(--roxo), -2px 0 0 var(--roxo),
+    0 2px 0 var(--roxo), 0 -2px 0 var(--roxo),
+    2px 2px 0 var(--roxo), -2px -2px 0 var(--roxo),
+    2px -2px 0 var(--roxo), -2px 2px 0 var(--roxo);
+  transition: transform 0.08s steps(2), box-shadow 0.08s steps(2);
+}
+
+.botao:hover:not(:disabled),
+.botao:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 9px 0 rgba(0, 0, 0, 0.35);
+  outline: none;
+}
+
+.botao:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+.botao:disabled {
+  filter: grayscale(0.8);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.botao--pequeno {
+  padding: var(--e2) var(--e3);
+  font-size: clamp(0.5rem, 1.2vw, 0.72rem);
+  border-width: 3px;
+}
+
+.botao--roxo {
+  background: var(--roxo);
+  color: var(--amarelo);
+}
+
+.botao--verde {
+  background: var(--grupo-barata);
+  color: var(--branco);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* --- item da lista do menu -------------------------------------- */
+
+.opcao {
+  display: block;
+  width: 100%;
+  padding: var(--e1) 0;
+  font-size: clamp(0.95rem, 3vw, 1.9rem);
+  text-transform: uppercase;
+  color: var(--amarelo);
+  text-shadow:
+    3px 0 0 var(--roxo), -3px 0 0 var(--roxo),
+    0 3px 0 var(--roxo), 0 -3px 0 var(--roxo),
+    3px 3px 0 var(--roxo), -3px -3px 0 var(--roxo),
+    3px -3px 0 var(--roxo), -3px 3px 0 var(--roxo),
+    0 7px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.1s steps(3), filter 0.1s steps(3);
+}
+
+.opcao:hover,
+.opcao:focus-visible {
+  transform: scale(1.09);
+  filter: drop-shadow(0 0 12px var(--verde-neon));
+  outline: none;
+}
+
+.opcao:active {
+  transform: scale(0.97);
+}
+
+/* Itens que ainda não fazem nada: presentes, mas visivelmente adormecidos. */
+.opcao--dormindo {
+  opacity: 0.62;
+}
+
+.opcao--secundario {
+  font-size: clamp(0.55rem, 1.5vw, 0.9rem);
+  opacity: 0.9;
+}

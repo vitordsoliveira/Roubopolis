@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roubodopolis</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/base/reset.css">
+  <link rel="stylesheet" href="/css/base/variaveis.css">
+  <link rel="stylesheet" href="/css/base/tipografia.css">
+  <link rel="stylesheet" href="/css/componentes/cenario.css">
+  <link rel="stylesheet" href="/css/componentes/botao.css">
+  <link rel="stylesheet" href="/css/componentes/modal.css">
+  <link rel="stylesheet" href="/css/telas/menu.css">
+</head>
+
+<body class="tema-verde">
+
+  <!-- Cenário desenhado em CSS. Some quando a arte final chegar. -->
+  <div class="cenario" aria-hidden="true">
+    <div class="cenario__cidade cenario__cidade--fundo"></div>
+    <div class="cenario__cidade"></div>
+    <span class="nuvem nuvem--a"></span>
+    <span class="nuvem nuvem--b"></span>
+    <span class="nuvem nuvem--c"></span>
+    <div class="cenario__scanlines"></div>
+  </div>
+
+  <main class="tela">
+    <div class="menu">
+
+      <header class="menu__cabecalho">
+        <h1 class="logo neon">ROUBODOPOLIS</h1>
+      </header>
+
+      <section class="menu__identidade">
+        <label class="rotulo" for="nome">Seu nome</label>
+        <input
+          class="campo"
+          id="nome"
+          type="text"
+          maxlength="16"
+          autocomplete="nickname"
+          spellcheck="false"
+          placeholder="digite aqui"
+          aria-describedby="dica">
+        <p class="menu__dica" id="dica" role="status"></p>
+      </section>
+
+      <nav class="menu__opcoes" id="opcoes" aria-label="Menu principal">
+        <button class="opcao" type="button" data-acao="jogar">Jogar</button>
+        <button class="opcao opcao--secundario" type="button" data-acao="abrir-codigo">
+          Entrar com código
+        </button>
+        <button class="opcao opcao--dormindo" type="button" data-acao="amigos">Amigos</button>
+        <button class="opcao opcao--dormindo" type="button" data-acao="loja">Loja</button>
+        <button class="opcao" type="button" data-acao="config">Configuração</button>
+        <button class="opcao" type="button" data-acao="sair">Sair</button>
+      </nav>
+
+    </div>
+    <p class="menu__rodape">v0.1 — nome e lobby</p>
+  </main>
+
+  <!-- Entrar numa sala de amigo -->
+  <div class="painel" id="painel-codigo" hidden>
+    <div class="painel__caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-codigo">
+      <h2 class="painel__titulo" id="titulo-codigo">Entrar com código</h2>
+      <input
+        class="campo"
+        id="codigo"
+        type="text"
+        maxlength="8"
+        spellcheck="false"
+        placeholder="ABC123"
+        aria-label="Código da sala">
+      <div class="painel__acoes">
+        <button class="botao botao--pequeno" type="button" data-acao="entrar-codigo">Entrar</button>
+        <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Configuração -->
+  <div class="painel" id="painel-config" hidden>
+    <div class="painel__caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-config">
+      <h2 class="painel__titulo" id="titulo-config">Configuração</h2>
+
+      <div class="painel__linha">
+        <span>Som</span>
+        <button class="interruptor" type="button" id="som" aria-pressed="true">Ligado</button>
+      </div>
+      <div class="painel__linha">
+        <span>Meus dados neste navegador</span>
+        <button class="interruptor" type="button" id="esquecer">Apagar</button>
+      </div>
+
+      <p class="texto-miudo" style="margin-top:var(--e3);opacity:.6">
+        Você não tem senha: seu nome fica salvo só neste navegador.
+      </p>
+
+      <div class="painel__acoes">
+        <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/telas/menu.js"></script>
+</body>
+</html>

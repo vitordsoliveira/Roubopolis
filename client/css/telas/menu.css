@@ -1,0 +1,88 @@
+/* Tela inicial: logo, o nome do jogador e a lista de opções. */
+
+.menu {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e5);
+  padding: var(--e5) var(--e3);
+}
+
+.menu__cabecalho {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+}
+
+/* Bloco do nome: é a primeira coisa que a pessoa faz no jogo. */
+.menu__identidade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+  width: min(340px, 90vw);
+}
+
+.menu__identidade .rotulo {
+  color: var(--preto);
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.6);
+}
+
+.menu__dica {
+  min-height: 1.4em;
+  font-size: clamp(0.42rem, 1vw, 0.56rem);
+  text-align: center;
+  color: var(--roxo);
+}
+
+.menu__dica--erro {
+  color: #b3123f;
+}
+
+.menu__opcoes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+  width: min(460px, 92vw);
+  text-align: center;
+}
+
+/* O cursor de seta da arte, aparecendo no item sob o ponteiro. */
+.opcao {
+  position: relative;
+}
+
+.opcao:hover::after,
+.opcao:focus-visible::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -26px;
+  width: 0;
+  height: 0;
+  border: 9px solid transparent;
+  border-right-color: var(--preto);
+  transform: translateY(-50%);
+}
+
+.menu__rodape {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--e2);
+  text-align: center;
+  font-size: 0.42rem;
+  letter-spacing: 0.2em;
+  color: rgba(22, 16, 31, 0.45);
+}
+
+@media (max-height: 620px) {
+  .menu {
+    gap: var(--e3);
+    justify-content: flex-start;
+  }
+}

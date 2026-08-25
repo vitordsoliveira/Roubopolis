@@ -1,0 +1,159 @@
+/* Painel sobreposto (código da sala, configuração) e o aviso passageiro. */
+
+.painel {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--e3);
+  background: rgba(22, 16, 31, 0.78);
+  animation: painel-entra 0.14s steps(3);
+}
+
+@keyframes painel-entra {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.painel__caixa {
+  width: min(460px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: var(--e4);
+  background: var(--branco);
+  color: var(--preto);
+  border: var(--borda) solid var(--preto);
+  box-shadow: 0 10px 0 rgba(0, 0, 0, 0.45);
+}
+
+.painel__titulo {
+  font-size: clamp(0.7rem, 1.9vw, 1rem);
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--roxo);
+  margin-bottom: var(--e4);
+}
+
+.painel__linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e3);
+  padding: var(--e2) 0;
+  font-size: clamp(0.5rem, 1.2vw, 0.68rem);
+  border-bottom: 2px dashed rgba(22, 16, 31, 0.2);
+}
+
+.painel__linha:last-of-type {
+  border-bottom: none;
+}
+
+.painel__acoes {
+  display: flex;
+  gap: var(--e2);
+  justify-content: center;
+  margin-top: var(--e4);
+  flex-wrap: wrap;
+}
+
+/* --- campo de texto pixelado ------------------------------------- */
+
+.campo {
+  width: 100%;
+  padding: var(--e3);
+  background: var(--branco);
+  color: var(--preto);
+  font-size: clamp(0.65rem, 1.8vw, 1rem);
+  text-align: center;
+  text-transform: uppercase;
+  border: var(--borda) solid var(--preto);
+  box-shadow: inset 0 4px 0 rgba(0, 0, 0, 0.12);
+}
+
+.campo:focus {
+  outline: none;
+  border-color: var(--roxo);
+  box-shadow: inset 0 4px 0 rgba(0, 0, 0, 0.12), 0 0 0 4px rgba(123, 47, 191, 0.35);
+}
+
+.campo::placeholder {
+  color: rgba(22, 16, 31, 0.32);
+}
+
+.campo--erro {
+  border-color: var(--rosa);
+  animation: treme 0.22s steps(3);
+}
+
+@keyframes treme {
+  25% { transform: translateX(-7px); }
+  75% { transform: translateX(7px); }
+}
+
+/* --- interruptor liga/desliga ------------------------------------ */
+
+.interruptor {
+  min-width: 88px;
+  padding: var(--e1) var(--e2);
+  font-size: 0.6rem;
+  text-align: center;
+  border: 3px solid var(--preto);
+  background: var(--cinza);
+  color: var(--branco);
+}
+
+.interruptor[aria-pressed="true"] {
+  background: var(--grupo-barata);
+}
+
+/* --- aviso passageiro (js/ui/toast.js) --------------------------- */
+
+.toast-pilha {
+  position: fixed;
+  left: 50%;
+  bottom: var(--e4);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  max-width: min(420px, 88vw);
+  padding: var(--e3) var(--e4);
+  background: var(--preto);
+  color: var(--branco);
+  font-size: clamp(0.45rem, 1.1vw, 0.62rem);
+  line-height: 1.7;
+  text-align: center;
+  border: 3px solid var(--branco);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4);
+  animation: toast-entra 0.16s steps(3);
+}
+
+.toast--erro {
+  background: var(--rosa);
+  border-color: var(--preto);
+}
+
+.toast--ok {
+  background: var(--grupo-barata);
+  border-color: var(--preto);
+}
+
+.toast--saindo {
+  animation: toast-sai 0.24s steps(3) forwards;
+}
+
+@keyframes toast-entra {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toast-sai {
+  to { opacity: 0; transform: translateY(14px); }
+}

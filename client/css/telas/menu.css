@@ -205,6 +205,27 @@
   color: rgba(22, 16, 31, 0.42);
 }
 
+.menu__rodape-nome {
+  display: inline;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--amarelo);
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.78rem;
+  text-shadow:
+    1px 0 0 var(--roxo), -1px 0 0 var(--roxo),
+    0 1px 0 var(--roxo), 0 -1px 0 var(--roxo);
+}
+
+.menu__rodape-nome:hover,
+.menu__rodape-nome:focus-visible {
+  color: var(--amarelo);
+  outline: none;
+  text-decoration: underline;
+}
+
 /* --- objetos espalhados ------------------------------------------- */
 
 .enfeite--dinheiro-a { top: 5%;   left: 4%;   width: 84px; --giro: -18deg; }

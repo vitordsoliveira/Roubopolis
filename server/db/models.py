@@ -69,6 +69,9 @@ class Jogador(Base):
     login: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
     senha_hash: Mapped[str | None] = mapped_column(String(256), nullable=True)
     token: Mapped[str] = mapped_column(String(48), nullable=False, unique=True, default=gerar_token)
+    partidas_jogadas: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    vitorias: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    derrotas: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     criado_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     visto_em: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now(), onupdate=func.now()

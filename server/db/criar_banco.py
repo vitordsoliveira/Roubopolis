@@ -123,6 +123,9 @@ def _atualizar_colunas_jogador(engine) -> None:
     faltantes = {
         "login": "VARCHAR(64)",
         "senha_hash": "VARCHAR(256)",
+        "partidas_jogadas": "INTEGER NOT NULL DEFAULT 0",
+        "vitorias": "INTEGER NOT NULL DEFAULT 0",
+        "derrotas": "INTEGER NOT NULL DEFAULT 0",
     }
     with engine.begin() as conexao:
         for nome, tipo in faltantes.items():

@@ -181,8 +181,18 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     ipcMain.on("tentar-de-novo", () => carregar());
+    ipcMain.on("sair-do-jogo", () => app.quit());
+    ipcMain.handle("alternar-tela-cheia", () => {
+      janela.setFullScreen(!janela.isFullScreen());
+      return janela.isFullScreen();
+    });
+    ipcMain.on("estado-tela-cheia", (evento) => {
+      evento.returnValue = Boolean(janela?.isFullScreen());
+    });
 
     criarJanela();
+    janela.on("enter-full-screen", () => janela.webContents.send("tela-cheia-alterada"));
+    janela.on("leave-full-screen", () => janela.webContents.send("tela-cheia-alterada"));
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) criarJanela();

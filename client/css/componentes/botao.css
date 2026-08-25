@@ -2,6 +2,7 @@
 
 .botao {
   display: inline-block;
+  min-height: 44px;
   padding: var(--e3) var(--e5);
   background: var(--branco);
   color: var(--amarelo);
@@ -15,6 +16,7 @@
     2px 2px 0 var(--roxo), -2px -2px 0 var(--roxo),
     2px -2px 0 var(--roxo), -2px 2px 0 var(--roxo);
   transition: transform 0.08s steps(2), box-shadow 0.08s steps(2);
+  cursor: pointer;
 }
 
 .botao:hover:not(:disabled),
@@ -36,6 +38,7 @@
 }
 
 .botao--pequeno {
+  min-height: 38px;
   padding: var(--e2) var(--e3);
   font-size: clamp(0.75rem, 1.2vw, 1.08rem);
   border-width: 3px;
@@ -50,6 +53,12 @@
   background: var(--grupo-barata);
   color: var(--branco);
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.botao--perigo {
+  background: var(--rosa);
+  color: var(--branco);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
 }
 
 /* --- item da lista do menu (arte do designer) -------------------- */

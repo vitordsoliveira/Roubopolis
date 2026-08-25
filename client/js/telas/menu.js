@@ -15,9 +15,20 @@ const opcoes = document.querySelector("#opcoes");
 const painelCodigo = document.querySelector("#painel-codigo");
 const campoCodigo = document.querySelector("#codigo");
 const painelConfig = document.querySelector("#painel-config");
+const painelPerfil = document.querySelector("#painel-perfil");
+const painelSaida = document.querySelector("#painel-saida");
+const atalhoPerfil = document.querySelector("#atalho-perfil");
+const rodapeMensagem = document.querySelector("#rodape-mensagem");
+const rodapeFinal = document.querySelector("#rodape-final");
 const botaoSom = document.querySelector("#som");
+const modoExibicao = document.querySelector("#modo-exibicao");
 const controleVolumeSom = document.querySelector("#volume-som");
 const valorVolumeSom = document.querySelector("#valor-volume-som");
+const perfilNome = document.querySelector("#perfil-nome");
+const perfilPartidas = document.querySelector("#perfil-partidas");
+const perfilVitorias = document.querySelector("#perfil-vitorias");
+const perfilDerrotas = document.querySelector("#perfil-derrotas");
+const perfilAviso = document.querySelector("#perfil-aviso");
 
 let ocupado = false;
 let modo = "entrar";
@@ -30,7 +41,7 @@ if (new URLSearchParams(location.search).has("novo")) {
 }
 
 if (guardado.abaPropria()) {
-  document.querySelector(".menu__rodape").textContent =
+  rodapeMensagem.textContent =
     "v0.1 - esta aba tem um jogador próprio";
 }
 
@@ -68,7 +79,10 @@ function mostrarJogo(jogador) {
   campoNome.value = jogador.nome;
   document.querySelector(".menu__login").hidden = true;
   opcoes.hidden = false;
-  document.querySelector(".menu__rodape").textContent = `Olá, ${jogador.nome}!`;
+  rodapeMensagem.textContent = "Olá, ";
+  atalhoPerfil.textContent = jogador.nome;
+  atalhoPerfil.hidden = false;
+  rodapeFinal.hidden = false;
   opcoes.querySelector("button")?.focus();
 }
 
@@ -79,7 +93,9 @@ function voltarAoLogin() {
   campoNome.value = "";
   document.querySelector(".menu__login").hidden = false;
   opcoes.hidden = true;
-  document.querySelector(".menu__rodape").textContent = "v0.1 - entre para jogar";
+  rodapeMensagem.textContent = "v0.1 - entre para jogar";
+  atalhoPerfil.hidden = true;
+  rodapeFinal.hidden = true;
   campoLogin.focus();
 }
 
@@ -104,6 +120,7 @@ async function acessar() {
     const jogador = modo === "entrar"
       ? await api.entrar(campoLogin.value, campoSenha.value)
       : await api.cadastrar(campoLogin.value, campoSenha.value, campoNome.value.trim());
+    som.tocar("sucesso");
     mostrarJogo(jogador);
   });
 }
@@ -132,6 +149,7 @@ async function comIndicador(tarefa) {
   try {
     await tarefa();
   } catch (erro) {
+    som.tocar("erro");
     toast(erro.message, "erro");
   } finally {
     ocupado = false;
@@ -160,6 +178,7 @@ function entrarComCodigo() {
     return;
   }
   return comIndicador(async () => {
+    som.tocar("entrar");
     await api.identificar(nome);
     const sala = await api.entrarNaSala(codigo);
     window.location.href = `/lobby?codigo=${sala.codigo}`;
@@ -178,15 +197,30 @@ function fechar(painel) {
   campoCodigo.classList.remove("campo--erro");
 }
 
+async function abrirPerfil() {
+  abrir(painelPerfil);
+  perfilAviso.hidden = true;
+  try {
+    const dados = await api.perfil();
+    perfilNome.textContent = dados.jogador.nome;
+    perfilPartidas.textContent = dados.estatisticas.partidas_jogadas;
+    perfilVitorias.textContent = dados.estatisticas.vitorias;
+    perfilDerrotas.textContent = dados.estatisticas.derrotas;
+  } catch (erro) {
+    perfilAviso.textContent = erro.message;
+    perfilAviso.hidden = false;
+  }
+}
+
 document.addEventListener("keydown", (evento) => {
   if (evento.key !== "Escape") return;
-  [painelCodigo, painelConfig].forEach((p) => {
+  [painelCodigo, painelConfig, painelPerfil, painelSaida].forEach((p) => {
     if (!p.hidden) fechar(p);
   });
 });
 
 // Clicar no fundo escuro fecha o painel.
-[painelCodigo, painelConfig].forEach((painel) => {
+[painelCodigo, painelConfig, painelPerfil, painelSaida].forEach((painel) => {
   painel.addEventListener("click", (evento) => {
     if (evento.target === painel) fechar(painel);
   });
@@ -223,19 +257,64 @@ controleVolumeSom.addEventListener("input", () => {
 
 controleVolumeSom.addEventListener("change", () => som.tocar("clique"));
 
+function estaEmTelaCheia() {
+  return window.roubodopolis?.desktop
+    ? Boolean(window.roubodopolis.telaCheia?.())
+    : Boolean(document.fullscreenElement);
+}
+
+function pintarTelaCheia() {
+  modoExibicao.value = estaEmTelaCheia() ? "tela-cheia" : "janela";
+}
+
+async function aplicarModoExibicao() {
+  const deveFicarEmTelaCheia = modoExibicao.value === "tela-cheia";
+  try {
+    if (window.roubodopolis?.desktop) {
+      if (deveFicarEmTelaCheia !== estaEmTelaCheia()) {
+        await window.roubodopolis.alternarTelaCheia();
+      }
+    } else if (deveFicarEmTelaCheia && !document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else if (!deveFicarEmTelaCheia && document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+    pintarTelaCheia();
+  } catch {
+    pintarTelaCheia();
+    toast("Não foi possível alterar o modo de exibição.", "erro");
+  }
+}
+
+modoExibicao.addEventListener("change", aplicarModoExibicao);
+document.addEventListener("fullscreenchange", pintarTelaCheia);
+window.roubodopolis?.aoMudarTelaCheia?.(pintarTelaCheia);
+pintarTelaCheia();
+
 // --- roteamento dos cliques ----------------------------------------
 
 const acoes = {
   jogar,
   "abrir-codigo": () => abrir(painelCodigo),
   "entrar-codigo": entrarComCodigo,
+  perfil: abrirPerfil,
   config: () => abrir(painelConfig),
   fechar: (elemento) => fechar(elemento.closest(".painel")),
   amigos: () => toast("AMIGOS ainda não foi construído. Em breve.", ""),
   loja: () => toast("A LOJA ainda não abriu. Em breve.", ""),
-  sair: () => {
+  sair: () => abrir(painelSaida),
+  logout: () => {
+    fechar(painelSaida);
     voltarAoLogin();
     toast("Você saiu da conta.", "ok");
+  },
+  "sair-jogo": () => {
+    if (window.roubodopolis?.desktop) {
+      window.roubodopolis.sairDoJogo();
+      return;
+    }
+    window.close();
+    toast("Feche esta aba para sair do jogo.", "");
   },
 };
 
@@ -243,16 +322,18 @@ document.addEventListener("click", (evento) => {
   const alvo = evento.target.closest("[data-acao]");
   if (!alvo) return;
   const tipoSom = {
-    jogar: "confirmar",
     "abrir-codigo": "confirmar",
     "entrar-codigo": "confirmar",
-    config: "confirmar",
+    perfil: "selecionar",
+    config: "clique",
     fechar: "voltar",
     amigos: "clique",
     loja: "clique",
     sair: "voltar",
+    logout: "voltar",
+    "sair-jogo": "voltar",
   }[alvo.dataset.acao];
-  som.tocar(tipoSom);
+  if (tipoSom) som.tocar(tipoSom);
   acoes[alvo.dataset.acao]?.(alvo);
 });
 

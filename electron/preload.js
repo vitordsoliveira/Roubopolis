@@ -11,6 +11,12 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("roubodopolis", {
   /** Só a tela de erro usa: manda o processo principal recarregar a URL. */
   tentarDeNovo: () => ipcRenderer.send("tentar-de-novo"),
+  sairDoJogo: () => ipcRenderer.send("sair-do-jogo"),
+
+  /** Alterna o modo de exibição da janela a partir das configurações. */
+  alternarTelaCheia: () => ipcRenderer.invoke("alternar-tela-cheia"),
+  telaCheia: () => ipcRenderer.sendSync("estado-tela-cheia"),
+  aoMudarTelaCheia: (callback) => ipcRenderer.on("tela-cheia-alterada", callback),
 
   /** Permite ao client/ detectar que está no desktop, se um dia precisar. */
   desktop: true,

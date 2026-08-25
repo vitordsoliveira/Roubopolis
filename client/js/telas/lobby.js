@@ -5,6 +5,7 @@
    o formato do estado é o mesmo. */
 
 import { api, guardado } from "../core/api.js";
+import { som } from "../core/som.js";
 import { toast } from "../ui/toast.js";
 
 const fila = document.querySelector("#slots");
@@ -29,8 +30,10 @@ if (!codigo || !guardado.token()) {
 async function entrar() {
   try {
     pintar(await api.entrarNaSala(codigo));
+    som.tocar("entrar");
     iniciarConsulta();
   } catch (erro) {
+    som.tocar("erro");
     toast(erro.message, "erro");
     setTimeout(() => (location.href = "/"), 1800);
   }
@@ -148,7 +151,9 @@ fila.addEventListener("click", async (evento) => {
 
   try {
     pintar(await api.escolherPersonagem(codigo, alvo));
+    som.tocar("selecionar");
   } catch (erro) {
+    som.tocar("erro");
     toast(erro.message, "erro");
     atualizar(); // alguém pegou antes: reflete o estado real na hora
   }
@@ -160,7 +165,9 @@ botaoPronto.addEventListener("click", async () => {
   const eu = estado?.participantes.find((p) => p.sou_eu);
   try {
     pintar(await api.marcarPronto(codigo, !eu?.pronto));
+    som.tocar(eu?.pronto ? "voltar" : "pronto");
   } catch (erro) {
+    som.tocar("erro");
     toast(erro.message, "erro");
   }
 });
@@ -168,14 +175,17 @@ botaoPronto.addEventListener("click", async () => {
 document.querySelector("#copiar").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(codigo);
+    som.tocar("copiar");
     toast(`Código ${codigo} copiado.`, "ok");
   } catch {
+    som.tocar("aviso");
     // Sem permissão de área de transferência: mostrar já resolve.
     toast(`Anote o código: ${codigo}`);
   }
 });
 
 document.querySelector("#voltar").addEventListener("click", async () => {
+  som.tocar("voltar");
   pararConsulta();
   try {
     await api.sairDaSala(codigo);

@@ -387,10 +387,21 @@ controleVolumeSom.addEventListener("input", () => {
 
 controleVolumeSom.addEventListener("change", () => som.tocar("clique"));
 
+/* O Roubopolis é jogado pelo aplicativo instalado — a página nunca é o
+   produto final. Tudo que depende da janela passa por esta ponte, e a
+   ausência dela é DEFEITO, não um segundo modo de uso. Ter um caminho
+   alternativo aqui só serviria para esconder o defeito. */
+
+function ponteDesktop() {
+  return window.roubodopolis?.desktop ? window.roubodopolis : null;
+}
+
+function avisarSemPonte() {
+  toast("Não consegui falar com o aplicativo. Abra o jogo pelo Roubopolis, não pelo navegador.", "erro");
+}
+
 function estaEmTelaCheia() {
-  return window.roubodopolis?.desktop
-    ? Boolean(window.roubodopolis.telaCheia?.())
-    : Boolean(document.fullscreenElement);
+  return Boolean(ponteDesktop()?.telaCheia?.());
 }
 
 function pintarTelaCheia() {
@@ -398,16 +409,19 @@ function pintarTelaCheia() {
 }
 
 async function aplicarModoExibicao() {
+  const desktop = ponteDesktop();
+  if (!desktop) {
+    // Antes caía em document.requestFullscreen(), que no Electron até
+    // funciona — mas é o fullscreen do HTML, e não o da janela nativa.
+    // O seletor e a janela real passavam a discordar em silêncio.
+    avisarSemPonte();
+    return;
+  }
+
   const deveFicarEmTelaCheia = modoExibicao.value === "tela-cheia";
   try {
-    if (window.roubodopolis?.desktop) {
-      if (deveFicarEmTelaCheia !== estaEmTelaCheia()) {
-        await window.roubodopolis.alternarTelaCheia();
-      }
-    } else if (deveFicarEmTelaCheia && !document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
-    } else if (!deveFicarEmTelaCheia && document.fullscreenElement) {
-      await document.exitFullscreen();
+    if (deveFicarEmTelaCheia !== estaEmTelaCheia()) {
+      await desktop.alternarTelaCheia();
     }
     pintarTelaCheia();
   } catch {
@@ -418,8 +432,9 @@ async function aplicarModoExibicao() {
 
 botaoAplicarModoExibicao.addEventListener("click", aplicarModoExibicao);
 botaoAplicarModoExibicao.addEventListener("click", () => som.tocar("confirmar"));
-document.addEventListener("fullscreenchange", pintarTelaCheia);
-window.roubodopolis?.aoMudarTelaCheia?.(pintarTelaCheia);
+// Quem avisa que a janela mudou é o processo do Electron (F11 inclusive),
+// não o evento `fullscreenchange` do HTML.
+ponteDesktop()?.aoMudarTelaCheia?.(pintarTelaCheia);
 pintarTelaCheia();
 
 // --- roteamento dos cliques ----------------------------------------
@@ -440,12 +455,14 @@ const acoes = {
     toast("Você saiu da conta.", "ok");
   },
   "sair-jogo": () => {
-    if (window.roubodopolis?.desktop) {
-      window.roubodopolis.sairDoJogo();
+    const desktop = ponteDesktop();
+    if (desktop) {
+      desktop.sairDoJogo();
       return;
     }
-    window.close();
-    toast("Feche esta aba para sair do jogo.", "");
+    // Antes caía num `window.close()` que o navegador ignora em silêncio,
+    // e o botão parecia simplesmente quebrado.
+    avisarSemPonte();
   },
 };
 

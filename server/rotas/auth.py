@@ -9,7 +9,13 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from server.db.session import Sessao
-from server.salas.gerenciador import ErroDeSala, entrar_ou_criar_jogador, jogador_por_token
+from server.salas.gerenciador import (
+    ErroDeSala,
+    autenticar_jogador,
+    criar_conta,
+    entrar_ou_criar_jogador,
+    jogador_por_token,
+)
 
 bp = Blueprint("auth", __name__, url_prefix="/api")
 
@@ -31,6 +37,20 @@ def criar_ou_atualizar():
     jogador = entrar_ou_criar_jogador(Sessao(), corpo.get("nome", ""), token_da_requisicao())
     # Único lugar que devolve o token: é a credencial da pessoa.
     return jsonify({**jogador.para_dict(), "token": jogador.token}), 200
+
+
+@bp.post("/auth/entrar")
+def entrar():
+    corpo = request.get_json(silent=True) or {}
+    jogador = autenticar_jogador(Sessao(), corpo.get("login", ""), corpo.get("senha", ""))
+    return jsonify({**jogador.para_dict(), "token": jogador.token}), 200
+
+
+@bp.post("/auth/cadastrar")
+def cadastrar():
+    corpo = request.get_json(silent=True) or {}
+    jogador = criar_conta(Sessao(), corpo.get("login", ""), corpo.get("senha", ""), corpo.get("nome", ""))
+    return jsonify({**jogador.para_dict(), "token": jogador.token}), 201
 
 
 @bp.get("/jogador")

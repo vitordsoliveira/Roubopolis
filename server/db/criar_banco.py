@@ -91,6 +91,13 @@ def conferir_conexao() -> bool:
 # colunas
 # --------------------------------------------------------------------------
 
+def garantir_tabelas() -> None:
+    """Cria tabelas ausentes e completa colunas antigas sem apagar dados."""
+    engine = obter_engine()
+    Base.metadata.create_all(engine)
+    _atualizar_colunas_jogador(engine)
+
+
 def criar_tabelas(recriar: bool = False) -> None:
     engine = obter_engine()
 
@@ -100,7 +107,7 @@ def criar_tabelas(recriar: bool = False) -> None:
         print("  tabelas apagadas.")
 
     antes = set(inspect(engine).get_table_names())
-    Base.metadata.create_all(engine)
+    garantir_tabelas()
     depois = set(inspect(engine).get_table_names())
 
     for modelo in TODOS_OS_MODELOS:
@@ -108,6 +115,25 @@ def criar_tabelas(recriar: bool = False) -> None:
         marca = "criada" if nome in depois - antes else "já existia"
         colunas = len(modelo.__table__.columns)
         print(f"  [{marca:>10}] {nome:<14} {colunas} colunas")
+
+
+def _atualizar_colunas_jogador(engine) -> None:
+    """Completa instalações antigas sem apagar jogadores ou partidas."""
+    colunas = {coluna["name"] for coluna in inspect(engine).get_columns("jogador")}
+    faltantes = {
+        "login": "VARCHAR(64)",
+        "senha_hash": "VARCHAR(256)",
+    }
+    with engine.begin() as conexao:
+        for nome, tipo in faltantes.items():
+            if nome not in colunas:
+                conexao.execute(text(f"ALTER TABLE jogador ADD COLUMN {nome} {tipo}"))
+                print(f"  [     criada] jogador.{nome}")
+        if "login" not in colunas:
+            if engine.dialect.name == "sqlite":
+                conexao.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_jogador_login ON jogador (login)"))
+            else:
+                conexao.execute(text("CREATE UNIQUE INDEX uq_jogador_login ON jogador (login)"))
 
 
 # --------------------------------------------------------------------------

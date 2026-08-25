@@ -11,6 +11,7 @@ from flask import Flask, jsonify, send_from_directory
 from sqlalchemy.exc import OperationalError
 
 from server.config import Config
+from server.db.criar_banco import garantir_tabelas
 from server.db.session import Sessao
 from server.rotas.auth import bp as bp_auth
 from server.rotas.salas import bp as bp_salas
@@ -18,6 +19,9 @@ from server.salas.gerenciador import ErroDeSala
 
 
 def criar_app() -> Flask:
+    # O create_all não altera tabelas existentes; esta chamada também aplica
+    # migrações pequenas, como as colunas da conta adicionadas depois.
+    garantir_tabelas()
     app = Flask(__name__, static_folder=None)
     app.config["SECRET_KEY"] = Config.SECRET_KEY
     app.config["JSON_SORT_KEYS"] = False

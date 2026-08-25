@@ -17,6 +17,65 @@
   padding: var(--e3) var(--e3) var(--e4);
 }
 
+.menu__login {
+  width: min(360px, 88vw);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--e2);
+  padding: var(--e3);
+  background: rgba(22, 16, 31, 0.86);
+  border: var(--borda) solid var(--amarelo);
+  box-shadow: var(--sombra-dura), 0 0 24px rgba(255, 217, 61, 0.28);
+}
+
+.menu__login h1 {
+  font-size: clamp(0.9rem, 2.3vw, 1.25rem);
+  text-align: center;
+  margin-bottom: var(--e1);
+}
+
+.login__abas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e1);
+  margin-bottom: var(--e1);
+}
+
+.login__aba {
+  padding: var(--e1) var(--e2);
+  color: var(--branco);
+  border-bottom: 2px solid transparent;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.login__aba--ativa {
+  color: var(--amarelo);
+  border-color: var(--amarelo);
+}
+
+.menu__login .rotulo {
+  color: var(--branco);
+  font-size: 0.68rem;
+}
+
+.menu__login .campo--placa {
+  min-height: 42px;
+  padding: var(--e2) var(--e3);
+  background-color: var(--branco);
+}
+
+.login__botao {
+  align-self: center;
+  margin-top: var(--e2);
+  padding-inline: var(--e5);
+}
+
+.menu__login .menu__dica {
+  color: var(--amarelo);
+}
+
 /* --- logo com as figuras apoiadas -------------------------------- */
 
 /* Tudo aqui é medido a partir da largura do bloco, não da altura: o logo

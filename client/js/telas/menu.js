@@ -3,7 +3,12 @@
 import { api, guardado } from "../core/api.js";
 import { toast } from "../ui/toast.js";
 
+const campoLogin = document.querySelector("#login");
+const campoSenha = document.querySelector("#senha");
 const campoNome = document.querySelector("#nome");
+const blocoNome = document.querySelector("#bloco-nome");
+const botaoAcessar = document.querySelector("#acessar");
+const abas = document.querySelectorAll("[data-modo]");
 const dica = document.querySelector("#dica");
 const opcoes = document.querySelector("#opcoes");
 const painelCodigo = document.querySelector("#painel-codigo");
@@ -12,6 +17,7 @@ const painelConfig = document.querySelector("#painel-config");
 const botaoSom = document.querySelector("#som");
 
 let ocupado = false;
+let modo = "entrar";
 
 // --- identidade só desta aba (para testar a sala sozinho) ------------
 
@@ -28,8 +34,7 @@ if (guardado.abaPropria()) {
 // --- nome -----------------------------------------------------------
 
 campoNome.value = guardado.nome();
-campoNome.focus();
-campoNome.select();
+campoLogin.focus();
 
 campoNome.addEventListener("input", () => {
   campoNome.classList.remove("campo--erro");
@@ -55,6 +60,65 @@ function avisarNoCampo(mensagem) {
   campoNome.classList.add("campo--erro");
   campoNome.focus();
 }
+
+function mostrarJogo(jogador) {
+  campoNome.value = jogador.nome;
+  document.querySelector(".menu__login").hidden = true;
+  opcoes.hidden = false;
+  document.querySelector(".menu__rodape").textContent = `Olá, ${jogador.nome}!`;
+  opcoes.querySelector("button")?.focus();
+}
+
+function voltarAoLogin() {
+  guardado.esquecer();
+  campoLogin.value = "";
+  campoSenha.value = "";
+  campoNome.value = "";
+  document.querySelector(".menu__login").hidden = false;
+  opcoes.hidden = true;
+  document.querySelector(".menu__rodape").textContent = "v0.1 - entre para jogar";
+  campoLogin.focus();
+}
+
+function validarAcesso() {
+  if (campoLogin.value.trim().length < 3) {
+    campoLogin.focus();
+    dica.textContent = "Digite seu usuário.";
+    return false;
+  }
+  if (campoSenha.value.length < 6) {
+    campoSenha.focus();
+    dica.textContent = "A senha precisa ter pelo menos 6 caracteres.";
+    return false;
+  }
+  if (modo === "cadastrar" && !nomeValido()) return false;
+  return true;
+}
+
+async function acessar() {
+  if (!validarAcesso()) return;
+  return comIndicador(async () => {
+    const jogador = modo === "entrar"
+      ? await api.entrar(campoLogin.value, campoSenha.value)
+      : await api.cadastrar(campoLogin.value, campoSenha.value, campoNome.value.trim());
+    mostrarJogo(jogador);
+  });
+}
+
+abas.forEach((aba) => aba.addEventListener("click", () => {
+  modo = aba.dataset.modo;
+  abas.forEach((item) => {
+    const ativo = item === aba;
+    item.classList.toggle("login__aba--ativa", ativo);
+    item.setAttribute("aria-selected", String(ativo));
+  });
+  blocoNome.hidden = modo !== "cadastrar";
+  botaoAcessar.textContent = modo === "entrar" ? "Entrar" : "Criar conta";
+  campoSenha.setAttribute("autocomplete", modo === "entrar" ? "current-password" : "new-password");
+}));
+
+botaoAcessar.addEventListener("click", acessar);
+campoSenha.addEventListener("keydown", (evento) => evento.key === "Enter" && acessar());
 
 // --- ações ----------------------------------------------------------
 
@@ -157,10 +221,8 @@ const acoes = {
   amigos: () => toast("AMIGOS ainda não foi construído. Em breve.", ""),
   loja: () => toast("A LOJA ainda não abriu. Em breve.", ""),
   sair: () => {
-    guardado.esquecer();
-    campoNome.value = "";
-    campoNome.focus();
-    toast("Até a próxima. Seu nome foi esquecido neste navegador.", "ok");
+    voltarAoLogin();
+    toast("Você saiu da conta.", "ok");
   },
 };
 
@@ -173,3 +235,7 @@ document.addEventListener("click", (evento) => {
 // Enter no nome já começa a partida; no código, entra na sala.
 campoNome.addEventListener("keydown", (e) => e.key === "Enter" && jogar());
 campoCodigo.addEventListener("keydown", (e) => e.key === "Enter" && entrarComCodigo());
+
+if (guardado.token()) {
+  api.quemSouEu?.().then(mostrarJogo).catch(() => guardado.esquecer());
+}

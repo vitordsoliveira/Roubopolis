@@ -13,6 +13,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from server.config import Config
 from server.db.models import Jogador, Personagem, Sala, SalaJogador, StatusSala, gerar_token
@@ -49,6 +50,52 @@ def jogador_por_token(sessao: Session, token: str | None) -> Jogador | None:
     if not token:
         return None
     return sessao.scalar(select(Jogador).where(Jogador.token == token))
+
+
+def jogador_por_login(sessao: Session, login: str) -> Jogador | None:
+    return sessao.scalar(select(Jogador).where(Jogador.login == login.lower()))
+
+
+def limpar_login(bruto: str) -> str:
+    login = (bruto or "").strip().lower()
+    if not re.fullmatch(r"[a-z0-9_][a-z0-9_.-]{2,31}", login):
+        raise ErroDeSala("O nome de usuário deve ter de 3 a 32 caracteres: letras, números, ponto, hífen ou _.")
+    return login
+
+
+def validar_senha(bruta: str) -> str:
+    if not isinstance(bruta, str) or len(bruta) < 6:
+        raise ErroDeSala("A senha precisa ter pelo menos 6 caracteres.")
+    if len(bruta) > 128:
+        raise ErroDeSala("A senha pode ter no máximo 128 caracteres.")
+    return bruta
+
+
+def autenticar_jogador(sessao: Session, login_bruto: str, senha: str) -> Jogador:
+    login = limpar_login(login_bruto)
+    jogador = jogador_por_login(sessao, login)
+    if jogador is None or not jogador.senha_hash or not check_password_hash(jogador.senha_hash, senha):
+        raise ErroDeSala("Usuário ou senha incorretos.", http=401)
+    jogador.token = gerar_token()
+    jogador.visto_em = datetime.now()
+    sessao.commit()
+    return jogador
+
+
+def criar_conta(sessao: Session, login_bruto: str, senha: str, nome_bruto: str) -> Jogador:
+    login = limpar_login(login_bruto)
+    senha = validar_senha(senha)
+    nome = limpar_nome(nome_bruto)
+    if jogador_por_login(sessao, login) is not None:
+        raise ErroDeSala("Esse usuário já existe. Escolha outro ou entre na sua conta.", http=409)
+    jogador = Jogador(nome=nome, login=login, senha_hash=generate_password_hash(senha), token=gerar_token())
+    sessao.add(jogador)
+    try:
+        sessao.commit()
+    except IntegrityError:
+        sessao.rollback()
+        raise ErroDeSala("Esse usuário já existe. Escolha outro ou entre na sua conta.", http=409)
+    return jogador
 
 
 def exigir_jogador(sessao: Session, token: str | None) -> Jogador:

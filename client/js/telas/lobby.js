@@ -65,8 +65,8 @@ function montarCarrossel(participante) {
     const botao = elemento("button", "carrossel__seta", sinal);
     botao.type = "button";
     botao.dataset.passo = String(passo);
-    // Só o dono do lugar folheia o próprio boneco.
-    botao.disabled = !participante.sou_eu;
+    // Só o dono do lugar folheia o próprio boneco antes de ficar pronto.
+    botao.disabled = !participante.sou_eu || participante.pronto;
     botao.setAttribute("aria-label", rotulo);
     return botao;
   }

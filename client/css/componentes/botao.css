@@ -77,6 +77,10 @@
   transition: transform 0.1s steps(3), filter 0.1s steps(3);
 }
 
+.opcao[data-acao="sair"] img {
+  height: clamp(32px, 5.4vh, 58px);
+}
+
 .opcao:hover img,
 .opcao:focus-visible img {
   transform: scale(1.08);

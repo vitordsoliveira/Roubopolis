@@ -106,7 +106,14 @@
 }
 
 .saida__acoes {
+  display: grid;
+  grid-template-columns: minmax(0, 230px);
+  justify-content: center;
   margin-top: var(--e2);
+}
+
+.saida__acoes .botao {
+  width: 100%;
 }
 
 @media (max-width: 420px) {
@@ -117,6 +124,7 @@
   .painel__caixa .botao {
     flex: 1 1 100%;
   }
+
 }
 
 /* --- campo de texto pixelado ------------------------------------- */

@@ -9,9 +9,9 @@
   z-index: 40;
   display: flex;
   align-items: center;
-  gap: var(--e2);
+  gap: var(--e3);
   /* Menos espaço à esquerda: o quadrado da foto já encosta na borda. */
-  padding: var(--e1) var(--e3) var(--e1) var(--e1);
+  padding: var(--e2) var(--e3) var(--e2) var(--e2);
   background: var(--branco);
   color: var(--preto);
   border: var(--borda) solid var(--preto);
@@ -32,8 +32,8 @@
 
 .perfil-atalho__quadro {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
@@ -61,9 +61,26 @@
 .perfil-atalho__nome {
   max-width: 12ch;
   overflow: hidden;
-  font-size: 0.8rem;
+  font-size: 0.92rem;
   line-height: 1.6;
   text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.perfil-atalho__info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+}
+
+.perfil-atalho__coins {
+  color: var(--amarelo-escuro);
+  font-size: 0.76rem;
+  font-weight: bold;
+  line-height: 1.3;
   text-transform: uppercase;
   white-space: nowrap;
 }

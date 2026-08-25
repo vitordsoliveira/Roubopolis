@@ -76,6 +76,7 @@ class Jogador(Base):
     # `prepararFoto` em client/js/telas/menu.js), então TEXT sobra.
     foto: Mapped[str | None] = mapped_column(Text, nullable=True)
     token: Mapped[str] = mapped_column(String(48), nullable=False, unique=True, default=gerar_token)
+    coins: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     partidas_jogadas: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     vitorias: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     derrotas: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
@@ -95,7 +96,7 @@ class Jogador(Base):
 
     def para_dict(self) -> dict:
         """Versão pública: nunca inclui o token nem o hash da senha."""
-        return {"id": self.id, "nome": self.nome, "foto": self.foto}
+        return {"id": self.id, "nome": self.nome, "foto": self.foto, "coins": self.coins}
 
     def __repr__(self) -> str:
         return f"<Jogador {self.id} {self.nome!r}>"

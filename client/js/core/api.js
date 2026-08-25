@@ -2,10 +2,10 @@
    Sem senha: o token devolvido no cadastro é a credencial. Perdeu o
    localStorage, virou outro jogador. */
 
-const CHAVE_TOKEN = "roubodopolis.token";
-const CHAVE_NOME = "roubodopolis.nome";
-const CHAVE_SOM = "roubodopolis.som";
-const CHAVE_ABA = "roubodopolis.aba-propria";
+const CHAVE_TOKEN = "roubopolis.token";
+const CHAVE_NOME = "roubopolis.nome";
+const CHAVE_SOM = "roubopolis.som";
+const CHAVE_ABA = "roubopolis.aba-propria";
 
 /* Abas do mesmo navegador dividem o localStorage — duas abas seriam sempre o
    MESMO jogador, o que impede testar uma sala sozinho. Abrir /?novo=1 marca a

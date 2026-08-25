@@ -79,7 +79,11 @@
       </nav>
 
     </div>
-    <p class="menu__rodape">v0.1 - nome e lobby</p>
+    <p class="menu__rodape">
+      <span id="rodape-mensagem">v0.1 - nome e lobby</span>
+      <button class="menu__rodape-nome" id="atalho-perfil" type="button" data-acao="perfil" hidden></button>
+      <span id="rodape-final" hidden>!</span>
+    </p>
   </main>
 
   <!-- Entrar numa sala de amigo -->
@@ -110,6 +114,13 @@
         <span>Som</span>
         <button class="interruptor" type="button" id="som" aria-pressed="true">Ligado</button>
       </div>
+      <div class="painel__linha">
+        <span>Exibição</span>
+        <select class="seletor-exibicao" id="modo-exibicao" aria-label="Modo de exibição">
+          <option value="janela">Modo janela</option>
+          <option value="tela-cheia">Tela cheia</option>
+        </select>
+      </div>
       <label class="painel__linha controle-volume" for="volume-som">
         <span>Volume dos efeitos</span>
         <span class="controle-volume__valor" id="valor-volume-som">100%</span>
@@ -117,6 +128,45 @@
       </label>
       <div class="painel__acoes">
         <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Perfil -->
+  <div class="painel" id="painel-perfil" hidden>
+    <div class="painel__caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-perfil">
+      <h2 class="painel__titulo" id="titulo-perfil">Meu perfil</h2>
+      <p class="perfil__nome" id="perfil-nome"></p>
+      <div class="perfil__estatisticas" aria-label="Estatísticas da conta">
+        <div class="perfil__estatistica">
+          <strong id="perfil-partidas">0</strong>
+          <span>Partidas</span>
+        </div>
+        <div class="perfil__estatistica">
+          <strong id="perfil-vitorias">0</strong>
+          <span>Vitórias</span>
+        </div>
+        <div class="perfil__estatistica">
+          <strong id="perfil-derrotas">0</strong>
+          <span>Derrotas</span>
+        </div>
+      </div>
+      <p class="perfil__aviso" id="perfil-aviso" hidden></p>
+      <div class="painel__acoes">
+        <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saída -->
+  <div class="painel" id="painel-saida" hidden>
+    <div class="painel__caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-saida">
+      <h2 class="painel__titulo" id="titulo-saida">Sair</h2>
+      <p class="saida__pergunta">O que você deseja fazer?</p>
+      <div class="painel__acoes saida__acoes">
+        <button class="botao botao--pequeno" type="button" data-acao="logout">Logout</button>
+        <button class="botao botao--pequeno botao--perigo" type="button" data-acao="sair-jogo">Sair do jogo</button>
+        <button class="botao botao--pequeno botao--verde" type="button" data-acao="fechar">Voltar</button>
       </div>
     </div>
   </div>

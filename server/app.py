@@ -14,6 +14,7 @@ from server.config import Config
 from server.db.criar_banco import garantir_tabelas
 from server.db.session import Sessao
 from server.rotas.auth import bp as bp_auth
+from server.rotas.perfil import bp as bp_perfil
 from server.rotas.salas import bp as bp_salas
 from server.salas.gerenciador import ErroDeSala
 
@@ -27,6 +28,7 @@ def criar_app() -> Flask:
     app.config["JSON_SORT_KEYS"] = False
 
     app.register_blueprint(bp_auth)
+    app.register_blueprint(bp_perfil)
     app.register_blueprint(bp_salas)
 
     # ---- telas -------------------------------------------------------

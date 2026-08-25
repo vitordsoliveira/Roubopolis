@@ -1,0 +1,84 @@
+/* Lugar na mesa: um por jogador, quatro na fila.
+   Ocupado mostra quem é; vazio mostra o "+" esperando alguém entrar. */
+
+.slots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(var(--e2), 2vw, var(--e4));
+  width: min(1000px, 100%);
+  margin: 0 auto;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e2);
+}
+
+/* --- quadro do jogador -------------------------------------------- */
+
+.slot__perfil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e1);
+  width: 100%;
+  max-width: 190px;
+  aspect-ratio: 1;
+  padding: var(--e2);
+  background: var(--branco);
+  color: var(--preto);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.28);
+}
+
+.slot--eu .slot__perfil {
+  outline: 4px solid var(--roxo);
+  outline-offset: -4px;
+  box-shadow: 0 5px 0 var(--roxo), 0 0 26px var(--verde-neon);
+}
+
+.slot__nome {
+  font-size: clamp(0.8rem, 1.5vw, 1.15rem);
+  text-transform: uppercase;
+  text-align: center;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+
+.slot__marcas {
+  display: flex;
+  gap: var(--e1);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.slot__marca {
+  font-size: clamp(0.5rem, 0.9vw, 0.68rem);
+  padding: 2px 5px;
+  border: 2px solid currentColor;
+}
+
+.slot__marca--dono   { color: var(--amarelo-escuro); }
+.slot__marca--pronto { color: var(--grupo-barata); }
+
+/* --- lugar vago ---------------------------------------------------- */
+
+.slot--vazio .slot__perfil {
+  background: rgba(255, 255, 255, 0.16);
+  border: 3px dashed rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+}
+
+.slot__mais {
+  font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.slot__espera {
+  font-size: clamp(0.5rem, 0.95vw, 0.7rem);
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}

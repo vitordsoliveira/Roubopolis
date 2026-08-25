@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lobby — Roubodopolis</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="preload" href="/assets/fontes/VCRosdNEUE.ttf" as="font" type="font/ttf" crossorigin>
 
   <link rel="stylesheet" href="/css/base/reset.css">
   <link rel="stylesheet" href="/css/base/variaveis.css">
@@ -15,17 +13,14 @@
   <link rel="stylesheet" href="/css/componentes/cenario.css">
   <link rel="stylesheet" href="/css/componentes/botao.css">
   <link rel="stylesheet" href="/css/componentes/modal.css">
-  <link rel="stylesheet" href="/css/componentes/boneco.css">
+  <link rel="stylesheet" href="/css/componentes/painel-jogador.css">
+  <link rel="stylesheet" href="/css/componentes/personagem.css">
   <link rel="stylesheet" href="/css/telas/lobby.css">
 </head>
 
 <body class="tema-laranja">
 
-  <div class="cenario" aria-hidden="true">
-    <div class="cenario__cidade cenario__cidade--fundo"></div>
-    <div class="cenario__cidade"></div>
-    <span class="nuvem nuvem--a"></span>
-    <span class="nuvem nuvem--c"></span>
+  <div class="cenario cenario--laranja" aria-hidden="true">
     <div class="cenario__scanlines"></div>
   </div>
 
@@ -33,8 +28,9 @@
     <div class="lobby">
 
       <header class="lobby__topo">
-        <button class="botao botao--pequeno" type="button" id="voltar">Voltar</button>
-        <h1 class="logo logo--pequeno neon">ROUBODOPOLIS</h1>
+        <button class="placa" type="button" id="voltar">
+          <img src="/assets/menu/voltar.png" alt="Voltar">
+        </button>
         <div class="lobby__codigo">
           <span class="rotulo">Sala</span>
           <strong id="codigo-sala">······</strong>
@@ -42,26 +38,16 @@
         </div>
       </header>
 
-      <div class="lobby__corpo">
-
-        <section>
-          <h2 class="titulo-secao">Escolha seu personagem</h2>
-          <!-- Os quatro bonecos entram aqui; cada um só pode ser de uma pessoa. -->
-          <div class="personagens" id="personagens"></div>
-        </section>
-
-        <aside class="mesa">
-          <h2 class="mesa__titulo">Na mesa</h2>
-          <ul class="mesa__lista" id="mesa"></ul>
-        </aside>
-
-      </div>
+      <!-- Um lugar por jogador; o boneco fica no carrossel abaixo de cada um. -->
+      <ul class="slots" id="slots"></ul>
 
       <footer class="lobby__acoes">
-        <button class="botao botao--verde" type="button" id="pronto" disabled>Estou pronto</button>
-        <button class="botao" type="button" id="iniciar" disabled hidden
-                title="O tabuleiro entra na próxima fase do projeto">Iniciar partida</button>
         <p class="lobby__aviso" id="aviso" role="status"></p>
+        <div class="lobby__botoes">
+          <button class="botao botao--verde" type="button" id="pronto" disabled>Estou pronto</button>
+          <button class="botao" type="button" id="iniciar" disabled hidden
+                  title="O tabuleiro entra na próxima fase do projeto">Começar</button>
+        </div>
       </footer>
 
     </div>

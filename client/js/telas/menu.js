@@ -22,7 +22,7 @@ if (new URLSearchParams(location.search).has("novo")) {
 
 if (guardado.abaPropria()) {
   document.querySelector(".menu__rodape").textContent =
-    "v0.1 — esta aba tem um jogador próprio";
+    "v0.1 - esta aba tem um jogador próprio";
 }
 
 // --- nome -----------------------------------------------------------

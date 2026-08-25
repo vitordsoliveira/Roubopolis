@@ -138,7 +138,6 @@ def popular_personagens() -> None:
             alvo.nome = item["nome"]
             alvo.descricao = item.get("descricao")
             alvo.cor = item.get("cor", "#ffd93d")
-            alvo.paleta = item.get("paleta", {})
             alvo.sprite = item.get("sprite")
             alvo.passiva = item.get("passiva")
             alvo.ordem = item.get("ordem", 0)

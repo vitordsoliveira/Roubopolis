@@ -89,6 +89,15 @@ def _vagas_maximas(sessao: Session) -> int:
     return min(Config.MAX_JOGADORES, disponiveis)
 
 
+def _personagem_livre(sessao: Session, sala: Sala | None = None) -> Personagem | None:
+    """O primeiro boneco que ninguém pegou, na ordem do catálogo."""
+    tomados = {p.personagem_id for p in sala.participantes if p.personagem_id} if sala else set()
+    consulta = select(Personagem).where(Personagem.ativo.is_(True)).order_by(Personagem.ordem)
+    if tomados:
+        consulta = consulta.where(Personagem.id.not_in(tomados))
+    return sessao.scalar(consulta)
+
+
 def buscar_sala(sessao: Session, codigo: str) -> Sala:
     codigo = normalizar_codigo(codigo)
     sala = sessao.scalar(select(Sala).where(Sala.codigo == codigo))
@@ -112,7 +121,17 @@ def criar_sala(sessao: Session, dono: Jogador, perfil: str = "padrao") -> Sala:
     sessao.add(sala)
     sessao.flush()
 
-    sessao.add(SalaJogador(sala_id=sala.id, jogador_id=dono.id, ordem=0))
+    # Já entra com um boneco: o lugar do jogador nunca aparece vazio, e as
+    # setas do lobby servem só para trocar.
+    livre = _personagem_livre(sessao)
+    sessao.add(
+        SalaJogador(
+            sala_id=sala.id,
+            jogador_id=dono.id,
+            ordem=0,
+            personagem_id=livre.id if livre else None,
+        )
+    )
     sessao.commit()
     sessao.refresh(sala)
     return sala
@@ -133,7 +152,15 @@ def entrar_na_sala(sessao: Session, codigo: str, jogador: Jogador) -> Sala:
     _sair_das_salas_abertas(sessao, jogador)
 
     proxima_ordem = max((p.ordem for p in sala.participantes), default=-1) + 1
-    sessao.add(SalaJogador(sala_id=sala.id, jogador_id=jogador.id, ordem=proxima_ordem))
+    livre = _personagem_livre(sessao, sala)
+    sessao.add(
+        SalaJogador(
+            sala_id=sala.id,
+            jogador_id=jogador.id,
+            ordem=proxima_ordem,
+            personagem_id=livre.id if livre else None,
+        )
+    )
     sessao.commit()
     sessao.refresh(sala)
     return sala

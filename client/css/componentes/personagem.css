@@ -1,0 +1,87 @@
+/* Carrossel do boneco, abaixo do quadro do jogador.
+   Sem nome: o desenho identifica sozinho. As setas só funcionam no
+   carrossel do próprio jogador — ninguém troca o boneco dos outros. */
+
+.carrossel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e1);
+  width: 100%;
+}
+
+.carrossel__rotulo {
+  font-size: clamp(0.5rem, 0.95vw, 0.72rem);
+  text-transform: lowercase;
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.carrossel__linha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--e2);
+  width: 100%;
+}
+
+.carrossel__seta {
+  flex-shrink: 0;
+  padding: var(--e1) var(--e2);
+  font-size: clamp(1.1rem, 2vw, 1.7rem);
+  line-height: 1;
+  color: var(--branco);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.55);
+  transition: transform 0.08s steps(2);
+}
+
+.carrossel__seta:hover:not(:disabled) {
+  transform: scale(1.25);
+  color: var(--amarelo);
+}
+
+.carrossel__seta:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+/* Nos lugares dos outros as setas ficam à mostra, mas inertes. */
+.carrossel__seta:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* Largura fixa (não `flex: 1`): assim as setas ficam ao lado do boneco em
+   vez de nas bordas da coluna, e não pulam de lugar quando o jogador troca
+   para um personagem mais largo ou mais estreito. */
+.carrossel__boneco {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: clamp(130px, 25vh, 260px);
+  flex: 0 0 58%;
+  min-width: 0;
+}
+
+.carrossel__boneco img {
+  max-height: 100%;
+  max-width: 100%;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.22));
+}
+
+.slot--eu .carrossel__boneco img {
+  animation: personagem-pula 0.9s steps(2) infinite alternate;
+}
+
+@keyframes personagem-pula {
+  to { transform: translateY(-8px); }
+}
+
+/* Sem boneco (nenhum sobrando): mantém a altura para a fila não pular. */
+.carrossel__vazio {
+  align-self: center;
+  font-size: clamp(0.5rem, 0.95vw, 0.7rem);
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}

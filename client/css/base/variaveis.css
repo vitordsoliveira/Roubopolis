@@ -34,24 +34,21 @@
   --sombra-dura: 0 6px 0 rgba(0, 0, 0, 0.35);
 }
 
-/* --- tema do menu: a vila verde (página 3 da arte) ----------------- */
+/* Os dois temas usam as cores medidas nas telas de referência
+   (ver PALETAS em ferramentas/preparar_assets.py). */
+
+/* --- tema do menu: a vila verde ----------------------------------- */
 .tema-verde {
-  --fundo-topo: #f2fff4;
-  --fundo-meio: #b6f5c6;
-  --fundo-baixo: #3fd977;
-  --predio: #4fce7d;
-  --predio-fundo: #8ce8ab;
-  --janela: #f6ffd0;
+  --fundo-topo: #d2fde4;
+  --fundo-baixo: #00b402;
   --texto: var(--preto);
+  --contraste: rgba(22, 16, 31, 0.72);
 }
 
-/* --- tema do lobby: a cidade laranja (páginas 1, 2 e 4) ------------ */
+/* --- tema do lobby: a cidade laranja ------------------------------ */
 .tema-laranja {
-  --fundo-topo: #ff7a18;
-  --fundo-meio: #ffb01f;
-  --fundo-baixo: #ff8a1e;
-  --predio: #d63a12;
-  --predio-fundo: #ef5a24;
-  --janela: #ffd25e;
+  --fundo-topo: #ffa60b;
+  --fundo-baixo: #8f1600;
   --texto: var(--branco);
+  --contraste: rgba(66, 12, 0, 0.66);
 }

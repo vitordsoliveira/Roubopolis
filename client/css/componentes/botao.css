@@ -5,7 +5,7 @@
   padding: var(--e3) var(--e5);
   background: var(--branco);
   color: var(--amarelo);
-  font-size: clamp(0.7rem, 1.9vw, 1.1rem);
+  font-size: clamp(1.05rem, 1.9vw, 1.65rem);
   text-transform: uppercase;
   border: var(--borda) solid var(--preto);
   box-shadow: var(--sombra-dura);
@@ -37,7 +37,7 @@
 
 .botao--pequeno {
   padding: var(--e2) var(--e3);
-  font-size: clamp(0.5rem, 1.2vw, 0.72rem);
+  font-size: clamp(0.75rem, 1.2vw, 1.08rem);
   border-width: 3px;
 }
 
@@ -52,41 +52,84 @@
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
 }
 
-/* --- item da lista do menu -------------------------------------- */
+/* --- item da lista do menu (arte do designer) -------------------- */
 
+/* Todos os PNGs de menu saem com a mesma altura de letra e a mesma altura
+   de tela (ver normalizar_item_de_menu), então uma altura só serve para
+   todos e as palavras ficam do mesmo tamanho. */
 .opcao {
   display: block;
-  width: 100%;
-  padding: var(--e1) 0;
-  font-size: clamp(0.95rem, 3vw, 1.9rem);
-  text-transform: uppercase;
-  color: var(--amarelo);
-  text-shadow:
-    3px 0 0 var(--roxo), -3px 0 0 var(--roxo),
-    0 3px 0 var(--roxo), 0 -3px 0 var(--roxo),
-    3px 3px 0 var(--roxo), -3px -3px 0 var(--roxo),
-    3px -3px 0 var(--roxo), -3px 3px 0 var(--roxo),
-    0 7px 0 rgba(0, 0, 0, 0.35);
+  line-height: 0;
+}
+
+.opcao img {
+  height: clamp(34px, 6.6vh, 70px);
+  width: auto;
   transition: transform 0.1s steps(3), filter 0.1s steps(3);
 }
 
-.opcao:hover,
+.opcao:hover img,
+.opcao:focus-visible img {
+  transform: scale(1.08);
+  filter: drop-shadow(0 0 14px var(--verde-neon));
+}
+
 .opcao:focus-visible {
-  transform: scale(1.09);
-  filter: drop-shadow(0 0 12px var(--verde-neon));
   outline: none;
 }
 
-.opcao:active {
+.opcao:active img {
   transform: scale(0.97);
 }
 
 /* Itens que ainda não fazem nada: presentes, mas visivelmente adormecidos. */
-.opcao--dormindo {
-  opacity: 0.62;
+.opcao--dormindo img {
+  filter: saturate(0.45) brightness(0.85);
 }
 
-.opcao--secundario {
-  font-size: clamp(0.55rem, 1.5vw, 0.9rem);
-  opacity: 0.9;
+.opcao--dormindo:hover img {
+  filter: saturate(0.45) brightness(0.85) drop-shadow(0 0 10px var(--verde-neon));
+}
+
+/* ENTRAR COM CÓDIGO não tem arte: desenhado no mesmo estilo, menor. */
+.opcao--texto {
+  font-size: clamp(0.75rem, 1.4vw, 1.23rem);
+  text-transform: uppercase;
+  color: var(--amarelo);
+  line-height: 1.6;
+  text-shadow:
+    2px 0 0 var(--roxo), -2px 0 0 var(--roxo),
+    0 2px 0 var(--roxo), 0 -2px 0 var(--roxo),
+    2px 2px 0 var(--roxo), -2px -2px 0 var(--roxo),
+    2px -2px 0 var(--roxo), -2px 2px 0 var(--roxo),
+    0 5px 0 rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s steps(3), filter 0.1s steps(3);
+}
+
+.opcao--texto:hover,
+.opcao--texto:focus-visible {
+  transform: scale(1.07);
+  filter: drop-shadow(0 0 10px var(--verde-neon));
+}
+
+/* --- botão sobre a placa branca rasgada da arte ------------------ */
+
+.placa {
+  display: inline-grid;
+  place-items: center;
+  padding: 1.6% 5%;
+  background: url("/assets/ui/placa.png") center / 100% 100% no-repeat;
+  line-height: 0;
+  transition: transform 0.1s steps(3);
+}
+
+.placa img {
+  height: clamp(26px, 4.4vh, 44px);
+  width: auto;
+}
+
+.placa:hover,
+.placa:focus-visible {
+  transform: scale(1.06);
+  outline: none;
 }

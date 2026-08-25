@@ -1,5 +1,4 @@
-/* Lobby: mostra o código da sala, deixa escolher o boneco e acompanha
-   quem já está na mesa.
+/* Lobby: um lugar por jogador, com o boneco num carrossel logo abaixo.
 
    A atualização é por consulta a cada poucos segundos. Quando
    server/sockets/lobby.py existir, troque `iniciarConsulta` por um socket —
@@ -8,21 +7,7 @@
 import { api, guardado } from "../core/api.js";
 import { toast } from "../ui/toast.js";
 
-const PECAS_DO_BONECO = `
-  <i class="boneco__chapeu"></i><i class="boneco__aba"></i>
-  <i class="boneco__cabelo"></i><i class="boneco__cabeca"></i>
-  <i class="boneco__olho boneco__olho--e"></i><i class="boneco__olho boneco__olho--d"></i>
-  <i class="boneco__boca"></i>
-  <i class="boneco__corpo"></i><i class="boneco__detalhe"></i>
-  <i class="boneco__braco boneco__braco--e"></i><i class="boneco__braco boneco__braco--d"></i>
-  <i class="boneco__mao boneco__mao--e"></i><i class="boneco__mao boneco__mao--d"></i>
-  <i class="boneco__calca"></i><i class="boneco__vinco"></i>
-  <i class="boneco__sapato boneco__sapato--e"></i><i class="boneco__sapato boneco__sapato--d"></i>`;
-
-const CORES_DA_PALETA = ["chapeu", "cabelo", "pele", "roupa", "detalhe", "calca", "sapato"];
-
-const grade = document.querySelector("#personagens");
-const listaMesa = document.querySelector("#mesa");
+const fila = document.querySelector("#slots");
 const rotuloCodigo = document.querySelector("#codigo-sala");
 const botaoPronto = document.querySelector("#pronto");
 const botaoIniciar = document.querySelector("#iniciar");
@@ -53,119 +38,123 @@ async function entrar() {
 
 // --- desenho --------------------------------------------------------
 
-function montarBoneco(personagem, meu) {
-  const boneco = document.createElement("div");
-  boneco.className = "boneco";
-  if (meu) boneco.classList.add("boneco--meu");
-  else if (!personagem.disponivel) boneco.classList.add("boneco--tomado");
+function elemento(tag, classe, texto) {
+  const el = document.createElement(tag);
+  if (classe) el.className = classe;
+  if (texto !== undefined) el.textContent = texto;
+  return el;
+}
 
-  const paleta = personagem.paleta || {};
-  for (const chave of CORES_DA_PALETA) {
-    if (paleta[chave]) boneco.style.setProperty(`--${chave}`, paleta[chave]);
+function montarPerfil(participante) {
+  const perfil = elemento("div", "slot__perfil");
+  perfil.appendChild(elemento("span", "slot__nome", participante.nome));
+
+  const marcas = elemento("div", "slot__marcas");
+  if (participante.dono) marcas.appendChild(elemento("span", "slot__marca slot__marca--dono", "DONO"));
+  if (participante.pronto) marcas.appendChild(elemento("span", "slot__marca slot__marca--pronto", "PRONTO"));
+  perfil.appendChild(marcas);
+
+  return perfil;
+}
+
+function montarCarrossel(participante) {
+  const carrossel = elemento("div", "carrossel");
+  carrossel.appendChild(elemento("span", "carrossel__rotulo", "personagem"));
+
+  function seta(passo, sinal, rotulo) {
+    const botao = elemento("button", "carrossel__seta", sinal);
+    botao.type = "button";
+    botao.dataset.passo = String(passo);
+    // Só o dono do lugar folheia o próprio boneco.
+    botao.disabled = !participante.sou_eu;
+    botao.setAttribute("aria-label", rotulo);
+    return botao;
   }
-  boneco.innerHTML = PECAS_DO_BONECO;
-  return boneco;
+
+  const palco = elemento("div", "carrossel__boneco");
+  if (participante.personagem?.sprite) {
+    const img = elemento("img");
+    img.src = participante.personagem.sprite;
+    img.alt = participante.personagem.nome;
+    palco.appendChild(img);
+  } else {
+    palco.appendChild(elemento("span", "carrossel__vazio", "sem boneco livre"));
+  }
+
+  const linha = elemento("div", "carrossel__linha");
+  linha.append(seta(-1, "<", "Personagem anterior"), palco, seta(1, ">", "Próximo personagem"));
+
+  carrossel.appendChild(linha);
+  return carrossel;
 }
 
-function montarCartao(personagem) {
-  const cartao = document.createElement("button");
-  cartao.type = "button";
-  cartao.className = "personagem" + (personagem.meu ? " personagem--meu" : "");
-  cartao.style.setProperty("--cor-do-personagem", personagem.cor);
-  // Já é de outra pessoa: fica à vista, mas não dá para clicar.
-  cartao.disabled = !personagem.disponivel && !personagem.meu;
-  cartao.dataset.slug = personagem.slug;
+function montarSlots(dados) {
+  const itens = [];
+  for (let lugar = 0; lugar < dados.max_jogadores; lugar += 1) {
+    const participante = dados.participantes[lugar];
 
-  const faixa = document.createElement("span");
-  faixa.className = "personagem__faixa";
-
-  const nome = document.createElement("span");
-  nome.className = "personagem__nome";
-  nome.textContent = personagem.nome;
-
-  const situacao = document.createElement("span");
-  situacao.className = "personagem__estado";
-  if (personagem.meu) situacao.textContent = "É O SEU";
-  else if (personagem.tomado_por) situacao.textContent = `DE ${personagem.tomado_por.toUpperCase()}`;
-  else situacao.textContent = personagem.descricao || "LIVRE";
-
-  cartao.append(montarBoneco(personagem, personagem.meu), faixa, nome, situacao);
-  return cartao;
-}
-
-function pintarMesa(dados) {
-  listaMesa.replaceChildren();
-
-  for (const participante of dados.participantes) {
-    const linha = document.createElement("li");
-    linha.className = "mesa__jogador" + (participante.sou_eu ? " mesa__jogador--eu" : "");
-    if (participante.personagem) {
-      linha.style.setProperty("--cor-do-personagem", participante.personagem.cor);
+    if (!participante) {
+      const vazio = elemento("li", "slot slot--vazio");
+      const perfil = elemento("div", "slot__perfil");
+      perfil.appendChild(elemento("span", "slot__mais", "+"));
+      vazio.append(perfil, elemento("span", "slot__espera", "lugar vago"));
+      itens.push(vazio);
+      continue;
     }
 
-    const nome = document.createElement("span");
-    nome.className = "mesa__nome";
-    nome.textContent = participante.personagem
-      ? `${participante.nome} · ${participante.personagem.nome}`
-      : `${participante.nome} · escolhendo...`;
-    linha.appendChild(nome);
-
-    if (participante.dono) linha.appendChild(marca("DONO", "dono"));
-    if (participante.pronto) linha.appendChild(marca("PRONTO", "pronto"));
-    listaMesa.appendChild(linha);
+    const slot = elemento("li", "slot" + (participante.sou_eu ? " slot--eu" : ""));
+    slot.append(montarPerfil(participante), montarCarrossel(participante));
+    itens.push(slot);
   }
-
-  for (let i = 0; i < dados.vagas; i += 1) {
-    const vaga = document.createElement("li");
-    vaga.className = "mesa__vaga";
-    vaga.textContent = "vaga aberta";
-    listaMesa.appendChild(vaga);
-  }
-}
-
-function marca(texto, tipo) {
-  const span = document.createElement("span");
-  span.className = `mesa__marca mesa__marca--${tipo}`;
-  span.textContent = texto;
-  return span;
+  fila.replaceChildren(...itens);
 }
 
 function pintar(dados) {
   estado = dados;
-  grade.replaceChildren(...dados.personagens.map(montarCartao));
-  pintarMesa(dados);
+  montarSlots(dados);
 
   const eu = dados.participantes.find((p) => p.sou_eu);
-  const escolhi = Boolean(eu?.personagem);
-
-  botaoPronto.disabled = !escolhi;
+  botaoPronto.disabled = !eu?.personagem;
   botaoPronto.textContent = eu?.pronto ? "NÃO ESTOU PRONTO" : "ESTOU PRONTO";
   botaoIniciar.hidden = !dados.sou_dono;
-
-  aviso.textContent = mensagemDeEspera(dados, escolhi);
+  aviso.textContent = mensagemDeEspera(dados);
 }
 
-function mensagemDeEspera(dados, escolhi) {
-  if (!escolhi) return `Escolha um dos ${dados.disponiveis} bonecos livres.`;
+function mensagemDeEspera(dados) {
   if (dados.participantes.length < 2) {
     return `Passe o código ${dados.codigo} para alguém entrar. Faltam jogadores.`;
   }
-  if (!dados.pode_iniciar) return "Esperando todo mundo escolher e ficar pronto.";
+  if (!dados.pode_iniciar) return "Esperando todo mundo ficar pronto.";
   return "Todo mundo pronto. O tabuleiro entra na próxima fase do projeto.";
 }
 
-// --- ações ----------------------------------------------------------
+// --- trocar de boneco ------------------------------------------------
 
-grade.addEventListener("click", async (evento) => {
-  const cartao = evento.target.closest(".personagem");
-  if (!cartao || cartao.disabled) return;
+/** Só entram na roda os bonecos livres e o que já é meu. */
+function vizinho(passo) {
+  const opcoes = estado.personagens.filter((p) => p.disponivel || p.meu);
+  if (!opcoes.length) return null;
+  const atual = opcoes.findIndex((p) => p.meu);
+  if (atual < 0) return opcoes[0].slug;
+  return opcoes[(atual + passo + opcoes.length) % opcoes.length].slug;
+}
+
+fila.addEventListener("click", async (evento) => {
+  const seta = evento.target.closest(".carrossel__seta");
+  if (!seta || seta.disabled || !estado) return;
+
+  const alvo = vizinho(Number(seta.dataset.passo));
+  if (!alvo) return;
+
   try {
-    pintar(await api.escolherPersonagem(codigo, cartao.dataset.slug));
+    pintar(await api.escolherPersonagem(codigo, alvo));
   } catch (erro) {
     toast(erro.message, "erro");
     atualizar(); // alguém pegou antes: reflete o estado real na hora
   }
 });
+
+// --- ações ------------------------------------------------------------
 
 botaoPronto.addEventListener("click", async () => {
   const eu = estado?.participantes.find((p) => p.sou_eu);
@@ -196,7 +185,7 @@ document.querySelector("#voltar").addEventListener("click", async () => {
   location.href = "/";
 });
 
-// --- consulta periódica ---------------------------------------------
+// --- consulta periódica -----------------------------------------------
 
 async function atualizar() {
   if (document.hidden) return;

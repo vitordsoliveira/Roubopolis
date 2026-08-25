@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Roubodopolis</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="preload" href="/assets/fontes/VCRosdNEUE.ttf" as="font" type="font/ttf" crossorigin>
 
   <link rel="stylesheet" href="/css/base/reset.css">
   <link rel="stylesheet" href="/css/base/variaveis.css">
@@ -20,27 +18,31 @@
 
 <body class="tema-verde">
 
-  <!-- Cenário desenhado em CSS. Some quando a arte final chegar. -->
-  <div class="cenario" aria-hidden="true">
-    <div class="cenario__cidade cenario__cidade--fundo"></div>
-    <div class="cenario__cidade"></div>
-    <span class="nuvem nuvem--a"></span>
-    <span class="nuvem nuvem--b"></span>
-    <span class="nuvem nuvem--c"></span>
+  <div class="cenario cenario--verde" aria-hidden="true">
     <div class="cenario__scanlines"></div>
   </div>
+
+  <!-- Antes do conteúdo no DOM: assim ficam por baixo do menu. -->
+  <img class="enfeite enfeite--dinheiro-a enfeite--flutua" src="/assets/objetos/dinheiro.png" alt="" aria-hidden="true">
+  <img class="enfeite enfeite--dinheiro-b enfeite--flutua" src="/assets/objetos/dinheiro.png" alt="" aria-hidden="true">
+  <img class="enfeite enfeite--dinheiro-c enfeite--flutua" src="/assets/objetos/dinheiro.png" alt="" aria-hidden="true">
+  <img class="enfeite enfeite--colar" src="/assets/objetos/colar.png" alt="" aria-hidden="true">
+  <img class="enfeite enfeite--detetive" src="/assets/objetos/detetive.png" alt="" aria-hidden="true">
 
   <main class="tela">
     <div class="menu">
 
-      <header class="menu__cabecalho">
-        <h1 class="logo neon">ROUBODOPOLIS</h1>
+      <header class="marquise">
+        <img class="marquise__oculos" src="/assets/objetos/oculos.png" alt="" aria-hidden="true">
+        <img class="marquise__figura marquise__figura--esq" src="/assets/objetos/policial.png" alt="" aria-hidden="true">
+        <img class="marquise__logo" src="/assets/logo/roubodopolis.png" alt="Roubodopolis">
+        <img class="marquise__figura marquise__figura--dir" src="/assets/objetos/mulher.png" alt="" aria-hidden="true">
       </header>
 
       <section class="menu__identidade">
         <label class="rotulo" for="nome">Seu nome</label>
         <input
-          class="campo"
+          class="campo campo--placa"
           id="nome"
           type="text"
           maxlength="16"
@@ -52,18 +54,28 @@
       </section>
 
       <nav class="menu__opcoes" id="opcoes" aria-label="Menu principal">
-        <button class="opcao" type="button" data-acao="jogar">Jogar</button>
-        <button class="opcao opcao--secundario" type="button" data-acao="abrir-codigo">
+        <button class="opcao" type="button" data-acao="jogar">
+          <img src="/assets/menu/jogar.png" alt="Jogar">
+        </button>
+        <button class="opcao opcao--texto" type="button" data-acao="abrir-codigo">
           Entrar com código
         </button>
-        <button class="opcao opcao--dormindo" type="button" data-acao="amigos">Amigos</button>
-        <button class="opcao opcao--dormindo" type="button" data-acao="loja">Loja</button>
-        <button class="opcao" type="button" data-acao="config">Configuração</button>
-        <button class="opcao" type="button" data-acao="sair">Sair</button>
+        <button class="opcao opcao--dormindo" type="button" data-acao="amigos">
+          <img src="/assets/menu/amigos.png" alt="Amigos">
+        </button>
+        <button class="opcao opcao--dormindo" type="button" data-acao="loja">
+          <img src="/assets/menu/loja.png" alt="Loja">
+        </button>
+        <button class="opcao" type="button" data-acao="config">
+          <img src="/assets/menu/configuracao.png" alt="Configuração">
+        </button>
+        <button class="opcao" type="button" data-acao="sair">
+          <img src="/assets/menu/sair.png" alt="Sair">
+        </button>
       </nav>
 
     </div>
-    <p class="menu__rodape">v0.1 — nome e lobby</p>
+    <p class="menu__rodape">v0.1 - nome e lobby</p>
   </main>
 
   <!-- Entrar numa sala de amigo -->

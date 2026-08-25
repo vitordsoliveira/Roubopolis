@@ -1,47 +1,40 @@
-/* Fundo das telas: céu, duas camadas de prédios e as linhas de varredura.
-   Tudo desenhado em CSS enquanto a arte final não entra em client/assets/.
-   Quando os PNGs chegarem, troque os background-image e apague o clip-path. */
+/* Fundo das telas: a cidade recolorida, as nuvens e as linhas de varredura.
+   As imagens saem de ferramentas/preparar_assets.py — a mesma arte base
+   (CIDADE VETOR) pintada com a paleta de cada referência. */
 
 .cenario {
   position: fixed;
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    var(--fundo-topo) 0%,
-    var(--fundo-meio) 48%,
-    var(--fundo-baixo) 100%
-  );
+  background-color: var(--fundo-topo);
+  background-position: center bottom;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
-/* Silhueta recortada com clip-path: cada par de pontos é um prédio. */
-.cenario__cidade {
+.cenario--verde {
+  background-image: url("/assets/cenario/cidade-verde.png");
+}
+
+.cenario--laranja {
+  background-image: url("/assets/cenario/cidade-laranja.png");
+}
+
+/* Nuvens em faixa, atravessando devagar. */
+.cenario__nuvens {
   position: absolute;
-  inset: auto 0 0 0;
-  height: 62%;
-  /* A grade de janelas nasce de duas camadas: faixas horizontais opacas na
-     cor do prédio por cima, colunas acesas por baixo. Onde a faixa é
-     transparente, a janela aparece. */
-  background:
-    repeating-linear-gradient(0deg, var(--predio) 0 14px, transparent 14px 26px),
-    repeating-linear-gradient(90deg, transparent 0 10px, var(--janela) 10px 18px, transparent 18px 30px),
-    var(--predio);
-  clip-path: polygon(
-    0% 55%, 5% 55%, 5% 30%, 11% 30%, 11% 62%, 16% 62%, 16% 20%, 22% 20%,
-    22% 48%, 28% 48%, 28% 8%, 34% 8%, 34% 40%, 39% 40%, 39% 66%, 45% 66%,
-    45% 26%, 52% 26%, 52% 54%, 58% 54%, 58% 14%, 64% 14%, 64% 44%, 70% 44%,
-    70% 70%, 75% 70%, 75% 32%, 82% 32%, 82% 58%, 88% 58%, 88% 22%, 94% 22%,
-    94% 50%, 100% 50%, 100% 100%, 0% 100%
-  );
+  top: 6%;
+  left: 0;
+  width: 190%;
+  max-width: none;
+  opacity: 0.55;
+  animation: nuvens-passam 90s linear infinite;
 }
 
-/* Camada de trás: mesma silhueta deslocada, mais clara e mais baixa. */
-.cenario__cidade--fundo {
-  height: 48%;
-  opacity: 0.55;
-  background: var(--predio-fundo);
-  transform: translateX(-6%);
+@keyframes nuvens-passam {
+  from { transform: translateX(0); }
+  to { transform: translateX(-47.4%); } /* metade da imagem: emenda invisível */
 }
 
 /* As linhas horizontais que a arte tem por cima de tudo. */
@@ -51,32 +44,9 @@
   pointer-events: none;
   background: repeating-linear-gradient(
     0deg,
-    rgba(0, 0, 0, 0.11) 0 2px,
+    rgba(0, 0, 0, 0.10) 0 2px,
     transparent 2px 4px
   );
-}
-
-/* Nuvens pixeladas: blocos simples, sem borda arredondada. */
-.nuvem {
-  position: absolute;
-  width: 46px;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow:
-    12px -10px 0 0 rgba(255, 255, 255, 0.85),
-    26px -10px 0 -2px rgba(255, 255, 255, 0.85);
-  animation: nuvem-passa 42s linear infinite;
-}
-
-.nuvem--a { top: 12%; left: -10%; --escala: 1;   animation-duration: 52s; }
-.nuvem--b { top: 24%; left: -25%; --escala: 0.7; animation-duration: 68s; }
-.nuvem--c { top: 7%;  left: -45%; --escala: 1.3; animation-duration: 44s; }
-
-/* O tamanho entra nos keyframes: se ficasse só na classe, a animação de
-   translate sobrescreveria o transform inteiro e a escala sumiria. */
-@keyframes nuvem-passa {
-  from { transform: translateX(0) scale(var(--escala, 1)); }
-  to   { transform: translateX(160vw) scale(var(--escala, 1)); }
 }
 
 /* Conteúdo de qualquer tela fica acima do cenário. */
@@ -85,4 +55,35 @@
   z-index: 1;
   height: 100%;
   overflow-y: auto;
+  /* As figuras decoradas passam de propósito das bordas laterais; sem isto
+     elas geram uma barra de rolagem horizontal. */
+  overflow-x: hidden;
+}
+
+/* --- objetos soltos (dinheiro, colar, detetive) -------------------- */
+
+.enfeite {
+  position: fixed;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+  transform: rotate(var(--giro, 0deg));
+}
+
+.enfeite--flutua {
+  animation: flutuar 7s ease-in-out infinite alternate;
+}
+
+/* O giro entra nos keyframes porque a animação substitui o transform
+   inteiro — se ficasse só na classe, a inclinação sumiria ao animar. */
+@keyframes flutuar {
+  from { transform: rotate(var(--giro, 0deg)) translateY(0); }
+  to   { transform: rotate(var(--giro, 0deg)) translateY(-18px); }
+}
+
+@media (max-width: 900px) {
+  /* Em tela estreita os enfeites brigam com o conteúdo. */
+  .enfeite {
+    display: none;
+  }
 }

@@ -1,11 +1,14 @@
-/* Lobby: código da sala, os quatro bonecos e quem já está na mesa. */
+/* Lobby no formato do wireframe: VOLTAR no topo, a fila de lugares dos
+   jogadores com o carrossel de boneco embaixo de cada um, e as ações no pé.
+   O código da sala não está no wireframe, mas sem ele ninguém entra —
+   ficou no canto oposto ao VOLTAR. */
 
 .lobby {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--e4);
-  padding: var(--e3) var(--e4) var(--e6);
+  gap: clamp(var(--e3), 3vh, var(--e5));
+  padding: var(--e3) clamp(var(--e3), 3vw, var(--e5)) var(--e3);
 }
 
 .lobby__topo {
@@ -21,167 +24,56 @@
   align-items: center;
   gap: var(--e2);
   padding: var(--e2) var(--e3);
-  background: rgba(22, 16, 31, 0.55);
+  background: var(--contraste);
   border: 3px solid var(--branco);
 }
 
 .lobby__codigo strong {
-  font-size: clamp(0.8rem, 2.4vw, 1.3rem);
+  font-size: clamp(1.2rem, 2.4vw, 1.95rem);
   letter-spacing: 0.28em;
   color: var(--amarelo);
 }
 
-.lobby__corpo {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(240px, 1fr);
-  gap: var(--e4);
-  align-items: start;
-}
-
-/* --- os quatro bonecos ------------------------------------------- */
-
-.personagens {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--e3);
-  margin-top: var(--e3);
-}
-
-.personagem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--e2);
-  padding: var(--e3) var(--e2);
-  background: rgba(255, 255, 255, 0.9);
-  border: var(--borda) solid var(--preto);
-  box-shadow: var(--sombra-dura);
-  transition: transform 0.1s steps(3), box-shadow 0.1s steps(3);
-}
-
-.personagem:hover:not(:disabled),
-.personagem:focus-visible {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 0 rgba(0, 0, 0, 0.35);
-  outline: none;
-}
-
-/* Escolhido por outra pessoa: continua visível, mas fora de alcance. */
-.personagem:disabled {
-  cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.42);
-  box-shadow: none;
-  transform: none;
-}
-
-.personagem--meu {
-  background: var(--amarelo);
-  border-color: var(--roxo);
-  box-shadow: 0 8px 0 var(--roxo), 0 0 26px var(--verde-neon);
-}
-
-.personagem__nome {
-  font-size: clamp(0.5rem, 1.3vw, 0.75rem);
-  text-transform: uppercase;
-  color: var(--preto);
-}
-
-.personagem__estado {
-  font-size: clamp(0.36rem, 0.95vw, 0.5rem);
-  text-align: center;
-  line-height: 1.7;
-  color: var(--roxo);
-  min-height: 2.6em;
-}
-
-.personagem__faixa {
-  width: 100%;
-  height: 6px;
-  background: var(--cor-do-personagem, var(--roxo));
-}
-
-/* --- painel de quem está na sala --------------------------------- */
-
-.mesa {
-  padding: var(--e3);
-  background: rgba(22, 16, 31, 0.62);
-  border: 3px solid var(--branco);
-}
-
-.mesa__titulo {
-  font-size: clamp(0.5rem, 1.3vw, 0.7rem);
-  text-transform: uppercase;
-  color: var(--amarelo);
-  margin-bottom: var(--e3);
-  text-align: center;
-}
-
-.mesa__lista {
-  display: flex;
-  flex-direction: column;
-  gap: var(--e2);
-}
-
-.mesa__jogador {
-  display: flex;
-  align-items: center;
-  gap: var(--e2);
-  padding: var(--e2);
-  font-size: clamp(0.42rem, 1.1vw, 0.58rem);
-  background: rgba(255, 255, 255, 0.12);
-  border-left: 6px solid var(--cor-do-personagem, var(--cinza));
-}
-
-.mesa__jogador--eu {
-  background: rgba(255, 217, 61, 0.22);
-}
-
-.mesa__nome {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mesa__marca {
-  font-size: 0.72em;
-  padding: 2px 6px;
-  border: 2px solid currentColor;
-}
-
-.mesa__marca--pronto { color: var(--verde-neon); }
-.mesa__marca--dono   { color: var(--amarelo); }
-
-.mesa__vaga {
-  padding: var(--e2);
-  font-size: clamp(0.42rem, 1.1vw, 0.58rem);
-  text-align: center;
-  color: rgba(255, 255, 255, 0.5);
-  border: 2px dashed rgba(255, 255, 255, 0.35);
-}
-
-/* --- rodapé de ações --------------------------------------------- */
+/* --- pé da tela ---------------------------------------------------- */
 
 .lobby__acoes {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: space-between;
   gap: var(--e3);
   flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.lobby__botoes {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  margin-left: auto;
 }
 
 .lobby__aviso {
-  width: 100%;
-  text-align: center;
-  font-size: clamp(0.4rem, 1vw, 0.55rem);
-  color: rgba(255, 255, 255, 0.75);
+  flex: 1 1 260px;
+  font-size: clamp(0.6rem, 1vw, 0.83rem);
+  color: var(--branco);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }
 
-@media (max-width: 900px) {
-  .lobby__corpo {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .personagens {
+@media (max-width: 760px) {
+  .slots {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--e4);
+  }
+
+  .lobby__acoes {
+    justify-content: center;
+  }
+
+  .lobby__botoes {
+    margin-left: 0;
+  }
+
+  .lobby__aviso {
+    text-align: center;
   }
 }

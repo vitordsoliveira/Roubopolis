@@ -11,7 +11,6 @@ o que permite rodar simulação sem banco nenhum.
 from __future__ import annotations
 
 import enum
-import json
 import secrets
 from datetime import datetime
 
@@ -22,8 +21,6 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    Text,
-    TypeDecorator,
     UniqueConstraint,
     func,
 )
@@ -38,29 +35,6 @@ ARGS_MYSQL = {
     "mysql_charset": "utf8mb4",
     "mysql_collate": "utf8mb4_unicode_ci",
 }
-
-
-class TextoJSON(TypeDecorator):
-    """Dicionário guardado como TEXT.
-
-    O tipo JSON nativo só apareceu no MariaDB 10.2 — e mesmo lá é apenas um
-    apelido de LONGTEXT. Guardar como TEXT funciona em qualquer versão do
-    MySQL/MariaDB e também em SQLite, sem perder nada.
-    """
-
-    impl = Text
-    cache_ok = True
-
-    def process_bind_param(self, valor, dialeto):
-        return json.dumps(valor or {}, ensure_ascii=False)
-
-    def process_result_value(self, valor, dialeto):
-        if not valor:
-            return {}
-        try:
-            return json.loads(valor)
-        except (TypeError, ValueError):
-            return {}
 
 
 class StatusSala(str, enum.Enum):
@@ -122,10 +96,9 @@ class Personagem(Base):
     slug: Mapped[str] = mapped_column(String(40), nullable=False, unique=True)
     nome: Mapped[str] = mapped_column(String(40), nullable=False)
     descricao: Mapped[str | None] = mapped_column(String(180))
+    # Cor de identificação do jogador: borda do cartão, painel da mesa e,
+    # mais tarde, o peão no tabuleiro.
     cor: Mapped[str] = mapped_column(String(7), nullable=False, default="#ffd93d")
-    # Paleta do boneco desenhado em CSS enquanto a arte final não chega.
-    # Quando o PNG existir, `sprite` assume e a paleta vira só fallback.
-    paleta: Mapped[dict] = mapped_column(TextoJSON, nullable=False, default=dict)
     sprite: Mapped[str | None] = mapped_column(String(160))
     # Passiva ainda não definida nas regras: fica nulo até existir em passivas.json.
     passiva: Mapped[str | None] = mapped_column(String(40))
@@ -138,7 +111,6 @@ class Personagem(Base):
             "nome": self.nome,
             "descricao": self.descricao,
             "cor": self.cor,
-            "paleta": self.paleta or {},
             "sprite": self.sprite,
         }
 

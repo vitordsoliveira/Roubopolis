@@ -1,19 +1,28 @@
-/* A fonte vem do Google Fonts (link no <head>). Sem internet, o navegador
-   cai no monospace e o layout continua de pé — só perde o charme. */
+/* A fonte do jogo é a VCR OSD Neue, a mesma das telas de referência.
+   Vem do próprio servidor (fontes/ -> client/assets/fontes/), então funciona
+   offline e sem depender do Google Fonts. */
+
+@font-face {
+  font-family: "VCR OSD Neue";
+  src: url("/assets/fontes/VCRosdNEUE.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
-  --fonte-pixel: "Press Start 2P", "Courier New", monospace;
+  --fonte-pixel: "VCR OSD Neue", "Courier New", monospace;
 }
 
 body {
   font-family: var(--fonte-pixel);
   color: var(--texto);
-  -webkit-font-smoothing: none;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   line-height: 1.6;
 }
 
-/* Contorno roxo + brilho neon: é o tratamento do logo na arte. */
+/* Contorno roxo + brilho neon: é o tratamento do logo na arte.
+   Sobrou para títulos escritos em texto, já que o logo em si é imagem. */
 .neon {
   color: var(--amarelo);
   text-shadow:
@@ -26,35 +35,23 @@ body {
     0 0 44px rgba(57, 255, 20, 0.5);
 }
 
-.logo {
-  font-size: clamp(1.4rem, 5.2vw, 3.6rem);
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-}
-
-/* Versão menor, para o cabeçalho do lobby. */
-.logo--pequeno {
-  font-size: clamp(0.85rem, 2.4vw, 1.4rem);
-}
-
 .titulo-secao {
-  font-size: clamp(0.6rem, 1.7vw, 1rem);
+  font-size: clamp(0.95rem, 2.4vw, 1.5rem);
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   text-align: center;
   color: var(--branco);
   text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
 }
 
 .rotulo {
-  font-size: clamp(0.5rem, 1.2vw, 0.7rem);
+  font-size: clamp(0.78rem, 1.7vw, 1rem);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   opacity: 0.85;
 }
 
 .texto-miudo {
-  font-size: clamp(0.45rem, 1.1vw, 0.62rem);
-  line-height: 1.9;
+  font-size: clamp(0.7rem, 1.5vw, 0.9rem);
+  line-height: 1.8;
 }

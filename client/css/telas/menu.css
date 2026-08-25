@@ -1,54 +1,119 @@
-/* Tela inicial: logo, o nome do jogador e a lista de opções. */
+/* Tela inicial, seguindo a referência img/objetos/Roubodopolis.png:
+   logo com o policial e a mulher apoiados nele, óculos por cima, e a lista
+   de opções centralizada. O campo de nome não existe na referência — foi
+   encaixado logo abaixo do logo, usando a mesma placa branca da arte. */
 
 .menu {
   min-height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* `safe center` centraliza quando cabe e volta a alinhar pelo topo quando
+     não cabe. Com `center` puro o excesso vaza para CIMA também, e as
+     cabeças do policial e da mulher ficavam cortadas pela borda. */
   justify-content: center;
-  gap: var(--e5);
-  padding: var(--e5) var(--e3);
+  justify-content: safe center;
+  gap: clamp(var(--e2), 2.2vh, var(--e4));
+  padding: var(--e3) var(--e3) var(--e4);
 }
 
-.menu__cabecalho {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--e2);
+/* --- logo com as figuras apoiadas -------------------------------- */
+
+/* Tudo aqui é medido a partir da largura do bloco, não da altura: o logo
+   tem proporção fixa, então uma medida só mantém as peças alinhadas em
+   qualquer tela. */
+.marquise {
+  /* Limitado também pela ALTURA da janela: o conjunto tem proporção fixa,
+     então travar só pela largura fazia ele estourar em telas baixas e
+     largas — que é o caso de qualquer notebook. */
+  --largura: min(660px, 82vw, 68vh);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--largura);
+  /* Faixa reservada para o policial, a mulher e os óculos, que sobem acima
+     do logo. Sem ela, como são posicionados de forma absoluta, não ocupam
+     espaço no layout e saem cortados pela borda de cima da tela. */
+  padding-top: calc(var(--largura) * 0.2);
+  flex-shrink: 0;
 }
 
-/* Bloco do nome: é a primeira coisa que a pessoa faz no jogo. */
+.marquise__logo {
+  width: 100%;
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.28));
+}
+
+/* De pé sobre a base do logo, encostados nas pontas — não por cima das
+   letras. O recuo negativo é a largura de cada figura. */
+.marquise__figura {
+  position: absolute;
+  bottom: 0;
+  height: calc(var(--largura) * 0.31);
+  width: auto;
+}
+
+.marquise__figura--esq { left: -14%; }
+.marquise__figura--dir { right: -17%; }
+
+/* Inteiramente acima do logo, dentro da faixa reservada, na mesma altura
+   da cabeça das duas figuras. */
+.marquise__oculos {
+  position: absolute;
+  top: calc(var(--largura) * 0.05);
+  left: 50%;
+  width: calc(var(--largura) * 0.24);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.25));
+}
+
+/* --- nome do jogador --------------------------------------------- */
+
 .menu__identidade {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--e2);
-  width: min(340px, 90vw);
+  width: min(360px, 88vw);
 }
 
 .menu__identidade .rotulo {
   color: var(--preto);
-  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.6);
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.65);
+}
+
+/* O campo herda a placa branca rasgada da arte. */
+.campo--placa {
+  background: url("/assets/ui/placa.png") center / 100% 100% no-repeat;
+  border: none;
+  box-shadow: none;
+  color: var(--roxo);
+  padding: var(--e3) var(--e4);
+}
+
+.campo--placa:focus {
+  box-shadow: none;
+  filter: drop-shadow(0 0 10px var(--verde-neon));
 }
 
 .menu__dica {
   min-height: 1.4em;
-  font-size: clamp(0.42rem, 1vw, 0.56rem);
+  font-size: clamp(0.63rem, 1vw, 0.84rem);
   text-align: center;
   color: var(--roxo);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .menu__dica--erro {
-  color: #b3123f;
+  color: #a30f36;
 }
+
+/* --- lista de opções ---------------------------------------------- */
 
 .menu__opcoes {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--e2);
-  width: min(460px, 92vw);
-  text-align: center;
+  gap: clamp(2px, 0.6vh, 8px);
 }
 
 /* O cursor de seta da arte, aparecendo no item sob o ponteiro. */
@@ -61,10 +126,10 @@
   content: "";
   position: absolute;
   top: 50%;
-  right: -26px;
+  right: -22px;
   width: 0;
   height: 0;
-  border: 9px solid transparent;
+  border: 8px solid transparent;
   border-right-color: var(--preto);
   transform: translateY(-50%);
 }
@@ -74,15 +139,34 @@
   left: 0;
   right: 0;
   bottom: var(--e2);
+  z-index: 2;
   text-align: center;
-  font-size: 0.42rem;
+  font-size: 0.63rem;
   letter-spacing: 0.2em;
-  color: rgba(22, 16, 31, 0.45);
+  color: rgba(22, 16, 31, 0.42);
 }
 
-@media (max-height: 620px) {
+/* --- objetos espalhados ------------------------------------------- */
+
+.enfeite--dinheiro-a { top: 5%;   left: 4%;   width: 84px; --giro: -18deg; }
+.enfeite--dinheiro-b { top: 22%;  right: 5%;  width: 96px; --giro: 14deg; }
+.enfeite--dinheiro-c { bottom: 9%; left: 7%;  width: 74px; --giro: 24deg; }
+.enfeite--detetive   { bottom: 0;  right: 2%; height: 34vh; }
+
+/* O colar fica na margem direita, entre o dinheiro e o detetive. Atravessando
+   o centro ele cortava a lista de opções no meio. */
+.enfeite--colar {
+  top: 30%;
+  right: 7%;
+  width: 250px;
+  opacity: 0.75;
+  --giro: 16deg;
+}
+
+/* Telas muito baixas: o vh já encolhe o logo, aqui só apertamos o resto. */
+@media (max-height: 560px) {
   .menu {
-    gap: var(--e3);
-    justify-content: flex-start;
+    gap: var(--e1);
+    padding-top: var(--e2);
   }
 }

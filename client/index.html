@@ -110,15 +110,11 @@
         <span>Som</span>
         <button class="interruptor" type="button" id="som" aria-pressed="true">Ligado</button>
       </div>
-      <div class="painel__linha">
-        <span>Meus dados neste navegador</span>
-        <button class="interruptor" type="button" id="esquecer">Apagar</button>
-      </div>
-
-      <p class="texto-miudo" style="margin-top:var(--e3);opacity:.6">
-        “Apagar” remove apenas a sessão salva neste navegador.
-      </p>
-
+      <label class="painel__linha controle-volume" for="volume-som">
+        <span>Volume dos efeitos</span>
+        <span class="controle-volume__valor" id="valor-volume-som">100%</span>
+        <input id="volume-som" type="range" min="0" max="100" step="5" value="100">
+      </label>
       <div class="painel__acoes">
         <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
       </div>

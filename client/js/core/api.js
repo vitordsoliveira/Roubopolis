@@ -5,6 +5,7 @@
 const CHAVE_TOKEN = "roubopolis.token";
 const CHAVE_NOME = "roubopolis.nome";
 const CHAVE_SOM = "roubopolis.som";
+const CHAVE_VOLUME_SOM = "roubopolis.volume-som";
 const CHAVE_ABA = "roubopolis.aba-propria";
 
 /* Abas do mesmo navegador dividem o localStorage — duas abas seriam sempre o
@@ -48,9 +49,11 @@ export const guardado = {
   token: () => ler(CHAVE_TOKEN),
   nome: () => ler(CHAVE_NOME),
   som: () => ler(CHAVE_SOM, "1") === "1",
+  volumeSom: () => Number(ler(CHAVE_VOLUME_SOM, "100")),
   salvarToken: (valor) => gravar(CHAVE_TOKEN, valor),
   salvarNome: (valor) => gravar(CHAVE_NOME, valor),
   salvarSom: (ligado) => gravar(CHAVE_SOM, ligado ? "1" : "0"),
+  salvarVolumeSom: (valor) => gravar(CHAVE_VOLUME_SOM, String(valor)),
   esquecer: () => {
     apagar(CHAVE_TOKEN);
     apagar(CHAVE_NOME);

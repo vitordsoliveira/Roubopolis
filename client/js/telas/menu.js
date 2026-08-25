@@ -1,6 +1,7 @@
 /* Tela inicial: guarda o nome e cria (ou entra em) uma sala. */
 
 import { api, guardado } from "../core/api.js";
+import { som } from "../core/som.js";
 import { toast } from "../ui/toast.js";
 
 const campoLogin = document.querySelector("#login");
@@ -15,6 +16,8 @@ const painelCodigo = document.querySelector("#painel-codigo");
 const campoCodigo = document.querySelector("#codigo");
 const painelConfig = document.querySelector("#painel-config");
 const botaoSom = document.querySelector("#som");
+const controleVolumeSom = document.querySelector("#volume-som");
+const valorVolumeSom = document.querySelector("#valor-volume-som");
 
 let ocupado = false;
 let modo = "entrar";
@@ -142,6 +145,7 @@ function jogar() {
   return comIndicador(async () => {
     await api.identificar(nome);
     const sala = await api.criarSala();
+    await new Promise((resolver) => setTimeout(resolver, 140));
     window.location.href = `/lobby?codigo=${sala.codigo}`;
   });
 }
@@ -197,18 +201,27 @@ function pintarSom() {
 }
 pintarSom();
 
+function pintarVolumeSom() {
+  const volume = guardado.volumeSom();
+  controleVolumeSom.value = String(volume);
+  valorVolumeSom.textContent = `${volume}%`;
+}
+pintarVolumeSom();
+
 botaoSom.addEventListener("click", () => {
-  guardado.salvarSom(!guardado.som());
+  const ligado = !guardado.som();
+  guardado.salvarSom(ligado);
   pintarSom();
+  if (ligado) som.tocar("confirmar");
 });
 
-document.querySelector("#esquecer").addEventListener("click", () => {
-  guardado.esquecer();
-  campoNome.value = "";
-  fechar(painelConfig);
-  toast("Seus dados neste navegador foram apagados.", "ok");
-  campoNome.focus();
+controleVolumeSom.addEventListener("input", () => {
+  const volume = Number(controleVolumeSom.value);
+  guardado.salvarVolumeSom(volume);
+  valorVolumeSom.textContent = `${volume}%`;
 });
+
+controleVolumeSom.addEventListener("change", () => som.tocar("clique"));
 
 // --- roteamento dos cliques ----------------------------------------
 
@@ -229,6 +242,17 @@ const acoes = {
 document.addEventListener("click", (evento) => {
   const alvo = evento.target.closest("[data-acao]");
   if (!alvo) return;
+  const tipoSom = {
+    jogar: "confirmar",
+    "abrir-codigo": "confirmar",
+    "entrar-codigo": "confirmar",
+    config: "confirmar",
+    fechar: "voltar",
+    amigos: "clique",
+    loja: "clique",
+    sair: "voltar",
+  }[alvo.dataset.acao];
+  som.tocar(tipoSom);
   acoes[alvo.dataset.acao]?.(alvo);
 });
 

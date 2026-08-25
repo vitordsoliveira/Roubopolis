@@ -29,6 +29,7 @@
 
 .painel__titulo {
   font-size: clamp(1.05rem, 1.9vw, 1.5rem);
+  line-height: 1.9;
   text-transform: uppercase;
   text-align: center;
   color: var(--roxo);
@@ -42,11 +43,39 @@
   gap: var(--e3);
   padding: var(--e2) 0;
   font-size: clamp(0.75rem, 1.2vw, 1.02rem);
+  line-height: 1.9;
   border-bottom: 2px dashed rgba(22, 16, 31, 0.2);
+}
+
+.painel__linha > span {
+  display: inline-block;
+  min-height: 1.9em;
+  padding-block: 3px;
+  font-family: Tahoma, sans-serif;
+  font-weight: bold;
+  letter-spacing: 0;
+  line-height: 1.4;
+  overflow: visible;
 }
 
 .painel__linha:last-of-type {
   border-bottom: none;
+}
+
+.controle-volume {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.controle-volume input {
+  width: 100%;
+  grid-column: 1 / -1;
+  accent-color: var(--roxo);
+}
+
+.controle-volume__valor {
+  color: var(--roxo);
+  font-weight: bold;
 }
 
 .painel__acoes {

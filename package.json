@@ -1,7 +1,7 @@
 {
-  "name": "roubodopolis",
+  "name": "roubopolis",
   "version": "0.1.0",
-  "description": "Casca desktop do Roubodopolis. A janela abre o servidor do jogo; a lógica toda vive no Flask.",
+  "description": "Casca desktop do roubopolis. A janela abre o servidor do jogo; a lógica toda vive no Flask.",
   "author": "vitordsoliveira",
   "license": "UNLICENSED",
   "private": true,
@@ -16,8 +16,8 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.gteltestes.roubodopolis",
-    "productName": "Roubodopolis",
+    "appId": "com.gteltestes.roubopolis",
+    "productName": "roubopolis",
     "directories": {
       "output": "dist-desktop"
     },
@@ -34,7 +34,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "Roubodopolis"
+      "shortcutName": "roubopolis"
     }
   }
 }

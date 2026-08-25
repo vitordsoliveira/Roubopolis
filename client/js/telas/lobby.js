@@ -48,15 +48,33 @@ function elemento(tag, classe, texto) {
   return el;
 }
 
-function montarPerfil(participante) {
-  const perfil = elemento("div", "slot__perfil");
-  perfil.appendChild(elemento("span", "slot__nome", participante.nome));
+/* A ordem no DOM é a ordem na tela: marcas em cima, o quadro com a foto no
+   meio, o nome embaixo. As marcas ficam num elemento próprio mesmo quando
+   não há nenhuma, senão os lugares desalinhavam entre si. */
 
+function montarMarcas(participante) {
   const marcas = elemento("div", "slot__marcas");
-  if (participante.dono) marcas.appendChild(elemento("span", "slot__marca slot__marca--dono", "DONO"));
-  if (participante.pronto) marcas.appendChild(elemento("span", "slot__marca slot__marca--pronto", "PRONTO"));
-  perfil.appendChild(marcas);
+  if (participante?.dono) {
+    marcas.appendChild(elemento("span", "slot__marca slot__marca--dono", "DONO"));
+  }
+  if (participante?.pronto) {
+    marcas.appendChild(elemento("span", "slot__marca slot__marca--pronto", "PRONTO"));
+  }
+  return marcas;
+}
 
+function montarQuadro(participante) {
+  const perfil = elemento("div", "slot__perfil");
+  if (participante.foto) {
+    const img = elemento("img", "slot__foto");
+    img.src = participante.foto;
+    img.alt = `Foto de ${participante.nome}`;
+    perfil.appendChild(img);
+  } else {
+    // Sem foto, a inicial do nome — mesma solução do atalho no menu.
+    const inicial = (participante.nome || "?").trim().charAt(0);
+    perfil.appendChild(elemento("span", "slot__inicial", inicial));
+  }
   return perfil;
 }
 
@@ -100,13 +118,20 @@ function montarSlots(dados) {
       const vazio = elemento("li", "slot slot--vazio");
       const perfil = elemento("div", "slot__perfil");
       perfil.appendChild(elemento("span", "slot__mais", "+"));
-      vazio.append(perfil, elemento("span", "slot__espera", "lugar vago"));
+      // Marcas vazias no topo para o quadro vago ficar na mesma altura
+      // dos ocupados.
+      vazio.append(montarMarcas(null), perfil, elemento("span", "slot__nome slot__espera", "lugar vago"));
       itens.push(vazio);
       continue;
     }
 
     const slot = elemento("li", "slot" + (participante.sou_eu ? " slot--eu" : ""));
-    slot.append(montarPerfil(participante), montarCarrossel(participante));
+    slot.append(
+      montarMarcas(participante),
+      montarQuadro(participante),
+      elemento("span", "slot__nome", participante.nome),
+      montarCarrossel(participante),
+    );
     itens.push(slot);
   }
   fila.replaceChildren(...itens);

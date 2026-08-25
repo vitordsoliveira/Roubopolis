@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/css/componentes/cenario.css">
   <link rel="stylesheet" href="/css/componentes/botao.css">
   <link rel="stylesheet" href="/css/componentes/modal.css">
+  <link rel="stylesheet" href="/css/componentes/perfil.css">
   <link rel="stylesheet" href="/css/telas/menu.css">
 </head>
 
@@ -28,6 +29,16 @@
   <img class="enfeite enfeite--dinheiro-c enfeite--flutua" src="/assets/objetos/dinheiro.png" alt="" aria-hidden="true">
   <img class="enfeite enfeite--colar" src="/assets/objetos/colar.png" alt="" aria-hidden="true">
   <img class="enfeite enfeite--detetive" src="/assets/objetos/detetive.png" alt="" aria-hidden="true">
+
+  <!-- Perfil: canto superior direito, como na maioria dos jogos.
+       Só aparece depois que a pessoa entra na conta. -->
+  <button class="perfil-atalho" id="atalho-perfil" type="button" data-acao="perfil" hidden>
+    <span class="perfil-atalho__quadro">
+      <img class="perfil-atalho__foto" id="atalho-foto" src="" alt="" hidden>
+      <span class="perfil-atalho__inicial" id="atalho-inicial" aria-hidden="true"></span>
+    </span>
+    <span class="perfil-atalho__nome" id="atalho-nome"></span>
+  </button>
 
   <main class="tela">
     <div class="menu">
@@ -81,8 +92,6 @@
     </div>
     <p class="menu__rodape">
       <span id="rodape-mensagem">v0.1 - nome e lobby</span>
-      <button class="menu__rodape-nome" id="atalho-perfil" type="button" data-acao="perfil" hidden></button>
-      <span id="rodape-final" hidden>!</span>
     </p>
   </main>
 
@@ -137,7 +146,20 @@
   <div class="painel" id="painel-perfil" hidden>
     <div class="painel__caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-perfil">
       <h2 class="painel__titulo" id="titulo-perfil">Meu perfil</h2>
-      <p class="perfil__nome" id="perfil-nome"></p>
+
+      <div class="perfil__foto-area">
+        <div class="perfil__foto">
+          <img id="perfil-foto" alt="Sua foto de perfil" hidden>
+          <span id="perfil-foto-vazia">sem foto</span>
+        </div>
+        <div class="perfil__foto-acoes">
+          <label class="botao botao--pequeno" for="perfil-arquivo">Trocar foto</label>
+          <input id="perfil-arquivo" type="file" accept="image/*" hidden>
+          <button class="botao botao--pequeno botao--roxo" type="button" id="perfil-remover-foto">Remover</button>
+          <p class="perfil__foto-dica">PNG ou JPG. A imagem é recortada em quadrado.</p>
+        </div>
+      </div>
+
       <div class="perfil__estatisticas" aria-label="Estatísticas da conta">
         <div class="perfil__estatistica">
           <strong id="perfil-partidas">0</strong>
@@ -148,12 +170,27 @@
           <span>Vitórias</span>
         </div>
         <div class="perfil__estatistica">
-          <strong id="perfil-derrotas">0</strong>
-          <span>Derrotas</span>
+          <strong id="perfil-taxa">0%</strong>
+          <span>Aproveitamento</span>
         </div>
       </div>
+
+      <div class="perfil__campos">
+        <label class="rotulo" for="perfil-nome-campo">Nome para jogadores</label>
+        <input class="campo" id="perfil-nome-campo" type="text" maxlength="16" spellcheck="false" autocomplete="nickname">
+
+        <p class="perfil__secao">Trocar senha — deixe em branco para manter</p>
+
+        <label class="rotulo" for="perfil-senha-atual">Senha atual</label>
+        <input class="campo" id="perfil-senha-atual" type="password" maxlength="128" autocomplete="current-password">
+
+        <label class="rotulo" for="perfil-senha-nova">Nova senha</label>
+        <input class="campo" id="perfil-senha-nova" type="password" maxlength="128" autocomplete="new-password">
+      </div>
+
       <p class="perfil__aviso" id="perfil-aviso" hidden></p>
       <div class="painel__acoes">
+        <button class="botao botao--pequeno" type="button" id="perfil-salvar">Salvar</button>
         <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
       </div>
     </div>

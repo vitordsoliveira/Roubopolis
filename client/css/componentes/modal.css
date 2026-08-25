@@ -97,46 +97,8 @@
   outline-offset: 3px;
 }
 
-.perfil__nome {
-  margin-bottom: var(--e3);
-  color: var(--roxo);
-  font-size: 1.2rem;
-  font-weight: bold;
-  text-align: center;
-}
-
-.perfil__estatisticas {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--e2);
-}
-
-.perfil__estatistica {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--e1);
-  padding: var(--e2);
-  background: rgba(123, 47, 191, 0.1);
-  border: 2px solid var(--roxo);
-  text-align: center;
-}
-
-.perfil__estatistica strong {
-  color: var(--roxo);
-  font-size: 1.35rem;
-}
-
-.perfil__estatistica span {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-}
-
-.perfil__aviso {
-  margin-top: var(--e3);
-  color: var(--rosa);
-  text-align: center;
-}
+/* O perfil (atalho do canto + conteúdo deste painel) mora em
+   componentes/perfil.css. */
 
 .saida__pergunta {
   margin-bottom: var(--e3);

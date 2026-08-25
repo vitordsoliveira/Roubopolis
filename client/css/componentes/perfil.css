@@ -1,0 +1,204 @@
+/* Cartão de perfil no canto superior direito e o painel que ele abre. */
+
+/* --- atalho fixo no canto --------------------------------------- */
+
+.perfil-atalho {
+  position: fixed;
+  top: var(--e3);
+  right: var(--e3);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  /* Menos espaço à esquerda: o quadrado da foto já encosta na borda. */
+  padding: var(--e1) var(--e3) var(--e1) var(--e1);
+  background: var(--branco);
+  color: var(--preto);
+  border: var(--borda) solid var(--preto);
+  box-shadow: var(--sombra-dura);
+  cursor: pointer;
+  transition: transform 0.1s steps(2);
+}
+
+.perfil-atalho:hover,
+.perfil-atalho:focus-visible {
+  transform: translateY(-2px);
+}
+
+.perfil-atalho:focus-visible {
+  outline: 3px solid var(--verde-neon);
+  outline-offset: 3px;
+}
+
+.perfil-atalho__quadro {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--roxo);
+  border: 3px solid var(--preto);
+}
+
+.perfil-atalho__foto {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Arte pixelada: sem suavização ao escalar. */
+  image-rendering: pixelated;
+}
+
+/* Enquanto não há foto, a inicial do nome faz o papel do avatar. */
+.perfil-atalho__inicial {
+  color: var(--amarelo);
+  font-size: 1.1rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.perfil-atalho__nome {
+  max-width: 12ch;
+  overflow: hidden;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* --- foto dentro do painel --------------------------------------- */
+
+.perfil__foto-area {
+  display: flex;
+  align-items: center;
+  gap: var(--e3);
+  margin-bottom: var(--e4);
+}
+
+.perfil__foto {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--roxo);
+  border: var(--borda) solid var(--preto);
+}
+
+.perfil__foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.perfil__foto span {
+  padding: 0 var(--e1);
+  color: var(--amarelo);
+  font-size: 0.52rem;
+  line-height: 1.6;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.perfil__foto-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+}
+
+/* O <label> vira botão porque <input type=file> não estiliza. */
+.perfil__foto-acoes .botao {
+  min-width: 0;
+  text-align: center;
+  cursor: pointer;
+}
+
+.perfil__foto-dica {
+  margin-top: var(--e1);
+  font-size: 0.55rem;
+  line-height: 1.7;
+  opacity: 0.6;
+}
+
+/* --- estatísticas ------------------------------------------------- */
+
+.perfil__estatisticas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--e2);
+  margin-bottom: var(--e4);
+}
+
+.perfil__estatistica {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--e1);
+  padding: var(--e2);
+  background: rgba(123, 47, 191, 0.1);
+  border: 2px solid var(--roxo);
+  text-align: center;
+}
+
+.perfil__estatistica strong {
+  color: var(--roxo);
+  font-size: 1.35rem;
+}
+
+.perfil__estatistica span {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+/* --- formulário --------------------------------------------------- */
+
+.perfil__campos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  text-align: left;
+}
+
+.perfil__campos .campo {
+  margin-bottom: var(--e2);
+  padding: var(--e2);
+  font-size: 0.95rem;
+}
+
+.perfil__secao {
+  margin-top: var(--e3);
+  padding-top: var(--e3);
+  border-top: 2px dashed rgba(22, 16, 31, 0.2);
+  font-size: 0.62rem;
+  line-height: 1.8;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.perfil__aviso {
+  margin-top: var(--e3);
+  color: var(--rosa);
+  font-size: 0.7rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.perfil__aviso--ok {
+  color: var(--grupo-morro);
+}
+
+@media (max-width: 520px) {
+  .perfil-atalho__nome {
+    display: none; /* no estreito sobra só o quadrado da foto */
+  }
+
+  .perfil__foto-area {
+    flex-direction: column;
+    text-align: center;
+  }
+}

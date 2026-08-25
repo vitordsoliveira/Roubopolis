@@ -21,6 +21,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -68,6 +69,12 @@ class Jogador(Base):
     nome: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     login: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
     senha_hash: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    # Avatar como data URL (image/jpeg em base64). Fica no banco, e não em
+    # disco, por três motivos: não depende de pasta gravável na hospedagem,
+    # não é apagado por um `git pull`, e acompanha o jogador se o servidor
+    # mudar de máquina. O cliente redimensiona antes de enviar (ver
+    # `prepararFoto` em client/js/telas/menu.js), então TEXT sobra.
+    foto: Mapped[str | None] = mapped_column(Text, nullable=True)
     token: Mapped[str] = mapped_column(String(48), nullable=False, unique=True, default=gerar_token)
     partidas_jogadas: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     vitorias: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
@@ -79,9 +86,16 @@ class Jogador(Base):
 
     participacoes: Mapped[list["SalaJogador"]] = relationship(back_populates="jogador")
 
+    @property
+    def taxa_vitorias(self) -> float:
+        """Aproveitamento em %, com uma casa. Sem partidas, é 0 e não erro."""
+        if not self.partidas_jogadas:
+            return 0.0
+        return round(self.vitorias * 100 / self.partidas_jogadas, 1)
+
     def para_dict(self) -> dict:
-        """Versão pública: nunca inclui o token."""
-        return {"id": self.id, "nome": self.nome}
+        """Versão pública: nunca inclui o token nem o hash da senha."""
+        return {"id": self.id, "nome": self.nome, "foto": self.foto}
 
     def __repr__(self) -> str:
         return f"<Jogador {self.id} {self.nome!r}>"

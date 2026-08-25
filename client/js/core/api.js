@@ -107,6 +107,22 @@ async function pedir(caminho, { metodo = "GET", corpo } = {}) {
 }
 
 export const api = {
+  quemSouEu: () => pedir("/api/jogador"),
+  async entrar(login, senha) {
+    const jogador = await pedir("/api/auth/entrar", { metodo: "POST", corpo: { login, senha } });
+    guardado.salvarToken(jogador.token);
+    guardado.salvarNome(jogador.nome);
+    return jogador;
+  },
+  async cadastrar(login, senha, nome) {
+    const jogador = await pedir("/api/auth/cadastrar", {
+      metodo: "POST",
+      corpo: { login, senha, nome },
+    });
+    guardado.salvarToken(jogador.token);
+    guardado.salvarNome(jogador.nome);
+    return jogador;
+  },
   /** Menu: manda o nome, recebe e guarda o token. */
   async identificar(nome) {
     const jogador = await pedir("/api/jogador", { metodo: "POST", corpo: { nome } });

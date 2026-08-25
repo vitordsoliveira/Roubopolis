@@ -55,7 +55,7 @@ def gerar_token() -> str:
 
 
 class Jogador(Base):
-    """Uma pessoa. Por enquanto só um apelido + um token no navegador.
+    """Uma pessoa, com credencial persistente e token de sessão.
 
     O token é a identidade real: é ele que reconhece quem voltou. O nome é
     apenas exibição, então dois jogadores podem se chamar igual.
@@ -66,6 +66,8 @@ class Jogador(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     nome: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    login: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    senha_hash: Mapped[str | None] = mapped_column(String(256), nullable=True)
     token: Mapped[str] = mapped_column(String(48), nullable=False, unique=True, default=gerar_token)
     criado_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
     visto_em: Mapped[datetime] = mapped_column(

@@ -39,21 +39,25 @@
         <img class="marquise__figura marquise__figura--dir" src="/assets/objetos/mulher.png" alt="" aria-hidden="true">
       </header>
 
-      <section class="menu__identidade">
-        <label class="rotulo" for="nome">Seu nome</label>
-        <input
-          class="campo campo--placa"
-          id="nome"
-          type="text"
-          maxlength="16"
-          autocomplete="nickname"
-          spellcheck="false"
-          placeholder="digite aqui"
-          aria-describedby="dica">
-        <p class="menu__dica" id="dica" role="status"></p>
+      <section class="menu__login" aria-labelledby="titulo-login">
+        <h1 class="neon" id="titulo-login">ENTRE NA CIDADE</h1>
+        <div class="login__abas" role="tablist" aria-label="Acesso">
+          <button class="login__aba login__aba--ativa" type="button" data-modo="entrar" role="tab" aria-selected="true">Entrar</button>
+          <button class="login__aba" type="button" data-modo="cadastrar" role="tab" aria-selected="false">Criar conta</button>
+        </div>
+        <label class="rotulo" for="login">Nome de usuário</label>
+        <input class="campo campo--placa" id="login" type="text" maxlength="32" autocomplete="username" spellcheck="false" placeholder="seu usuário">
+        <label class="rotulo" for="senha">Senha</label>
+        <input class="campo campo--placa" id="senha" type="password" maxlength="128" autocomplete="current-password" placeholder="sua senha">
+        <div class="login__nome" id="bloco-nome" hidden>
+          <label class="rotulo" for="nome">Nome no jogo</label>
+          <input class="campo campo--placa" id="nome" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" placeholder="como vão te chamar?">
+        </div>
+        <button class="botao login__botao" type="button" id="acessar">Entrar</button>
+        <p class="menu__dica" id="dica" role="alert"></p>
       </section>
 
-      <nav class="menu__opcoes" id="opcoes" aria-label="Menu principal">
+      <nav class="menu__opcoes" id="opcoes" aria-label="Menu principal" hidden>
         <button class="opcao" type="button" data-acao="jogar">
           <img src="/assets/menu/jogar.png" alt="Jogar">
         </button>
@@ -112,7 +116,7 @@
       </div>
 
       <p class="texto-miudo" style="margin-top:var(--e3);opacity:.6">
-        Você não tem senha: seu nome fica salvo só neste navegador.
+        “Apagar” remove apenas a sessão salva neste navegador.
       </p>
 
       <div class="painel__acoes">

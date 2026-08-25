@@ -206,6 +206,8 @@ def escolher_personagem(sessao: Session, sala: Sala, jogador: Jogador, slug: str
     assento = next((p for p in sala.participantes if p.jogador_id == jogador.id), None)
     if assento is None:
         raise ErroDeSala("Você não está nessa sala.", http=403)
+    if assento.pronto:
+        raise ErroDeSala("Tire o pronto antes de trocar de personagem.", http=409)
 
     personagem = sessao.scalar(
         select(Personagem).where(Personagem.slug == slug, Personagem.ativo.is_(True))

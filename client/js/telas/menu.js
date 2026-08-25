@@ -22,6 +22,7 @@ const rodapeMensagem = document.querySelector("#rodape-mensagem");
 const rodapeFinal = document.querySelector("#rodape-final");
 const botaoSom = document.querySelector("#som");
 const modoExibicao = document.querySelector("#modo-exibicao");
+const botaoAplicarModoExibicao = document.querySelector("#aplicar-modo-exibicao");
 const controleVolumeSom = document.querySelector("#volume-som");
 const valorVolumeSom = document.querySelector("#valor-volume-som");
 const perfilNome = document.querySelector("#perfil-nome");
@@ -286,7 +287,7 @@ async function aplicarModoExibicao() {
   }
 }
 
-modoExibicao.addEventListener("change", aplicarModoExibicao);
+botaoAplicarModoExibicao.addEventListener("click", aplicarModoExibicao);
 document.addEventListener("fullscreenchange", pintarTelaCheia);
 window.roubodopolis?.aoMudarTelaCheia?.(pintarTelaCheia);
 pintarTelaCheia();

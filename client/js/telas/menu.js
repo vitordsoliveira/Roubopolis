@@ -18,21 +18,34 @@ const painelConfig = document.querySelector("#painel-config");
 const painelPerfil = document.querySelector("#painel-perfil");
 const painelSaida = document.querySelector("#painel-saida");
 const atalhoPerfil = document.querySelector("#atalho-perfil");
+const atalhoFoto = document.querySelector("#atalho-foto");
+const atalhoInicial = document.querySelector("#atalho-inicial");
+const atalhoNome = document.querySelector("#atalho-nome");
 const rodapeMensagem = document.querySelector("#rodape-mensagem");
-const rodapeFinal = document.querySelector("#rodape-final");
 const botaoSom = document.querySelector("#som");
 const modoExibicao = document.querySelector("#modo-exibicao");
 const botaoAplicarModoExibicao = document.querySelector("#aplicar-modo-exibicao");
 const controleVolumeSom = document.querySelector("#volume-som");
 const valorVolumeSom = document.querySelector("#valor-volume-som");
-const perfilNome = document.querySelector("#perfil-nome");
 const perfilPartidas = document.querySelector("#perfil-partidas");
 const perfilVitorias = document.querySelector("#perfil-vitorias");
-const perfilDerrotas = document.querySelector("#perfil-derrotas");
+const perfilTaxa = document.querySelector("#perfil-taxa");
 const perfilAviso = document.querySelector("#perfil-aviso");
+const perfilFoto = document.querySelector("#perfil-foto");
+const perfilFotoVazia = document.querySelector("#perfil-foto-vazia");
+const perfilArquivo = document.querySelector("#perfil-arquivo");
+const perfilRemoverFoto = document.querySelector("#perfil-remover-foto");
+const perfilNomeCampo = document.querySelector("#perfil-nome-campo");
+const perfilSenhaAtual = document.querySelector("#perfil-senha-atual");
+const perfilSenhaNova = document.querySelector("#perfil-senha-nova");
+const perfilSalvar = document.querySelector("#perfil-salvar");
 
 let ocupado = false;
 let modo = "entrar";
+
+/* Foto escolhida mas ainda não enviada. Três estados distintos:
+   undefined = não mexeu | string = trocou | null = mandou remover. */
+let fotoPendente;
 
 // --- identidade só desta aba (para testar a sala sozinho) ------------
 
@@ -76,14 +89,22 @@ function avisarNoCampo(mensagem) {
   campoNome.focus();
 }
 
+/** Pinta o cartão do canto: quadrado com a foto (ou a inicial) e o nome. */
+function pintarAtalho(jogador) {
+  const temFoto = Boolean(jogador.foto);
+  atalhoNome.textContent = jogador.nome;
+  atalhoInicial.textContent = (jogador.nome || "?").trim().charAt(0);
+  atalhoFoto.src = temFoto ? jogador.foto : "";
+  atalhoFoto.hidden = !temFoto;
+  atalhoInicial.hidden = temFoto;
+  atalhoPerfil.hidden = false;
+}
+
 function mostrarJogo(jogador) {
   campoNome.value = jogador.nome;
   document.querySelector(".menu__login").hidden = true;
   opcoes.hidden = false;
-  rodapeMensagem.textContent = "Olá, ";
-  atalhoPerfil.textContent = jogador.nome;
-  atalhoPerfil.hidden = false;
-  rodapeFinal.hidden = false;
+  pintarAtalho(jogador);
   opcoes.querySelector("button")?.focus();
 }
 
@@ -96,7 +117,6 @@ function voltarAoLogin() {
   opcoes.hidden = true;
   rodapeMensagem.textContent = "v0.1 - entre para jogar";
   atalhoPerfil.hidden = true;
-  rodapeFinal.hidden = true;
   campoLogin.focus();
 }
 
@@ -203,20 +223,122 @@ function fechar(painel) {
   campoCodigo.classList.remove("campo--erro");
 }
 
+// --- perfil ---------------------------------------------------------
+
+//: Lado do avatar em pixels. Pequeno de propósito: a foto viaja como data
+//: URL e é guardada no banco, então cada pixel a mais custa em toda resposta.
+const LADO_FOTO = 192;
+
+function avisarPerfil(mensagem, ok = false) {
+  perfilAviso.textContent = mensagem;
+  perfilAviso.hidden = !mensagem;
+  perfilAviso.classList.toggle("perfil__aviso--ok", ok);
+}
+
+function mostrarFoto(foto) {
+  const tem = Boolean(foto);
+  perfilFoto.src = tem ? foto : "";
+  perfilFoto.hidden = !tem;
+  perfilFotoVazia.hidden = tem;
+}
+
+function preencherPerfil({ jogador, estatisticas }) {
+  perfilNomeCampo.value = jogador.nome;
+  perfilPartidas.textContent = estatisticas.partidas_jogadas;
+  perfilVitorias.textContent = estatisticas.vitorias;
+  perfilTaxa.textContent = `${estatisticas.taxa_vitorias}%`;
+  mostrarFoto(jogador.foto);
+  pintarAtalho(jogador);
+}
+
 async function abrirPerfil() {
   abrir(painelPerfil);
-  perfilAviso.hidden = true;
+  avisarPerfil("");
+  // Senha nunca volta preenchida, e a foto pendente de uma abertura
+  // anterior não pode vazar para esta.
+  perfilSenhaAtual.value = "";
+  perfilSenhaNova.value = "";
+  fotoPendente = undefined;
   try {
-    const dados = await api.perfil();
-    perfilNome.textContent = dados.jogador.nome;
-    perfilPartidas.textContent = dados.estatisticas.partidas_jogadas;
-    perfilVitorias.textContent = dados.estatisticas.vitorias;
-    perfilDerrotas.textContent = dados.estatisticas.derrotas;
+    preencherPerfil(await api.perfil());
   } catch (erro) {
-    perfilAviso.textContent = erro.message;
-    perfilAviso.hidden = false;
+    avisarPerfil(erro.message);
   }
 }
+
+/** Recorta no centro, reduz e devolve um data URL JPEG. */
+async function prepararFoto(arquivo) {
+  const bitmap = await createImageBitmap(arquivo);
+  const lado = Math.min(bitmap.width, bitmap.height);
+  const tela = document.createElement("canvas");
+  tela.width = LADO_FOTO;
+  tela.height = LADO_FOTO;
+  tela.getContext("2d").drawImage(
+    bitmap,
+    (bitmap.width - lado) / 2,
+    (bitmap.height - lado) / 2,
+    lado,
+    lado,
+    0,
+    0,
+    LADO_FOTO,
+    LADO_FOTO,
+  );
+  bitmap.close?.();
+  return tela.toDataURL("image/jpeg", 0.82);
+}
+
+async function salvarPerfil() {
+  // Só vai no corpo o que a pessoa realmente mexeu: campo ausente é
+  // "não altera" para o servidor.
+  const corpo = {};
+  const nome = perfilNomeCampo.value.trim();
+  if (nome) corpo.nome = nome;
+
+  if (perfilSenhaNova.value) {
+    corpo.senha_atual = perfilSenhaAtual.value;
+    corpo.senha_nova = perfilSenhaNova.value;
+  }
+
+  if (fotoPendente === null) corpo.remover_foto = true;
+  else if (typeof fotoPendente === "string") corpo.foto = fotoPendente;
+
+  try {
+    const dados = await api.salvarPerfil(corpo);
+    guardado.salvarNome(dados.jogador.nome);
+    preencherPerfil(dados);
+    fotoPendente = undefined;
+    perfilSenhaAtual.value = "";
+    perfilSenhaNova.value = "";
+    som.tocar("sucesso");
+    avisarPerfil("Perfil salvo.", true);
+  } catch (erro) {
+    som.tocar("erro");
+    avisarPerfil(erro.message);
+  }
+}
+
+perfilArquivo.addEventListener("change", async () => {
+  const arquivo = perfilArquivo.files?.[0];
+  // Zera para que escolher o MESMO arquivo de novo dispare o evento.
+  perfilArquivo.value = "";
+  if (!arquivo) return;
+  try {
+    fotoPendente = await prepararFoto(arquivo);
+    mostrarFoto(fotoPendente);
+    avisarPerfil("Foto trocada. Clique em SALVAR para confirmar.", true);
+  } catch {
+    avisarPerfil("Não consegui ler essa imagem. Tente um PNG ou JPG.");
+  }
+});
+
+perfilRemoverFoto.addEventListener("click", () => {
+  fotoPendente = null;
+  mostrarFoto(null);
+  avisarPerfil("Foto removida. Clique em SALVAR para confirmar.", true);
+});
+
+perfilSalvar.addEventListener("click", salvarPerfil);
 
 document.addEventListener("keydown", (evento) => {
   if (evento.key !== "Escape") return;

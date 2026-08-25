@@ -2,7 +2,7 @@
   "name": "Roubopolis",
   "version": "0.1.0",
   "description": "Casca desktop do Roubopolis. A janela abre o servidor do jogo; a lógica toda vive no Flask.",
-  "author": "vitordsoliveira",
+  "author": "Vitinho e Amigos",
   "license": "UNLICENSED",
   "private": true,
   "main": "electron/main.js",

@@ -15,6 +15,38 @@ BRANCH="${1:-vitinho}"
 
 echo "== Roubodopolis: publicando ($BRANCH) =="
 
+# --- 0. quem está rodando isto -------------------------------------------
+# O Passenger executa o app como o DONO da pasta. Se o deploy rodar como
+# root, os arquivos baixados nascem de root e o app perde acesso a eles —
+# e o erro só aparece depois, como 500 sem causa aparente.
+#
+# É por isso que NÃO usamos o `git config --global --add safe.directory` que
+# o git sugere quando reclama de "dubious ownership": aquilo silencia o
+# aviso e deixa o estrago acontecer. O aviso está certo; o usuário é que
+# está errado.
+DONO="$(stat -c '%U' "$RAIZ")"
+EU="$(id -un)"
+
+if [ "$EU" != "$DONO" ]; then
+  echo "ERRO: rodando como '$EU', mas $RAIZ pertence a '$DONO'."
+  echo
+  echo "Rode assim:"
+  echo "    su - $DONO -c 'cd $RAIZ && bash ferramentas/publicar.sh $BRANCH'"
+  echo
+  echo "Se a conta estiver com shell bloqueado:"
+  echo "    su -s /bin/bash - $DONO -c 'cd $RAIZ && bash ferramentas/publicar.sh $BRANCH'"
+  exit 1
+fi
+
+# Restos de uma execução anterior feita como root.
+INTRUSO="$(find "$RAIZ" -not -user "$DONO" -print -quit 2>/dev/null || true)"
+if [ -n "$INTRUSO" ]; then
+  echo "ERRO: há arquivo que não pertence a '$DONO' (ex.: $INTRUSO)."
+  echo "Provavelmente sobrou de um deploy feito como root. Como root, rode:"
+  echo "    chown -R $DONO:$DONO $RAIZ"
+  exit 1
+fi
+
 # --- 1. o .env precisa existir antes de qualquer coisa --------------------
 if [ ! -f .env ]; then
   echo "ERRO: não existe .env em $RAIZ"

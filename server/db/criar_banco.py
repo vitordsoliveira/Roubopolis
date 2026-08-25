@@ -95,6 +95,7 @@ def garantir_tabelas() -> None:
     """Cria tabelas ausentes e completa colunas antigas sem apagar dados."""
     engine = obter_engine()
     Base.metadata.create_all(engine)
+    garantir_colunas()
     _atualizar_colunas_jogador(engine)
 
 
@@ -276,7 +277,6 @@ def main(argv: list[str] | None = None) -> int:
     if not args.so_linhas:
         print("Colunas:")
         criar_tabelas(recriar=args.recriar)
-        garantir_colunas()
         print()
 
     print("Linhas:")

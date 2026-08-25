@@ -107,7 +107,11 @@ function mostrarJogo(jogador) {
   document.querySelector(".menu__login").hidden = true;
   opcoes.hidden = false;
   pintarAtalho(jogador);
-  opcoes.querySelector("button")?.focus();
+  // Foco no CONTÊINER, não no primeiro botão. Focar o botão acendia a
+  // setinha do `:focus-visible` no JOGAR, que ficava parecendo uma seleção
+  // travada e concorria com a setinha do mouse. Assim o leitor de tela
+  // entra no menu e nada acende.
+  opcoes.focus({ preventScroll: true });
 }
 
 function voltarAoLogin() {
@@ -307,7 +311,9 @@ async function salvarPerfil() {
 
   try {
     const dados = await api.salvarPerfil(corpo);
-    guardado.salvarNome(dados.jogador.nome);
+    // Atualiza o cache do navegador junto: é ele que desenha o menu na
+    // próxima abertura, antes de qualquer consulta ao servidor.
+    guardado.salvarSessao(dados.jogador);
     preencherPerfil(dados);
     fotoPendente = undefined;
     perfilSenhaAtual.value = "";
@@ -489,6 +495,33 @@ document.addEventListener("click", (evento) => {
 campoNome.addEventListener("keydown", (e) => e.key === "Enter" && jogar());
 campoCodigo.addEventListener("keydown", (e) => e.key === "Enter" && entrarComCodigo());
 
+/* Entrada da tela.
+
+   Antes esta decisão esperava a resposta do `GET /api/jogador`, e nessa ida
+   e volta pela rede a tela de login aparecia para quem já estava logado —
+   o "pisca" ao voltar do lobby. Pior: a troca de DOM acontecia com o cursor
+   parado, e o Chromium não reavalia `:hover` nesse caso, então as opções
+   ficavam sem realce até o primeiro clique.
+
+   Agora o que está guardado no navegador pinta na hora, antes de qualquer
+   rede, e o servidor apenas confirma depois. */
+
 if (guardado.token()) {
-  api.quemSouEu?.().then(mostrarJogo).catch(() => guardado.esquecer());
+  mostrarJogo({ nome: guardado.nome(), foto: guardado.foto() });
+
+  api.quemSouEu()
+    .then((jogador) => {
+      // O servidor é a verdade: corrige nome/foto se mudaram em outra máquina.
+      guardado.salvarSessao(jogador);
+      pintarAtalho(jogador);
+    })
+    .catch((erro) => {
+      // Só derruba a sessão se o servidor DISSE que o token não vale mais.
+      // Rede fora do ar não pode deslogar quem estava logado.
+      if (erro.status === 401) {
+        guardado.esquecer();
+        voltarAoLogin();
+        toast("Sua sessão expirou. Entre de novo.", "erro");
+      }
+    });
 }

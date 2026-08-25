@@ -71,7 +71,9 @@
         <p class="menu__dica" id="dica" role="alert"></p>
       </section>
 
-      <nav class="menu__opcoes" id="opcoes" aria-label="Menu principal" hidden>
+      <!-- tabindex=-1: alvo de foco só por script, para o menu receber o
+           foco sem acender a setinha em nenhum botão. -->
+      <nav class="menu__opcoes" id="opcoes" aria-label="Menu principal" tabindex="-1" hidden>
         <button class="opcao" type="button" data-acao="jogar">
           <img src="/assets/menu/jogar.png" alt="Jogar">
         </button>

@@ -5,11 +5,24 @@
 const CHAVE_TOKEN = "roubodopolis.token";
 const CHAVE_NOME = "roubodopolis.nome";
 const CHAVE_SOM = "roubodopolis.som";
+const CHAVE_ABA = "roubodopolis.aba-propria";
+
+/* Abas do mesmo navegador dividem o localStorage — duas abas seriam sempre o
+   MESMO jogador, o que impede testar uma sala sozinho. Abrir /?novo=1 marca a
+   aba para guardar a identidade no sessionStorage, que é por aba. */
+function cofre() {
+  try {
+    if (sessionStorage.getItem(CHAVE_ABA) === "1") return sessionStorage;
+  } catch {
+    /* sem sessionStorage: segue no localStorage */
+  }
+  return localStorage;
+}
 
 function ler(chave, padrao = "") {
   // Aba anônima e navegador com dados bloqueados fazem isto lançar.
   try {
-    return localStorage.getItem(chave) ?? padrao;
+    return cofre().getItem(chave) ?? padrao;
   } catch {
     return padrao;
   }
@@ -17,7 +30,7 @@ function ler(chave, padrao = "") {
 
 function gravar(chave, valor) {
   try {
-    localStorage.setItem(chave, valor);
+    cofre().setItem(chave, valor);
   } catch {
     /* sem armazenamento: o jogo funciona, só não lembra da pessoa */
   }
@@ -25,7 +38,7 @@ function gravar(chave, valor) {
 
 function apagar(chave) {
   try {
-    localStorage.removeItem(chave);
+    cofre().removeItem(chave);
   } catch {
     /* idem */
   }
@@ -41,6 +54,25 @@ export const guardado = {
   esquecer: () => {
     apagar(CHAVE_TOKEN);
     apagar(CHAVE_NOME);
+  },
+
+  /** Só para testar: dá a esta aba um jogador independente das outras. */
+  usarAbaPropria: () => {
+    try {
+      sessionStorage.setItem(CHAVE_ABA, "1");
+      sessionStorage.removeItem(CHAVE_TOKEN);
+      sessionStorage.removeItem(CHAVE_NOME);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  abaPropria: () => {
+    try {
+      return sessionStorage.getItem(CHAVE_ABA) === "1";
+    } catch {
+      return false;
+    }
   },
 };
 

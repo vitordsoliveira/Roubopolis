@@ -13,6 +13,18 @@ const botaoSom = document.querySelector("#som");
 
 let ocupado = false;
 
+// --- identidade só desta aba (para testar a sala sozinho) ------------
+
+if (new URLSearchParams(location.search).has("novo")) {
+  guardado.usarAbaPropria();
+  history.replaceState(null, "", "/"); // tira o ?novo=1 da barra
+}
+
+if (guardado.abaPropria()) {
+  document.querySelector(".menu__rodape").textContent =
+    "v0.1 — esta aba tem um jogador próprio";
+}
+
 // --- nome -----------------------------------------------------------
 
 campoNome.value = guardado.nome();

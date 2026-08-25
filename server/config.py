@@ -20,6 +20,12 @@ class Config:
     # --- banco ---------------------------------------------------------
     DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
 
+    # Atalho de desenvolvimento: com USAR_SQLITE=1 no .env, todo o jogo roda
+    # num arquivo local e a DATABASE_URL é ignorada (mas continua lá, intacta).
+    # Volte para 0 quando o MySQL liberar o seu IP.
+    USAR_SQLITE: bool = os.getenv("USAR_SQLITE", "0").strip() == "1"
+    ARQUIVO_SQLITE: Path = RAIZ / os.getenv("ARQUIVO_SQLITE", "roubodopolis.sqlite")
+
     # --- servidor ------------------------------------------------------
     SECRET_KEY: str = os.getenv("SECRET_KEY", "roubodopolis-dev-nao-use-em-producao")
     HOST: str = os.getenv("HOST", "127.0.0.1")
@@ -41,14 +47,19 @@ class Config:
     NOME_MAX: int = 16
 
 
-def exigir_database_url() -> str:
-    """Devolve a DATABASE_URL ou explica exatamente o que está faltando."""
+def url_do_banco() -> str:
+    """Onde o jogo grava: o arquivo SQLite local ou o MySQL da hospedagem."""
+    if Config.USAR_SQLITE:
+        # as_posix() para a barra invertida do Windows não virar escape na URL
+        return f"sqlite:///{Config.ARQUIVO_SQLITE.as_posix()}"
+
     if not Config.DATABASE_URL:
         raise RuntimeError(
             "DATABASE_URL não encontrada.\n"
             f"Esperado no arquivo: {RAIZ / '.env'}\n"
             "Formato: mysql+pymysql://usuario:senha@host:3306/banco\n"
             "Se a senha tiver caracteres especiais, use percent-encoding "
-            "(@ vira %40, # vira %23, : vira %3A)."
+            "(@ vira %40, # vira %23, : vira %3A).\n"
+            "Para testar sem MySQL nenhum, ponha USAR_SQLITE=1 no .env."
         )
     return Config.DATABASE_URL

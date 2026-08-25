@@ -193,6 +193,11 @@ function abrir(painel) {
   painel.querySelector("input, button")?.focus();
 }
 
+function abrirConfiguracao() {
+  pintarTelaCheia();
+  abrir(painelConfig);
+}
+
 function fechar(painel) {
   painel.hidden = true;
   campoCodigo.classList.remove("campo--erro");
@@ -299,7 +304,7 @@ const acoes = {
   "abrir-codigo": () => abrir(painelCodigo),
   "entrar-codigo": entrarComCodigo,
   perfil: abrirPerfil,
-  config: () => abrir(painelConfig),
+  config: abrirConfiguracao,
   fechar: (elemento) => fechar(elemento.closest(".painel")),
   amigos: () => toast("AMIGOS ainda não foi construído. Em breve.", ""),
   loja: () => toast("A LOJA ainda não abriu. Em breve.", ""),

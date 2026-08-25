@@ -417,6 +417,7 @@ async function aplicarModoExibicao() {
 }
 
 botaoAplicarModoExibicao.addEventListener("click", aplicarModoExibicao);
+botaoAplicarModoExibicao.addEventListener("click", () => som.tocar("confirmar"));
 document.addEventListener("fullscreenchange", pintarTelaCheia);
 window.roubodopolis?.aoMudarTelaCheia?.(pintarTelaCheia);
 pintarTelaCheia();

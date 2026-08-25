@@ -30,13 +30,22 @@
       "ordem": 3
     },
     {
+      "slug": "random",
+      "nome": "Random",
+      "descricao": "Imprevisível, ligeiro e sempre pronto para virar o jogo.",
+      "cor": "#00b8d4",
+      "sprite": "/assets/personagens/random.png",
+      "passiva": null,
+      "ordem": 4
+    },
+    {
       "slug": "festa",
       "nome": "Festa",
       "descricao": "Chega atrasado e sai com o aluguel de todo mundo.",
       "cor": "#e94f37",
       "sprite": "/assets/personagens/festa.png",
       "passiva": null,
-      "ordem": 4
+      "ordem": 5
     }
   ]
 }

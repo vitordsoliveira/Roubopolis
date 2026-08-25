@@ -21,6 +21,7 @@ const atalhoPerfil = document.querySelector("#atalho-perfil");
 const atalhoFoto = document.querySelector("#atalho-foto");
 const atalhoInicial = document.querySelector("#atalho-inicial");
 const atalhoNome = document.querySelector("#atalho-nome");
+const atalhoCoins = document.querySelector("#atalho-coins");
 const rodapeMensagem = document.querySelector("#rodape-mensagem");
 const botaoSom = document.querySelector("#som");
 const modoExibicao = document.querySelector("#modo-exibicao");
@@ -93,6 +94,7 @@ function avisarNoCampo(mensagem) {
 function pintarAtalho(jogador) {
   const temFoto = Boolean(jogador.foto);
   atalhoNome.textContent = jogador.nome;
+  atalhoCoins.textContent = `${Number(jogador.coins) || 0} COINS`;
   atalhoInicial.textContent = (jogador.nome || "?").trim().charAt(0);
   atalhoFoto.src = temFoto ? jogador.foto : "";
   atalhoFoto.hidden = !temFoto;

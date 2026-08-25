@@ -224,6 +224,8 @@ class SalaJogador(Base):
         return {
             "jogador_id": self.jogador_id,
             "nome": self.jogador.nome,
+            # O lobby mostra a foto dentro do quadro de cada lugar.
+            "foto": self.jogador.foto,
             "ordem": self.ordem,
             "pronto": self.pronto,
             "dono": self.jogador_id == self.sala.dono_id,

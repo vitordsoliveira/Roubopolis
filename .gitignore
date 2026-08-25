@@ -6,3 +6,7 @@ __pycache__/
 .venv/
 venv/
 *.sqlite
+
+# desktop (Electron)
+node_modules/
+dist-desktop/

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Roubodopolis — sem conexão</title>
+<!-- Página local: nada de caminho absoluto e nada de módulo, porque isto
+     roda em file:// e as duas coisas quebrariam. CSS inline de propósito. -->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #12160f;
+    color: #e8e4d9;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    padding: 2rem;
+  }
+  .caixa {
+    max-width: 34rem;
+    text-align: center;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin: 0 0 .75rem;
+    color: #ffd83d;
+  }
+  p { line-height: 1.6; margin: 0 0 1rem; opacity: .85; }
+  code {
+    display: inline-block;
+    background: #1e2419;
+    border: 1px solid #33402a;
+    border-radius: .35rem;
+    padding: .15rem .45rem;
+    font-size: .9em;
+    color: #b7d68a;
+    word-break: break-all;
+  }
+  .detalhe {
+    font-size: .85rem;
+    opacity: .55;
+    margin-top: 1.5rem;
+    border-top: 1px solid #2a3323;
+    padding-top: 1rem;
+  }
+  .dica {
+    text-align: left;
+    background: #1a2015;
+    border: 1px solid #33402a;
+    border-radius: .5rem;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    font-size: .92rem;
+  }
+  .dica strong { color: #ffd83d; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    background: #ffd83d;
+    color: #12160f;
+    border: 0;
+    border-radius: .5rem;
+    padding: .7rem 1.6rem;
+    transition: filter .15s;
+  }
+  button:hover { filter: brightness(1.1); }
+</style>
+</head>
+<body>
+  <div class="caixa">
+    <h1>Não alcancei o servidor</h1>
+    <p>O jogo roda no servidor — o aplicativo é só a janela. Sem servidor, não há partida.</p>
+
+    <p>Tentei falar com<br><code id="servidor">—</code></p>
+
+    <div class="dica" id="dica" hidden></div>
+
+    <button type="button" id="repetir">Tentar de novo</button>
+
+    <p class="detalhe" id="detalhe"></p>
+  </div>
+
+<script>
+  var parametros = new URLSearchParams(location.search);
+  var servidor = parametros.get("servidor") || "(desconhecido)";
+  var mensagem = parametros.get("mensagem") || "";
+  var local = parametros.get("local") === "1";
+
+  document.getElementById("servidor").textContent = servidor;
+  document.getElementById("detalhe").textContent = mensagem;
+
+  var dica = document.getElementById("dica");
+  if (local) {
+    dica.innerHTML =
+      "<strong>Modo local.</strong> O servidor Flask precisa estar de pé numa " +
+      "outra janela do terminal:<br><br><code>python run.py</code>";
+    dica.hidden = false;
+  } else {
+    dica.innerHTML =
+      "<strong>Modo produção.</strong> Confira se o site abre no navegador. " +
+      "Se abrir lá e não aqui, o problema é rede ou certificado; se não abrir " +
+      "em lugar nenhum, o aplicativo Python caiu na hospedagem.";
+    dica.hidden = false;
+  }
+
+  document.getElementById("repetir").addEventListener("click", function () {
+    // window.roubodopolis vem do preload.js.
+    if (window.roubodopolis) window.roubodopolis.tentarDeNovo();
+  });
+</script>
+</body>
+</html>

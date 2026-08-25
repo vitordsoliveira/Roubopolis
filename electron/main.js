@@ -54,8 +54,10 @@ const enderecoServidor = (
 const origemPermitida = new URL(enderecoServidor).origin;
 
 const PAGINA_DE_ERRO = path.join(__dirname, "erro.html");
-// Cópia local do logo: o instalador empacota só a pasta electron/, então o
-// ícone não pode depender de client/ estar junto.
+// Ícone do app. Fica aqui, e não em client/assets/, porque o instalador
+// empacota só a pasta electron/ — ver "files" no package.json.
+// O mesmo arquivo é usado em três lugares: esta janela, o .exe e o
+// instalador (os dois últimos via "build.win.icon" no package.json).
 const ICONE = path.join(__dirname, "icone.png");
 
 let janela = null;

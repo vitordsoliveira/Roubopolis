@@ -238,5 +238,37 @@ class SalaJogador(Base):
         return f"<SalaJogador sala={self.sala_id} jogador={self.jogador_id}>"
 
 
+class Partida(Base):
+    """A partida em andamento de uma sala.
+
+    O estado inteiro do motor mora aqui como JSON, e não em memória, porque
+    o Passenger pode rodar em vários processos: memória local daria estados
+    diferentes conforme o processo que atendesse a requisição. Guardar no
+    banco também deixa a partida sobreviver a um restart.
+
+    O `engine/` continua sem saber que este model existe — quem traduz é
+    `server/salas/partida.py`.
+    """
+
+    __tablename__ = "partida"
+    __table_args__ = ARGS_MYSQL
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Uma partida por sala: a sala é o lobby, a partida é o que veio dele.
+    sala_id: Mapped[int] = mapped_column(
+        ForeignKey("sala.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    estado: Mapped[str] = mapped_column(Text, nullable=False)
+    criada_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+    atualizada_em: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    sala: Mapped["Sala"] = relationship()
+
+    def __repr__(self) -> str:
+        return f"<Partida sala={self.sala_id}>"
+
+
 #: Ordem de criação (respeita as chaves estrangeiras).
-TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador)
+TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador, Partida)

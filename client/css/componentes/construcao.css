@@ -1,0 +1,205 @@
+/* As construções que sobem no terreno comprado.
+
+   Regra de estilo: o jogo é PIXEL ART. Nada de gradiente suave, canto
+   arredondado ou sombra borrada — a versão anterior errava justamente
+   nisso e ficava fora do tom. Aqui é tudo aresta dura, cor chapada,
+   contorno preto grosso e sombra sólida deslocada, que é como pixel art
+   representa volume.
+
+   Cada faixa de preço tem um prédio, e a leitura é pela SILHUETA:
+
+     barata            barraco torto de madeira, telhado de zinco
+     média             casa de telhado de duas águas
+     cara              sobrado de dois andares
+     muito cara        prédio
+     extremamente cara arranha-céu com antena
+
+   A cor do DONO fica no telhado — é o que substitui a bandeirinha. */
+
+.construcao {
+  position: absolute;
+  left: 50%;
+  bottom: 46%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Em pé, com a rotação inversa à da mesa, como os peões. */
+  transform: translateX(-50%) rotateX(calc(var(--inclinacao) * -1));
+  transform-origin: bottom center;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  image-rendering: pixelated;
+  animation: construcao-sobe 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes construcao-sobe {
+  0%   { transform: translateX(-50%) rotateX(calc(var(--inclinacao) * -1)) scaleY(0.1); opacity: 0; }
+  70%  { transform: translateX(-50%) rotateX(calc(var(--inclinacao) * -1)) scaleY(1.12); opacity: 1; }
+  100% { transform: translateX(-50%) rotateX(calc(var(--inclinacao) * -1)) scaleY(1); }
+}
+
+/* --- corpo ---------------------------------------------------------- */
+
+.construcao__corpo {
+  position: relative;
+  display: block;
+  width: var(--larg);
+  height: var(--alt);
+  background: var(--parede);
+  border: 2px solid #17140f;
+  /* Sombra sólida, sem blur: é a "lateral" do prédio em pixel art. */
+  box-shadow: 3px 3px 0 #17140f, 3px 3px 0 2px rgba(0, 0, 0, 0.25);
+}
+
+/* As janelas: retângulos chapados distribuídos por igual. `space` reparte
+   as cópias sem cortar nenhuma, o que mantém a grade alinhada em qualquer
+   tamanho de prédio. */
+.construcao__corpo::before {
+  content: "";
+  position: absolute;
+  inset: var(--recuo, 3px);
+  background-image: linear-gradient(var(--janela) 0 0);
+  background-size: var(--jan-larg, 5px) var(--jan-alt, 5px);
+  background-repeat: space;
+}
+
+/* Faixa de luz acesa em uma janela: dá vida sem detalhar. */
+.construcao__corpo::after {
+  content: "";
+  position: absolute;
+  left: var(--recuo, 3px);
+  top: var(--recuo, 3px);
+  width: var(--jan-larg, 5px);
+  height: var(--jan-alt, 5px);
+  background: #ffd83d;
+}
+
+/* --- telhado --------------------------------------------------------- */
+
+.construcao__telhado {
+  display: block;
+  background: var(--cor-dono, #c0392b);
+  border: 2px solid #17140f;
+  border-bottom-width: 0;
+}
+
+/* --- barraco (barata) ------------------------------------------------ */
+
+.construcao--barata {
+  --parede: #a9764c;
+  --janela: #3c2a18;
+  --larg: 22px;
+  --alt: 15px;
+  --jan-larg: 7px;
+  --jan-alt: 6px;
+  --recuo: 4px;
+}
+
+/* Torto: é um barraco, não uma casinha certinha. */
+.construcao--barata .construcao__corpo {
+  transform: skewX(-5deg);
+  /* Tábuas horizontais, em aresta dura. */
+  background-image: repeating-linear-gradient(
+    180deg, transparent 0 4px, rgba(0, 0, 0, 0.18) 4px 5px
+  );
+}
+
+/* Placa de zinco caída para o lado. */
+.construcao--barata .construcao__telhado {
+  width: 27px;
+  height: 6px;
+  transform: rotate(-8deg) translateY(2px);
+}
+
+/* --- casa (média) ----------------------------------------------------- */
+
+.construcao--media {
+  --parede: #f0e6cd;
+  --janela: #3d5a73;
+  --larg: 26px;
+  --alt: 19px;
+  --jan-larg: 6px;
+  --jan-alt: 6px;
+}
+
+/* Duas águas: triângulo de borda, sem antialias suave. */
+.construcao--media .construcao__telhado {
+  width: 0;
+  height: 0;
+  background: none;
+  border: none;
+  border-left: 16px solid transparent;
+  border-right: 16px solid transparent;
+  border-bottom: 12px solid var(--cor-dono, #c0392b);
+  filter: drop-shadow(0 -2px 0 #17140f) drop-shadow(2px 0 0 #17140f);
+}
+
+/* --- sobrado (cara) ---------------------------------------------------- */
+
+.construcao--cara {
+  --parede: #dde5ec;
+  --janela: #2f4d6b;
+  --larg: 24px;
+  --alt: 28px;
+  --jan-larg: 6px;
+  --jan-alt: 6px;
+}
+
+/* Laje com beiral saindo dos dois lados. */
+.construcao--cara .construcao__telhado {
+  width: 30px;
+  height: 6px;
+}
+
+/* --- prédio (muito cara) ------------------------------------------------ */
+
+.construcao--muito-cara {
+  --parede: #c6d2df;
+  --janela: #1f3a55;
+  --larg: 24px;
+  --alt: 36px;
+  --jan-larg: 5px;
+  --jan-alt: 5px;
+  --recuo: 4px;
+}
+
+.construcao--muito-cara .construcao__telhado {
+  width: 28px;
+  height: 5px;
+}
+
+/* --- arranha-céu (extremamente cara) ------------------------------------ */
+
+.construcao--extremamente-cara {
+  --parede: #aec4d8;
+  --janela: #12293f;
+  --larg: 22px;
+  --alt: 46px;
+  --jan-larg: 4px;
+  --jan-alt: 5px;
+  --recuo: 3px;
+}
+
+/* Topo recuado, como prédio alto de verdade. */
+.construcao--extremamente-cara .construcao__telhado {
+  position: relative;
+  width: 14px;
+  height: 8px;
+}
+
+/* A antena com a luz vermelha é o que identifica o arranha-céu de longe. */
+.construcao--extremamente-cara .construcao__telhado::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 2px;
+  height: 11px;
+  margin-left: -1px;
+  background: #17140f;
+  box-shadow: 0 -3px 0 0 #ff3b3b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .construcao { animation: none; }
+}

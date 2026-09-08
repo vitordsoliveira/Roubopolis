@@ -1,0 +1,69 @@
+{
+  "_leia_isto": "As 42 casas, na ordem em que o peão anda. O preço de cada propriedade está aqui na própria casa — é o lugar mais fácil de achar e mexer. 'x' e 'y' são a posição na grade 11x12 que a tela desenha (x cresce para a direita, y para baixo).",
+
+  "nome": "vila_original",
+  "largura": 11,
+  "altura": 12,
+
+  "_sentido": "Começa na INICIAL (canto inferior esquerdo), corre a linha de baixo para a direita, sobe pela coluna direita, volta pela linha de cima para a esquerda e desce pela coluna esquerda.",
+
+  "casas": [
+    { "i": 0,  "x": 0,  "y": 11, "tipo": "inicial",      "nome": "Início" },
+
+    { "i": 1,  "x": 1,  "y": 11, "tipo": "propriedade", "nome": "Madureira",        "grupo": "muito_cara",        "preco": 3200 },
+    { "i": 2,  "x": 2,  "y": 11, "tipo": "propriedade", "nome": "Moema",            "grupo": "cara",              "preco": 2400 },
+    { "i": 3,  "x": 3,  "y": 11, "tipo": "coletor",     "nome": "Coletor de Impostos" },
+    { "i": 4,  "x": 4,  "y": 11, "tipo": "propriedade", "nome": "Méier",            "grupo": "media",             "preco": 1500 },
+    { "i": 5,  "x": 5,  "y": 11, "tipo": "neutra",      "nome": "Nada a fazer" },
+    { "i": 6,  "x": 6,  "y": 11, "tipo": "propriedade", "nome": "Vila Madalena",    "grupo": "media",             "preco": 1700 },
+    { "i": 7,  "x": 7,  "y": 11, "tipo": "propriedade", "nome": "Beco do Mandelão", "grupo": "barata",            "preco": 800,
+      "easter_egg": "Você fica bêbado e te furtam." },
+    { "i": 8,  "x": 8,  "y": 11, "tipo": "neutra",      "nome": "Nada a fazer" },
+    { "i": 9,  "x": 9,  "y": 11, "tipo": "propriedade", "nome": "Tijuca",           "grupo": "media",             "preco": 1600 },
+    { "i": 10, "x": 10, "y": 11, "tipo": "prisao",      "nome": "Prisão" },
+
+    { "i": 11, "x": 10, "y": 10, "tipo": "propriedade", "nome": "Botafogo",         "grupo": "cara",              "preco": 2200 },
+    { "i": 12, "x": 10, "y": 9,  "tipo": "propriedade", "nome": "Copacabana",       "grupo": "cara",              "preco": 2600 },
+    { "i": 13, "x": 10, "y": 8,  "tipo": "portal",      "nome": "Portal" },
+    { "i": 14, "x": 10, "y": 7,  "tipo": "propriedade", "nome": "Viela do Bar",     "grupo": "barata",            "preco": 700 },
+    { "i": 15, "x": 10, "y": 6,  "tipo": "propriedade", "nome": "Beco da Quadra",   "grupo": "barata",            "preco": 750 },
+    { "i": 16, "x": 10, "y": 5,  "tipo": "propriedade", "nome": "Rua do Bailão",    "grupo": "barata",            "preco": 850 },
+    { "i": 17, "x": 10, "y": 4,  "tipo": "coringa",     "nome": "Coringa" },
+    { "i": 18, "x": 10, "y": 3,  "tipo": "neutra",      "nome": "Nada a fazer" },
+    { "i": 19, "x": 10, "y": 2,  "tipo": "neutra",      "nome": "Nada a fazer" },
+    { "i": 20, "x": 10, "y": 1,  "tipo": "propriedade", "nome": "Escadão",          "grupo": "barata",            "preco": 600 },
+
+    { "i": 21, "x": 10, "y": 0,  "tipo": "propriedade", "nome": "Rua da Laje",      "grupo": "barata",            "preco": 650 },
+    { "i": 22, "x": 9,  "y": 0,  "tipo": "propriedade", "nome": "Viela do Zé",      "grupo": "barata",            "preco": 700 },
+    { "i": 23, "x": 8,  "y": 0,  "tipo": "propriedade", "nome": "Beco da Ladeira",  "grupo": "barata",            "preco": 750 },
+    { "i": 24, "x": 7,  "y": 0,  "tipo": "roubo",       "nome": "Casa do Roubo" },
+    { "i": 25, "x": 6,  "y": 0,  "tipo": "propriedade", "nome": "Tatuapé",          "grupo": "media",             "preco": 1400 },
+    { "i": 26, "x": 5,  "y": 0,  "tipo": "neutra",      "nome": "Nada a fazer" },
+    { "i": 27, "x": 4,  "y": 0,  "tipo": "propriedade", "nome": "Av. Augusta",      "grupo": "muito_cara",        "preco": 3400,
+      "easter_egg": "Você fica encantado com uma bela pessoa." },
+    { "i": 28, "x": 3,  "y": 0,  "tipo": "propriedade", "nome": "Itaim Bibi",       "grupo": "extremamente_cara", "preco": 4600 },
+    { "i": 29, "x": 2,  "y": 0,  "tipo": "prejuizo",    "nome": "Casa do Prejuízo" },
+    { "i": 30, "x": 1,  "y": 0,  "tipo": "propriedade", "nome": "Jardins",          "grupo": "muito_cara",        "preco": 3800 },
+    { "i": 31, "x": 0,  "y": 0,  "tipo": "propriedade", "nome": "Av. Faria Lima",   "grupo": "extremamente_cara", "preco": 5000 },
+
+    { "i": 32, "x": 0,  "y": 1,  "tipo": "propriedade", "nome": "Beira Mar Leblon", "grupo": "muito_cara",        "preco": 4000 },
+    { "i": 33, "x": 0,  "y": 2,  "tipo": "ganho",       "nome": "Casa do Ganho" },
+    { "i": 34, "x": 0,  "y": 3,  "tipo": "propriedade", "nome": "Barra da Tijuca",  "grupo": "muito_cara",        "preco": 3600 },
+    { "i": 35, "x": 0,  "y": 4,  "tipo": "neutra",      "nome": "Nada a fazer" },
+    { "i": 36, "x": 0,  "y": 5,  "tipo": "propriedade", "nome": "Vila Olímpia",     "grupo": "cara",              "preco": 2800 },
+    { "i": 37, "x": 0,  "y": 6,  "tipo": "reconstrucao","nome": "Reconstrução" },
+    { "i": 38, "x": 0,  "y": 7,  "tipo": "propriedade", "nome": "Ipanema",          "grupo": "muito_cara",        "preco": 3300 },
+    { "i": 39, "x": 0,  "y": 8,  "tipo": "neutra",      "nome": "Nada a fazer" },
+    { "i": 40, "x": 0,  "y": 9,  "tipo": "propriedade", "nome": "Pinheiros",        "grupo": "cara",              "preco": 2500 },
+    { "i": 41, "x": 0,  "y": 10, "tipo": "propriedade", "nome": "Santana",          "grupo": "media",             "preco": 1800 }
+  ],
+
+  "grupos": {
+    "_sobre": "Só cor e rótulo para a tela. O preço fica em cada casa.",
+    "extremamente_cara": { "rotulo": "Extremamente cara", "cor": "#e11d9c" },
+    "muito_cara":        { "rotulo": "Muito cara",        "cor": "#7b2fbf" },
+    "cara":              { "rotulo": "Cara",              "cor": "#2563c9" },
+    "media":             { "rotulo": "Média",             "cor": "#c9a227" },
+    "barata":            { "rotulo": "Barata",            "cor": "#a2483f" }
+  }
+}

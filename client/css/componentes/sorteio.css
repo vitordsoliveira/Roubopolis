@@ -1,0 +1,254 @@
+/* A cena de abertura: todo mundo junto, cada um com os seus dados.
+
+   A ideia é encenar o sorteio em vez de listar o resultado. Os bonecos
+   entram pulando, os dados tombam no ar acima deles, cai o total de cada
+   um, e só no fim aparecem as colocações — de último para primeiro, para
+   o vencedor ser a última coisa que a mesa descobre. */
+
+.sorteio {
+  width: min(940px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: var(--e4) var(--e4) var(--e5);
+  text-align: center;
+  background: #f7f3e6;
+  color: #1b1b1b;
+  border: 5px solid #10140f;
+  box-shadow: 0 22px 0 rgba(0, 0, 0, 0.35), 0 34px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* O botão fica bem afastado da cena: com ele colado, o boneco do vencedor
+   — que pula mais alto que os outros — passava por cima dele. */
+.sorteio .escritura__acoes {
+  margin-top: var(--e4);
+  padding: var(--e3) 0 0;
+  background: none;
+  border-top: 3px dashed rgba(0, 0, 0, 0.15);
+}
+
+.sorteio__titulo {
+  font-size: 1.4rem;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--roxo, #7b2fbf);
+}
+
+.sorteio__explica {
+  margin-bottom: var(--e4);
+  font-size: 0.68rem;
+  line-height: 1.7;
+  opacity: 0.7;
+}
+
+/* --- a mesa de bonecos --------------------------------------------- */
+
+.sorteio__mesa {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(var(--e2), 2.5vw, var(--e4));
+  /* Folga extra embaixo: o vencedor pula 16px e não pode sair da caixa. */
+  padding: var(--e3) 0 var(--e4);
+  /* Chão sob os bonecos, para eles não flutuarem no branco. */
+  background: linear-gradient(180deg, transparent 58%, rgba(123, 47, 191, 0.09) 58%);
+  perspective: 800px;
+}
+
+.posto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 0 1 auto;
+  /* Entram um depois do outro, de baixo, quicando. */
+  animation: posto-entra 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) backwards;
+  animation-delay: calc(var(--ordem, 0) * 0.1s);
+}
+
+@keyframes posto-entra {
+  from { transform: translateY(60px) scale(0.7); opacity: 0; }
+}
+
+/* --- os dados de cada um -------------------------------------------- */
+
+.posto__dados {
+  display: flex;
+  gap: var(--e2);
+  height: 42px;
+  align-items: center;
+  perspective: 500px;
+}
+
+/* Enquanto ninguém revelou, os dados ficam girando no alto. */
+.posto:not(.posto--revelado) .dado__cubo {
+  animation: dado-gira 0.45s linear infinite;
+}
+
+/* Ao revelar, o dado cai de cima e assenta. */
+.posto--revelado .dado { animation: posto-dado-cai 0.5s cubic-bezier(0.3, 1.4, 0.4, 1); }
+.posto--revelado .dado:nth-child(2) { animation-delay: 0.07s; }
+
+@keyframes posto-dado-cai {
+  0%   { transform: translateY(-46px) scale(0.6); opacity: 0.4; }
+  60%  { transform: translateY(6px) scale(1.12); opacity: 1; }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* --- o total que cai ------------------------------------------------ */
+
+.posto__total {
+  display: grid;
+  place-items: center;
+  min-width: 2.1em;
+  min-height: 1.5em;
+  padding: 0 6px;
+  background: var(--cor, #7b2fbf);
+  color: #fff;
+  font-size: 1.35rem;
+  line-height: 1.3;
+  border: 3px solid #10140f;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
+  opacity: 0;
+}
+
+.posto--revelado .posto__total {
+  animation: total-cai 0.5s cubic-bezier(0.2, 1.8, 0.4, 1) 0.34s forwards;
+}
+
+@keyframes total-cai {
+  0%   { transform: translateY(-32px) scale(0.3) rotate(-16deg); opacity: 0; }
+  55%  { transform: translateY(5px) scale(1.3) rotate(5deg); opacity: 1; }
+  78%  { transform: translateY(0) scale(0.93) rotate(-2deg); }
+  100% { transform: none; opacity: 1; }
+}
+
+/* Empate desempatado: mostra o dado extra sob o total. */
+.posto__desempate {
+  min-height: 1.2em;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  color: var(--roxo, #7b2fbf);
+  opacity: 0;
+}
+
+.posto--revelado .posto__desempate { animation: aparece 0.3s ease-out 0.6s forwards; }
+
+@keyframes aparece { to { opacity: 0.8; } }
+
+/* --- o boneco -------------------------------------------------------- */
+
+/* Flex, e não grid, de propósito: `height: 100%` numa imagem dentro de um
+   grid de altura automática vira referência circular, e o navegador acaba
+   usando o tamanho natural do arquivo — foi assim que os bonecos estouraram
+   a caixa e passaram por cima do botão. Com altura definida no pai e
+   `max-height` no filho, a conta fecha. */
+.posto__boneco {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: clamp(78px, 12vh, 116px);
+  width: 100%;
+}
+
+.posto__boneco img {
+  max-height: 100%;
+  width: auto;
+  max-width: 78px;
+  object-fit: contain;
+  object-position: bottom center;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.25));
+  transform-origin: bottom center;
+  /* Braços para cima é arte; o que dá a energia é o pulinho de empolgação,
+     que roda o tempo todo enquanto ninguém sabe o resultado. */
+  animation: comemora 0.42s ease-in-out infinite alternate;
+  animation-delay: calc(var(--ordem, 0) * 0.09s);
+}
+
+.posto__ficha {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  background: var(--cor, #7b2fbf);
+  color: #fff;
+  font-size: 1.6rem;
+  border: 4px solid #10140f;
+  border-radius: 50%;
+  animation: comemora 0.42s ease-in-out infinite alternate;
+}
+
+@keyframes comemora {
+  from { transform: translateY(0) rotate(-4deg); }
+  to   { transform: translateY(-11px) rotate(4deg); }
+}
+
+/* Já revelado: para de pular e fica esperando o resultado geral. */
+.posto--revelado .posto__boneco img,
+.posto--revelado .posto__ficha {
+  animation: pousa 0.3s ease-out forwards;
+}
+
+@keyframes pousa {
+  to { transform: translateY(0) rotate(0); }
+}
+
+/* O vencedor volta a comemorar, e mais forte. */
+.posto--vencedor .posto__boneco img,
+.posto--vencedor .posto__ficha {
+  animation: vitoria 0.36s ease-in-out infinite alternate;
+  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.25)) drop-shadow(0 0 14px var(--amarelo, #ffd83d));
+}
+
+@keyframes vitoria {
+  from { transform: translateY(0) rotate(-7deg) scale(1); }
+  to   { transform: translateY(-16px) rotate(7deg) scale(1.06); }
+}
+
+/* --- nome e colocação ------------------------------------------------ */
+
+.posto__nome {
+  max-width: 11ch;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.posto__lugar {
+  min-height: 1.7em;
+  padding: 1px 9px;
+  font-size: 0.7rem;
+  color: #fff;
+  background: #10140f;
+  border-radius: 2px;
+  opacity: 0;
+}
+
+.posto--colocado .posto__lugar { animation: lugar-bate 0.4s cubic-bezier(0.2, 1.7, 0.4, 1) forwards; }
+
+@keyframes lugar-bate {
+  0%   { transform: scale(2.4) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(0.9); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.posto--vencedor .posto__lugar {
+  background: var(--amarelo, #ffd83d);
+  color: #10140f;
+}
+
+@media (max-width: 620px) {
+  .sorteio__mesa { flex-wrap: wrap; min-height: 0; }
+  .posto__boneco { height: 74px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .posto, .posto__boneco img, .posto__ficha, .posto__total,
+  .posto__lugar, .posto__desempate, .posto--revelado .dado {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}

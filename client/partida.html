@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partida — Roubopolis</title>
+
+  <link rel="preload" href="/assets/fontes/VCRosdNEUE.ttf" as="font" type="font/ttf" crossorigin>
+
+  <link rel="stylesheet" href="/css/base/reset.css">
+  <link rel="stylesheet" href="/css/base/variaveis.css">
+  <link rel="stylesheet" href="/css/base/tipografia.css">
+  <link rel="stylesheet" href="/css/componentes/botao.css">
+  <link rel="stylesheet" href="/css/componentes/tabuleiro.css">
+  <link rel="stylesheet" href="/css/componentes/construcao.css">
+  <link rel="stylesheet" href="/css/componentes/dados.css">
+  <link rel="stylesheet" href="/css/componentes/escritura.css">
+  <link rel="stylesheet" href="/css/componentes/sorteio.css">
+  <link rel="stylesheet" href="/css/telas/partida.css">
+</head>
+
+<body class="tema-mesa">
+
+  <main class="partida">
+
+    <aside class="placar" id="placar" aria-label="Jogadores"></aside>
+
+    <section class="mesa">
+      <div class="mesa__palco">
+        <div class="tabuleiro" id="tabuleiro">
+          <!-- As casas entram aqui; os peões ficam numa camada por cima. -->
+          <div class="peoes" id="peoes"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="painel">
+      <div class="painel__topo">
+        <span class="painel__rodada" id="vez-rodada">rodada 1</span>
+        <div class="vez" id="vez">
+          <span class="vez__rotulo">Vez de</span>
+          <strong class="vez__nome" id="vez-nome">—</strong>
+        </div>
+      </div>
+
+      <!-- A soma fica ACIMA dos dados: é o número que decide a jogada, e o
+           olho sobe até ele depois de ler as duas faces. -->
+      <div class="dados__soma" id="dados-soma" aria-live="polite"></div>
+      <div class="dados" id="dados">
+        <div class="dado" id="dado-a"><div class="dado__cubo" id="cubo-a"></div></div>
+        <div class="dado" id="dado-b"><div class="dado__cubo" id="cubo-b"></div></div>
+      </div>
+
+      <button class="botao botao--verde botao--rolar" type="button" id="rolar">
+        <span class="botao--rolar__texto">Rolar os dados</span>
+      </button>
+      <p class="painel__aviso" id="aviso" role="status"></p>
+
+      <h2 class="painel__titulo-log">O que aconteceu</h2>
+      <ol class="log" id="log"></ol>
+
+      <button class="botao botao--pequeno botao--roxo" type="button" id="sair">Sair da partida</button>
+    </aside>
+
+  </main>
+
+  <!-- Anúncio da vez, atravessa a tela na troca de turno -->
+  <div class="anuncio" id="anuncio" aria-hidden="true"><span id="anuncio-texto"></span></div>
+
+  <!-- Números que sobem quando o caixa muda -->
+  <div class="flutuantes" id="flutuantes" aria-hidden="true"></div>
+
+  <!-- Escritura do terreno: a carta de compra -->
+  <div class="cortina" id="modal-compra" hidden>
+    <div class="escritura" role="dialog" aria-modal="true" aria-labelledby="compra-titulo">
+      <header class="escritura__cabecalho" id="compra-cabecalho">
+        <span class="escritura__grupo" id="compra-grupo">—</span>
+        <h2 class="escritura__nome" id="compra-titulo">—</h2>
+      </header>
+      <div class="escritura__corpo">
+        <p class="escritura__rotulo">Preço de tabela</p>
+        <strong class="escritura__preco" id="compra-preco">—</strong>
+        <dl class="escritura__linhas">
+          <div><dt>Aluguel base</dt><dd id="compra-aluguel">—</dd></div>
+          <div><dt>Seu caixa</dt><dd id="compra-caixa">—</dd></div>
+          <div><dt>Depois da compra</dt><dd id="compra-sobra">—</dd></div>
+        </dl>
+      </div>
+      <div class="escritura__acoes">
+        <button class="botao botao--pequeno botao--verde" type="button" id="comprar-sim">Comprar</button>
+        <button class="botao botao--pequeno botao--roxo" type="button" id="comprar-nao">Deixar passar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cobrança de aluguel: quem pagou, a quem, quanto e onde -->
+  <div class="cortina" id="modal-aluguel" hidden>
+    <div class="recibo" role="dialog" aria-modal="true" aria-labelledby="aluguel-titulo">
+      <h2 class="recibo__titulo" id="aluguel-titulo">Aluguel</h2>
+      <p class="recibo__casa" id="aluguel-casa">—</p>
+      <div class="recibo__fluxo">
+        <span class="recibo__lado" id="aluguel-de">—</span>
+        <span class="recibo__seta">→</span>
+        <span class="recibo__lado recibo__lado--recebe" id="aluguel-para">—</span>
+      </div>
+      <strong class="recibo__valor" id="aluguel-valor">—</strong>
+      <p class="recibo__detalhe" id="aluguel-detalhe" hidden></p>
+    </div>
+  </div>
+
+  <!-- Abertura: todo mundo junto jogando os dados -->
+  <div class="cortina" id="modal-ordem" hidden>
+    <div class="sorteio" role="dialog" aria-modal="true" aria-labelledby="ordem-titulo">
+      <h2 class="sorteio__titulo" id="ordem-titulo">Quem começa</h2>
+      <p class="sorteio__explica">Todo mundo joga junto. Quem tirar mais, começa.</p>
+      <div class="sorteio__mesa" id="sorteio-mesa"></div>
+      <div class="escritura__acoes">
+        <button class="botao botao--pequeno botao--verde" type="button" id="ordem-fechar" disabled>
+          Bora jogar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/telas/partida.js"></script>
+</body>
+</html>

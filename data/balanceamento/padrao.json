@@ -1,0 +1,79 @@
+{
+  "_leia_isto": "TODOS os números do jogo ficam aqui. Mexer neste arquivo muda o jogo sem tocar em uma linha de código — é só reiniciar o servidor. Os preços das propriedades ficam no tabuleiro (data/tabuleiros/vila_original.json), junto de cada casa.",
+
+  "nome": "padrao",
+  "descricao": "Perfil principal — partida de 15 minutos.",
+
+  "dinheiro": {
+    "_sobre": "Quanto cada jogador tem ao começar.",
+    "caixa_inicial": 8000
+  },
+
+  "dados": {
+    "_sobre": "Dois dados somados. Mexer em 'faces' muda o alcance do movimento e, junto, o ritmo da partida inteira.",
+    "quantidade": 2,
+    "faces": 6
+  },
+
+  "tempo": {
+    "_sobre": "Segundos. 0 desliga o limite.",
+    "segundos_por_turno": 15,
+    "segundos_de_leilao": 12,
+    "minutos_de_partida": 15
+  },
+
+  "casas": {
+    "_sobre": "Valores em reais que cada casa de evento movimenta.",
+    "ganho": 1000,
+    "roubo": 500,
+    "easter_egg": 450,
+    "chance_easter_egg": 0.05
+  },
+
+  "aluguel": {
+    "_sobre": "Fração do valor de tabela da propriedade.",
+    "base": 0.20,
+    "por_nivel_de_upgrade": 0.15,
+    "niveis_maximos": 3
+  },
+
+  "morro": {
+    "_sobre": "Multiplicador do aluguel conforme quantos becos o jogador controla. A chave é a quantidade.",
+    "_grupo": "Qual grupo de propriedades é o Morro. Mudar aqui muda quais casas ganham o multiplicador.",
+    "grupo": "barata",
+    "2": 1.2,
+    "3": 1.4,
+    "4": 1.8,
+    "5": 2.0
+  },
+
+  "leilao": {
+    "_sobre": "O imposto é calculado sobre o VALOR DE TABELA, não sobre o lance — ver docs/REGRAS-DO-JOGO.md.",
+    "imposto_sobre_tabela": 0.02,
+    "compra_do_banco_sem_lance": 0.35,
+    "so_abaixo_de_percentual_da_media": 0.60
+  },
+
+  "desafio": {
+    "pago_ao_dono": 0.15,
+    "opcao_pagar_para_encerrar": 0.25,
+    "opcao_duelo_perdendo": 0.50,
+    "rodadas_entre_desafios": 5
+  },
+
+  "prejuizo": {
+    "_sobre": "Casa do Prejuízo: quanto do valor da propriedade tomada vai para o Coletor, e a punição alternativa em caixa.",
+    "ao_coletor": 0.50,
+    "sem_propriedade_perde_do_caixa": 0.15
+  },
+
+  "banco": {
+    "_sobre": "Evento Bônus do banco: venda ao banco acima da tabela.",
+    "bonus_de_venda": 0.35
+  },
+
+  "prisao": {
+    "rodadas_presas": 1,
+    "rodadas_presas_reincidente": 3
+  }
+}

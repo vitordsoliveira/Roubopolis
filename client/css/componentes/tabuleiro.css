@@ -1,0 +1,333 @@
+/* Tabuleiro com volume, no espírito do Business Tour.
+
+   Duas ideias sustentam o efeito:
+
+   1. A mesa inteira é inclinada com rotateX. Como o container tem
+      `preserve-3d`, cada casa pode ser ERGUIDA com translateZ e passa a ter
+      parede lateral de verdade — é isso que separa "tabuleiro" de "planilha
+      colorida".
+   2. Tudo que precisa ser lido — peão, logo, plaquinha de dono — recebe a
+      rotação inversa e volta a ficar em pé, como peça espetada no tabuleiro.
+
+   Nada disso usa WebGL: é uma transformação de CSS e as casas continuam
+   sendo elementos normais, clicáveis e acessíveis. */
+
+.mesa {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: var(--e3);
+  overflow: hidden;
+}
+
+.mesa__palco {
+  /* Ponto de fuga no centro: com ele acima, a borda de baixo do tabuleiro
+     — que é justamente onde fica a INICIAL — crescia para fora da tela. */
+  perspective: 1700px;
+  perspective-origin: 50% 50%;
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.tabuleiro {
+  /* 46° em vez de 54°: inclinado o bastante para ter volume, sem espremer
+     a fileira do fundo a ponto de não dar para ler. */
+  --inclinacao: 46deg;
+  --altura-casa: 10px;
+  position: relative;
+  /* Medido pela ALTURA, não pela largura. Como a inclinação encolhe o
+     tabuleiro na vertical, dimensionar pela largura fazia ele passar da
+     altura disponível e cortar a base. */
+  height: min(92vh, 940px);
+  max-width: 84vw;
+  aspect-ratio: 11 / 12;
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  grid-template-rows: repeat(12, 1fr);
+  gap: 3px;
+  /* Sobe um tico: em perspectiva a borda de baixo (a mais próxima) cresce
+     mais do que a de cima encolhe, então o conjunto tende a descer. */
+  transform: translateY(-2%) rotateX(var(--inclinacao));
+  transform-style: preserve-3d;
+  /* A base é o "feltro" da mesa: aparece nas frestas e por baixo das casas
+     erguidas, o que dá a leitura de espessura. */
+  background: linear-gradient(160deg, #13210f, #0a1108);
+  border: 5px solid #060a05;
+  border-radius: 6px;
+  box-shadow: 0 50px 70px rgba(0, 0, 0, 0.6);
+}
+
+/* --- miolo -------------------------------------------------------- */
+
+.tabuleiro__miolo {
+  grid-column: 2 / 11;
+  grid-row: 2 / 12;
+  display: grid;
+  place-items: center;
+  transform: translateZ(2px);
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0 14px, transparent 14px 28px),
+    radial-gradient(circle at 50% 32%, #2c6427, #122c10 72%);
+  border: 2px solid rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+.tabuleiro__marca {
+  transform: rotateX(calc(var(--inclinacao) * -1)) translateZ(30px);
+  font-size: clamp(1.1rem, 3.2vw, 2.6rem);
+  letter-spacing: 0.08em;
+  color: var(--amarelo, #ffd83d);
+  text-shadow:
+    0 3px 0 var(--roxo, #7b2fbf),
+    0 6px 0 rgba(0, 0, 0, 0.4),
+    0 0 26px rgba(255, 216, 61, 0.4);
+}
+
+/* --- casa: o bloco erguido ---------------------------------------- */
+
+.casa {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #f5f1e4;
+  color: #1b1b1b;
+  transform: translateZ(var(--altura-casa));
+  transform-style: preserve-3d;
+  border-radius: 2px;
+  /* A pilha de sombras finas simula a parede lateral do bloco: cada linha é
+     uma "fatia" mais escura descendo até a base da mesa. */
+  box-shadow:
+    0 1px 0 #cdc7b4, 0 2px 0 #c2bca9, 0 3px 0 #b7b19e,
+    0 4px 0 #aca693, 0 5px 0 #a19b88, 0 6px 0 #969079,
+    0 10px 12px rgba(0, 0, 0, 0.45);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.casa__faixa {
+  height: 30%;
+  min-height: 9px;
+  background: var(--cor-grupo, transparent);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* O nome fica na BASE da casa. Em perspectiva a borda de baixo é a mais
+   próxima da câmera, então é lá que o texto fica maior e legível — no topo
+   ele some junto com a fuga.
+
+   A fonte AQUI não é a de pixel do resto do jogo, de propósito. Fonte de
+   pixel só é nítida no tamanho nativo dela; espremida a 8px e ainda por
+   cima escalada por uma transformação 3D, cada letra vira borrão. Nas
+   casas entra uma sem serifa comum, que aguenta tamanho pequeno.
+
+   O tamanho acompanha a ALTURA da tela porque é ela que dimensiona o
+   tabuleiro — assim a letra encolhe junto com a casa, em vez de estourar. */
+.casa__nome {
+  margin-top: auto;
+  padding: 1px 2px;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(7.5px, 1.28vh, 13px);
+  font-weight: 700;
+  letter-spacing: 0; /* zera o 0.04em que vem do body */
+  line-height: 1.05;
+  text-align: center;
+  text-transform: uppercase;
+  color: #14140f;
+  overflow: hidden;
+  text-wrap: balance;
+}
+
+.casa__preco {
+  padding-bottom: 2px;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-size: clamp(6.5px, 1.05vh, 11px);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.1;
+  text-align: center;
+  color: #4a4636;
+}
+
+/* Casas sem grupo têm cara própria. */
+.casa--evento      { background: #d3ecc7; }
+.casa--inicial     { background: #ffe6a0; }
+.casa--prisao      { background: #eeb6b6; }
+.casa--neutra      { background: #e9e5d8; }
+
+/* --- propriedade comprada ------------------------------------------ */
+
+/* Comprada sobe mais: dá para ver de relance quem domina o tabuleiro. */
+.casa--comprada {
+  --altura-casa: 18px;
+  box-shadow:
+    0 1px 0 #cdc7b4, 0 2px 0 #c2bca9, 0 3px 0 #b7b19e, 0 4px 0 #aca693,
+    0 5px 0 #a19b88, 0 6px 0 #969079, 0 7px 0 #8b8570, 0 8px 0 #807a67,
+    0 14px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* Quem é o dono se lê pela construção que sobe no terreno — o desenho de
+   cada faixa de preço está em componentes/construcao.css. */
+
+/* --- casa em foco --------------------------------------------------- */
+
+.casa--destacada {
+  animation: casa-pulsa 0.5s ease-out 3;
+  z-index: 3;
+}
+
+@keyframes casa-pulsa {
+  50% {
+    transform: translateZ(calc(var(--altura-casa) + 14px));
+    filter: brightness(1.35);
+  }
+}
+
+/* --- camada dos peões ------------------------------------------------ */
+
+/* Os peões não moram dentro da casa: ficam numa camada por cima do
+   tabuleiro, posicionados em porcentagem da grade. Assim eles deslizam de
+   uma casa para outra em vez de sumir de um lugar e aparecer em outro. */
+.peoes {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.peao {
+  --ms-passo: 300ms;
+  position: absolute;
+  width: 0;
+  height: 0;
+  /* Deslocamento até o centro da casa; o JS calcula a porcentagem. */
+  left: var(--px, 0%);
+  top: var(--py, 0%);
+  transform-style: preserve-3d;
+  transition: left var(--ms-passo) linear, top var(--ms-passo) linear;
+}
+
+/* Sombra achatada, colada no tabuleiro — é ela que "prende" o peão ao chão
+   e faz o pulo ser lido como pulo. */
+.peao__sombra {
+  position: absolute;
+  left: -9px;
+  top: -4px;
+  width: 18px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 50%;
+  filter: blur(1.5px);
+  transform: translateZ(var(--altura-casa, 10px));
+}
+
+/* Base: o disco colorido deitado no chão, como peça de tabuleiro. Fica
+   FORA do pino, para acompanhar a inclinação da mesa em vez de ficar em pé. */
+.peao__base {
+  position: absolute;
+  left: -10px;
+  top: -5px;
+  width: 20px;
+  height: 10px;
+  background: var(--cor-peao, #fff);
+  border: 2px solid #10140f;
+  border-radius: 50%;
+  transform: translateZ(calc(var(--altura-casa, 10px) + 1px));
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Pino: a partir daqui tudo fica EM PÉ, com a rotação inversa à da mesa. */
+.peao__pino {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform: rotateX(calc(var(--inclinacao) * -1)) translateZ(var(--altura-casa, 10px));
+  transform-origin: bottom center;
+  transform-style: preserve-3d;
+}
+
+/* O boneco INTEIRO, sem recorte. `contain` preserva a proporção e a altura
+   manda — antes era um círculo com `cover`, que cortava o personagem no
+   pescoço e ficava grotesco. */
+.peao__figura {
+  display: block;
+  height: 38px;
+  width: auto;
+  max-width: 30px;
+  margin-left: -15px; /* centraliza sobre a base */
+  object-fit: contain;
+  object-position: bottom center;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
+  transform-origin: bottom center;
+  animation: peao-balanca 1.2s ease-in-out infinite alternate;
+}
+
+/* Sem sprite: uma ficha redonda com a inicial. */
+.peao__ficha {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  background: var(--cor-peao, #fff);
+  color: #10140f;
+  font-size: 0.62rem;
+  line-height: 1;
+  border: 2px solid #10140f;
+  border-radius: 50%;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
+  transform-origin: bottom center;
+  animation: peao-balanca 1.2s ease-in-out infinite alternate;
+}
+
+/* Parado: balança de um lado para o outro, como boneco de joguinho. */
+@keyframes peao-balanca {
+  from { transform: translateX(-2px) rotate(-7deg); }
+  to   { transform: translateX(2px) rotate(7deg); }
+}
+
+/* De quem é a vez: fica maior, brilha e o anel da base acende. */
+.peao--da-vez { z-index: 5; }
+
+.peao--da-vez .peao__figura,
+.peao--da-vez .peao__ficha {
+  animation: peao-anima 0.6s ease-in-out infinite alternate;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45)) drop-shadow(0 0 7px var(--verde-neon, #7CFC00));
+}
+
+.peao--da-vez .peao__base {
+  border-color: var(--verde-neon, #7CFC00);
+  box-shadow: 0 0 14px var(--verde-neon, #7CFC00);
+}
+
+@keyframes peao-anima {
+  from { transform: translateY(0) scale(1) rotate(-4deg); }
+  to   { transform: translateY(-4px) scale(1.06) rotate(4deg); }
+}
+
+/* Andando: pulo em arco a cada casa. A sombra encolhe junto, que é o que
+   vende a altura. A duração acompanha --ms-passo para o salto casar com o
+   deslocamento — se as duas discordarem, o boneco desliza no ar. */
+.peao--andando .peao__pino { animation: peao-salto var(--ms-passo) ease-in-out; }
+.peao--andando .peao__sombra { animation: sombra-encolhe var(--ms-passo) ease-in-out; }
+.peao--andando .peao__base { animation: sombra-encolhe var(--ms-passo) ease-in-out; }
+
+@keyframes peao-salto {
+  50% {
+    transform: rotateX(calc(var(--inclinacao) * -1)) translateZ(var(--altura-casa, 10px)) translateY(-20px) scale(1.08);
+  }
+}
+
+@keyframes sombra-encolhe {
+  50% { transform: translateZ(var(--altura-casa, 10px)) scale(0.6); opacity: 0.3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .peao, .peao__figura, .peao__ficha, .peao__pino, .peao__sombra, .peao__base, .casa--destacada {
+    animation: none !important;
+    transition: none !important;
+  }
+}

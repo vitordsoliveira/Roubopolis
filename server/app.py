@@ -14,6 +14,7 @@ from server.config import Config
 from server.db.criar_banco import garantir_tabelas
 from server.db.session import Sessao
 from server.rotas.auth import bp as bp_auth
+from server.rotas.partida import bp as bp_partida
 from server.rotas.perfil import bp as bp_perfil
 from server.rotas.salas import bp as bp_salas
 from server.salas.gerenciador import ErroDeSala
@@ -30,6 +31,7 @@ def criar_app() -> Flask:
     app.register_blueprint(bp_auth)
     app.register_blueprint(bp_perfil)
     app.register_blueprint(bp_salas)
+    app.register_blueprint(bp_partida)
 
     # ---- telas -------------------------------------------------------
     @app.get("/")
@@ -39,6 +41,10 @@ def criar_app() -> Flask:
     @app.get("/lobby")
     def lobby():
         return send_from_directory(Config.DIR_CLIENTE, "lobby.html")
+
+    @app.get("/partida")
+    def partida():
+        return send_from_directory(Config.DIR_CLIENTE, "partida.html")
 
     @app.get("/<path:caminho>")
     def estaticos(caminho: str):

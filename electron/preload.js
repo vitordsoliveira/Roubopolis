@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld("roubodopolis", {
   tentarDeNovo: () => ipcRenderer.send("tentar-de-novo"),
   sairDoJogo: () => ipcRenderer.send("sair-do-jogo"),
 
+  /** Copia pela área de transferência do Electron. A do navegador
+      (`navigator.clipboard`) não existe fora de contexto seguro, e o jogo
+      roda em http quando é servido na rede local. */
+  copiar: (texto) => ipcRenderer.invoke("copiar-texto", texto),
+
   /** Alterna o modo de exibição da janela a partir das configurações. */
   alternarTelaCheia: () => ipcRenderer.invoke("alternar-tela-cheia"),
   telaCheia: () => ipcRenderer.sendSync("estado-tela-cheia"),

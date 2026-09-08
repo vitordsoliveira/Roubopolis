@@ -156,4 +156,15 @@ export const api = {
   marcarPronto: (codigo, pronto) =>
     pedir(`/api/salas/${codigo}/pronto`, { metodo: "POST", corpo: { pronto } }),
   sairDaSala: (codigo) => pedir(`/api/salas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
+
+  // --- partida ---------------------------------------------------------
+  /** Só o dono da sala, e só com todo mundo pronto. */
+  iniciarPartida: (codigo) => pedir(`/api/salas/${codigo}/iniciar`, { metodo: "POST", corpo: {} }),
+  verPartida: (codigo) => pedir(`/api/partidas/${codigo}`),
+  rolarDados: (codigo) => pedir(`/api/partidas/${codigo}/rolar`, { metodo: "POST", corpo: {} }),
+  /** `comprar` false também passa o turno — recusar é uma decisão. */
+  decidirCompra: (codigo, comprar) =>
+    pedir(`/api/partidas/${codigo}/comprar`, { metodo: "POST", corpo: { comprar } }),
+  /** Abandona a partida: os terrenos voltam ao banco e a vez passa. */
+  sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 };

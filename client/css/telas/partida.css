@@ -1,0 +1,230 @@
+/* Tela da partida: placar à esquerda, mesa no centro, controles à direita.
+   Os modais e a carta de compra ficam em componentes/escritura.css. */
+
+.tema-mesa {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 50% -10%, #35482f 0%, #16200f 55%, #080c06 100%);
+  color: var(--branco, #fff);
+  overflow: hidden;
+}
+
+.partida {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr minmax(230px, 300px);
+  gap: var(--e3);
+  height: 100vh;
+  padding: var(--e3);
+}
+
+/* --- placar ------------------------------------------------------- */
+
+.placar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  overflow-y: auto;
+}
+
+.jogador {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--e2);
+  padding: var(--e2);
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-left: 8px solid var(--cor-jogador, #fff);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+/* Quem joga agora salta para a frente e acende. */
+.jogador--da-vez {
+  background: rgba(255, 216, 61, 0.16);
+  border-color: var(--amarelo, #ffd83d);
+  transform: translateX(6px) scale(1.03);
+  box-shadow: 0 0 24px rgba(255, 216, 61, 0.28);
+}
+
+.jogador--eu .jogador__nome::after {
+  content: " (você)";
+  opacity: 0.55;
+  font-size: 0.72em;
+}
+
+.jogador__retrato {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--cor-jogador, #666);
+  border: 3px solid #10140f;
+  color: #10140f;
+  font-size: 1.05rem;
+}
+
+.jogador__retrato img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.jogador__dados { min-width: 0; }
+
+.jogador__nome {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jogador__caixa {
+  font-size: 1rem;
+  color: var(--amarelo, #ffd83d);
+  transition: color 0.2s;
+}
+
+.jogador__terrenos { font-size: 0.58rem; opacity: 0.6; }
+
+/* --- painel lateral ------------------------------------------------ */
+
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  min-height: 0;
+}
+
+.painel__topo {
+  padding: var(--e2);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 3px solid var(--amarelo, #ffd83d);
+  transition: border-color 0.2s;
+}
+
+.painel__rodada {
+  display: block;
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.vez__rotulo { font-size: 0.6rem; opacity: 0.7; text-transform: uppercase; }
+
+.vez__nome {
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.5;
+  color: var(--amarelo, #ffd83d);
+  text-transform: uppercase;
+}
+
+/* Minha vez: o painel inteiro muda de cor e pulsa. */
+.painel__topo--minha {
+  border-color: var(--verde-neon, #7CFC00);
+  animation: topo-pulsa 1.2s ease-in-out infinite alternate;
+}
+
+.painel__topo--minha .vez__nome { color: var(--verde-neon, #7CFC00); }
+
+@keyframes topo-pulsa {
+  to { box-shadow: 0 0 26px rgba(124, 252, 0, 0.45); }
+}
+
+.botao--rolar {
+  width: 100%;
+  padding: var(--e3);
+  font-size: 1rem;
+}
+
+/* Quando dá para rolar, o botão respira para puxar o olho. */
+.botao--rolar:not(:disabled) { animation: rolar-respira 1.3s ease-in-out infinite alternate; }
+
+@keyframes rolar-respira {
+  to { transform: scale(1.04); }
+}
+
+.botao--rolar:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  animation: none;
+}
+
+.painel__aviso {
+  min-height: 2.6em;
+  font-size: 0.64rem;
+  line-height: 1.6;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.painel__titulo-log {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  opacity: 0.5;
+  letter-spacing: 0.14em;
+}
+
+.log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--e2);
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  list-style: none;
+}
+
+.log li {
+  font-size: 0.6rem;
+  line-height: 1.55;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+  opacity: 0.8;
+  animation: log-entra 0.25s ease-out;
+}
+
+@keyframes log-entra {
+  from { transform: translateX(10px); opacity: 0; }
+}
+
+.log li:last-child { border-bottom: none; opacity: 1; }
+
+.log li.log--dado    { color: #9fd4ff; }
+.log li.log--compra  { color: #a8e6a3; }
+.log li.log--vez     { color: var(--amarelo, #ffd83d); }
+.log li.log--sorteio { color: #d9b8ff; }
+.log li.log--rodada  { color: #fff; opacity: 0.55; text-transform: uppercase; font-size: 0.55rem; }
+
+/* --- telas estreitas ----------------------------------------------- */
+
+@media (max-width: 1080px) {
+  .partida {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .placar { flex-direction: row; overflow-x: auto; }
+  .jogador { flex: 0 0 auto; }
+  .jogador--da-vez { transform: translateY(-4px) scale(1.03); }
+  .tabuleiro { width: min(94vw, 680px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao--rolar:not(:disabled),
+  .painel__topo--minha,
+  .log li { animation: none; }
+}

@@ -31,7 +31,7 @@ if (typeof electron === "string" || !electron.app) {
   process.exit(1);
 }
 
-const { app, BrowserWindow, Menu, shell, ipcMain } = electron;
+const { app, BrowserWindow, Menu, shell, ipcMain, clipboard } = electron;
 
 // --------------------------------------------------------------------------
 // para onde a janela aponta
@@ -182,6 +182,15 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     ipcMain.on("tentar-de-novo", () => carregar());
     ipcMain.on("sair-do-jogo", () => app.quit());
+
+    // A área de transferência do Electron, e não a do navegador: a
+    // `navigator.clipboard` só existe em contexto seguro (https ou
+    // localhost), então ela some justamente quando alguém entra pelo IP da
+    // rede local — que é como o pessoal testa junto.
+    ipcMain.handle("copiar-texto", (_evento, texto) => {
+      clipboard.writeText(String(texto ?? ""));
+      return true;
+    });
     ipcMain.handle("alternar-tela-cheia", () => {
       janela.setFullScreen(!janela.isFullScreen());
       return janela.isFullScreen();

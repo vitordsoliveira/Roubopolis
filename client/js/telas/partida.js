@@ -31,11 +31,33 @@ const modalCompra = document.querySelector("#modal-compra");
 const modalOrdem = document.querySelector("#modal-ordem");
 
 const CORES_RESERVA = ["#e94f37", "#7cb342", "#a855f7", "#ffd83d", "#2563c9", "#c9a227"];
-const MS_POR_CASA = 175;
-/** O arremesso do dado até assentar (a animação dura 0,85s + o atraso do 2º). */
-const MS_ARREMESSO = 980;
-/** Respiro depois da soma aparecer, para dar tempo de LER antes do peão sair. */
-const MS_LER_RESULTADO = 750;
+
+/* --- ritmo da partida -------------------------------------------------
+
+   Um botão só para o jogo inteiro: 1 é o ritmo normal, 1.5 deixa tudo 50%
+   mais lento, 0.8 acelera. Todo tempo de animação sai daqui, então dá para
+   calibrar a partida inteira mexendo em um número.
+
+   Por que devagar: o jogador precisa conseguir contar o que aconteceu —
+   quanto deu no dado, para onde o boneco foi, em que casa parou. Rápido
+   demais vira borrão e ninguém acompanha. */
+
+const RITMO = 1;
+const ms = (base) => Math.round(base * RITMO);
+
+/** Tempo de UMA casa: o passo do peão. É também a duração da animação do
+    salto no CSS — ver `aplicarRitmo()`, que grava o valor no tabuleiro
+    para os dois nunca discordarem. */
+const MS_POR_CASA = ms(330);
+/** Do arremesso até o dado assentar. */
+const MS_ARREMESSO = ms(1150);
+/** Respiro depois da soma aparecer, para dar tempo de LER antes de andar. */
+const MS_LER_RESULTADO = ms(1200);
+/** Pausa depois que o peão pousa, antes do modal ou do estado novo entrar. */
+const MS_APOS_CHEGAR = ms(650);
+/** Quanto o recibo do aluguel fica na tela. */
+const MS_RECIBO = ms(3200);
+const MS_RECIBO_FALENCIA = ms(4200);
 
 /** Para mostrar a face N, quanto o cubo precisa girar. */
 const FACES = { 1: [0, 0], 2: [0, -90], 3: [-90, 0], 4: [90, 0], 5: [0, 90], 6: [0, 180] };
@@ -183,6 +205,15 @@ function desenharTabuleiro(dados) {
   // Foi exatamente o que aconteceu com as construções.
   elTabuleiro.replaceChildren(...itens, elConstrucoes, elPeoes);
   conferirCamadas();
+  aplicarRitmo();
+}
+
+/* O CSS anima o salto e o JS espera entre as casas. Se os dois tempos
+   discordarem, o peão é arrancado para a casa seguinte antes de pousar e
+   parece deslizar em vez de andar — foi o que aconteceu com 175ms no JS
+   contra 300ms no CSS. Uma fonte da verdade só: o JS grava o valor. */
+function aplicarRitmo() {
+  elTabuleiro.style.setProperty("--ms-passo", `${MS_POR_CASA}ms`);
 }
 
 const casaDe = (i) => elTabuleiro.querySelector(`.casa[data-i="${i}"]`);
@@ -577,6 +608,7 @@ async function encenarLanceDeOutro(resposta) {
     await espera(MS_LER_RESULTADO);
 
     await andarPeao(movimento);
+    await espera(MS_APOS_CHEGAR);
     await mostrarAluguel(resposta.partida.ultimo_aluguel);
   } finally {
     ocupado = false;
@@ -615,7 +647,10 @@ botaoRolar.addEventListener("click", async () => {
     // 3. o peão anda casa por casa
     await andarPeao(movimento);
 
-    // 4. e só agora o estado novo entra
+    // 4. um respiro para ver ONDE parou, antes da tela mudar
+    await espera(MS_APOS_CHEGAR);
+
+    // 5. e só agora o estado novo entra
     aplicar(resposta);
 
     // 5. se parou em terreno alheio, o recibo do aluguel
@@ -659,7 +694,7 @@ async function mostrarAluguel(cobranca) {
 
   modalAluguel.hidden = false;
   som.tocar(cobranca.faliu ? "erro" : "aviso");
-  await espera(cobranca.faliu ? 3200 : 2400);
+  await espera(cobranca.faliu ? MS_RECIBO_FALENCIA : MS_RECIBO);
   modalAluguel.hidden = true;
 }
 

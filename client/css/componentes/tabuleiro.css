@@ -214,7 +214,11 @@
 }
 
 .peao {
-  --ms-passo: 300ms;
+  /* Só o valor de partida: quem manda é o JS, que grava --ms-passo no
+     tabuleiro a partir de MS_POR_CASA. Se este número aqui divergir do de
+     lá, o peão é puxado para a casa seguinte antes de pousar e passa a
+     deslizar em vez de andar. */
+  --ms-passo: 330ms;
   position: absolute;
   width: 0;
   height: 0;

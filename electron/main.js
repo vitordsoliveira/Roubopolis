@@ -75,7 +75,7 @@ function criarJanela() {
     backgroundColor: "#12160f", // evita o flash branco antes do CSS carregar
     show: false,
     icon: ICONE,
-    title: "Roubodopolis",
+    title: "Roubopolis",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

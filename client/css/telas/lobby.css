@@ -28,8 +28,15 @@
   border: 3px solid var(--branco);
 }
 
+/* O "SALA" fica maior só aqui: no menu o mesmo .rotulo já está no tamanho
+   certo, e crescer lá desalinharia o formulário de entrada. */
+.lobby__codigo .rotulo {
+  font-size: clamp(0.9rem, 1.9vw, 1.15rem);
+  opacity: 1;
+}
+
 .lobby__codigo strong {
-  font-size: clamp(1.2rem, 2.4vw, 1.95rem);
+  font-size: clamp(1.35rem, 2.7vw, 2.15rem);
   letter-spacing: 0.28em;
   color: var(--amarelo);
 }
@@ -54,7 +61,8 @@
 
 .lobby__aviso {
   flex: 1 1 260px;
-  font-size: clamp(0.6rem, 1vw, 0.83rem);
+  font-size: clamp(0.78rem, 1.3vw, 1.05rem);
+  line-height: 1.6;
   color: var(--branco);
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
 }

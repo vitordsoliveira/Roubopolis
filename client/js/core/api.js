@@ -112,6 +112,8 @@ async function pedir(caminho, { metodo = "GET", corpo } = {}) {
 export const api = {
   quemSouEu: () => pedir("/api/jogador"),
   perfil: () => pedir("/api/perfil"),
+  /** Campo ausente não é alterado; `remover_foto: true` apaga o avatar. */
+  salvarPerfil: (dados) => pedir("/api/perfil", { metodo: "POST", corpo: dados }),
   async entrar(login, senha) {
     const jogador = await pedir("/api/auth/entrar", { metodo: "POST", corpo: { login, senha } });
     guardado.salvarToken(jogador.token);

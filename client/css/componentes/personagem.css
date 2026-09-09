@@ -11,7 +11,7 @@
 }
 
 .carrossel__rotulo {
-  font-size: clamp(0.5rem, 0.95vw, 0.72rem);
+  font-size: clamp(0.7rem, 1.2vw, 0.95rem);
   text-transform: lowercase;
   color: rgba(255, 255, 255, 0.78);
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
@@ -81,7 +81,7 @@
 /* Sem boneco (nenhum sobrando): mantém a altura para a fila não pular. */
 .carrossel__vazio {
   align-self: center;
-  font-size: clamp(0.5rem, 0.95vw, 0.7rem);
+  font-size: clamp(0.7rem, 1.2vw, 0.95rem);
   color: rgba(255, 255, 255, 0.55);
   text-align: center;
 }

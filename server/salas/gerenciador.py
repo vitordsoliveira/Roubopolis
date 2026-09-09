@@ -98,6 +98,58 @@ def criar_conta(sessao: Session, login_bruto: str, senha: str, nome_bruto: str) 
     return jogador
 
 
+#: Teto do data URL do avatar. O cliente manda 192x192 JPEG, que dá ~20 KB
+#: em base64 — o limite é folgado de propósito e só existe para impedir que
+#: alguém poste um arquivo enorme direto na API.
+LIMITE_FOTO = 300_000
+
+
+def validar_foto(bruta: str | None) -> str | None:
+    """Aceita só data URL de imagem. Vazio significa 'sem foto'."""
+    if not bruta:
+        return None
+    if not isinstance(bruta, str) or not bruta.startswith("data:image/"):
+        raise ErroDeSala("Formato de imagem não reconhecido. Envie um PNG ou JPG.")
+    if len(bruta) > LIMITE_FOTO:
+        raise ErroDeSala("A foto ficou grande demais. Tente outra imagem.")
+    return bruta
+
+
+def atualizar_perfil(
+    sessao: Session,
+    jogador: Jogador,
+    *,
+    nome: str | None = None,
+    senha_atual: str | None = None,
+    senha_nova: str | None = None,
+    foto: str | None = None,
+    remover_foto: bool = False,
+) -> Jogador:
+    """Altera o que o jogador pode mudar de si. Cada campo é opcional:
+    `None` quer dizer 'não mexe', não 'apaga'.
+    """
+    if nome is not None:
+        jogador.nome = limpar_nome(nome)
+
+    if senha_nova:
+        # Trocar senha exige provar que sabe a atual: sem isso, um token
+        # roubado viraria posse permanente da conta.
+        if not jogador.senha_hash:
+            raise ErroDeSala("Esta conta ainda não tem senha para trocar.")
+        if not senha_atual or not check_password_hash(jogador.senha_hash, senha_atual):
+            raise ErroDeSala("A senha atual está incorreta.", http=403)
+        jogador.senha_hash = generate_password_hash(validar_senha(senha_nova))
+
+    if remover_foto:
+        jogador.foto = None
+    elif foto is not None:
+        jogador.foto = validar_foto(foto)
+
+    jogador.visto_em = datetime.now()
+    sessao.commit()
+    return jogador
+
+
 def exigir_jogador(sessao: Session, token: str | None) -> Jogador:
     jogador = jogador_por_token(sessao, token)
     if jogador is None:

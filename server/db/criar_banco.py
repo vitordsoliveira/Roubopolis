@@ -95,6 +95,7 @@ def garantir_tabelas() -> None:
     """Cria tabelas ausentes e completa colunas antigas sem apagar dados."""
     engine = obter_engine()
     Base.metadata.create_all(engine)
+    garantir_colunas()
     _atualizar_colunas_jogador(engine)
 
 
@@ -115,6 +116,42 @@ def criar_tabelas(recriar: bool = False) -> None:
         marca = "criada" if nome in depois - antes else "já existia"
         colunas = len(modelo.__table__.columns)
         print(f"  [{marca:>10}] {nome:<14} {colunas} colunas")
+
+
+def garantir_colunas() -> None:
+    """Adiciona colunas novas em tabelas que já existem.
+
+    `create_all` só cria tabela que falta — ele NÃO mexe em tabela existente.
+    Sem isto, acrescentar um campo ao model funcionaria numa base nova e
+    falharia em produção com "Unknown column", que é o pior momento para
+    descobrir. Roda a cada `criar_banco` e é seguro repetir: só age no que
+    está faltando.
+    """
+    engine = obter_engine()
+    inspetor = inspect(engine)
+    tabelas = set(inspetor.get_table_names())
+
+    for modelo in TODOS_OS_MODELOS:
+        nome = modelo.__tablename__
+        if nome not in tabelas:
+            continue  # acabou de ser criada pelo create_all, já veio completa
+
+        existentes = {coluna["name"] for coluna in inspetor.get_columns(nome)}
+        for coluna in modelo.__table__.columns:
+            if coluna.name in existentes:
+                continue
+
+            tipo = coluna.type.compile(engine.dialect)
+            # Coluna nova em tabela com linhas não pode ser NOT NULL sem
+            # default: as linhas antigas não teriam o que gravar ali.
+            padrao = getattr(coluna.server_default, "arg", None)
+            trecho_padrao = f" DEFAULT {padrao}" if isinstance(padrao, str) else ""
+            nulo = "NULL" if coluna.nullable or not trecho_padrao else "NOT NULL"
+
+            ddl = f"ALTER TABLE `{nome}` ADD COLUMN `{coluna.name}` {tipo} {nulo}{trecho_padrao}"
+            with engine.begin() as conexao:
+                conexao.execute(text(ddl))
+            print(f"  [{'+ coluna':>10}] {nome}.{coluna.name} ({tipo})")
 
 
 def _atualizar_colunas_jogador(engine) -> None:

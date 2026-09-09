@@ -22,7 +22,7 @@
 /* --- escritura ----------------------------------------------------- */
 
 .escritura {
-  width: min(340px, 100%);
+  width: min(376px, 100%);
   background: #f7f3e6;
   color: #1b1b1b;
   border: 5px solid #10140f;
@@ -64,42 +64,81 @@
 
 .escritura__corpo { padding: var(--e3); text-align: center; }
 
+/* A partir daqui os NÚMEROS saem da fonte de pixel.
+
+   `VCR OSD Neue` é bitmap: nítida no tamanho nativo, mas a 10px ela fica
+   fina e sem peso, e era isso que deixava os valores quase invisíveis
+   mesmo em preto sobre creme. Os números são o que decide a compra, então
+   entram numa sem serifa comum, maiores e em negrito. O título e o
+   cabeçalho continuam na fonte de pixel, onde ela funciona. */
+
 .escritura__rotulo {
   font-size: 0.56rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .escritura__preco {
   display: block;
-  margin-bottom: var(--e3);
-  font-size: 2.1rem;
-  line-height: 1.2;
-  color: var(--roxo, #7b2fbf);
+  margin-bottom: var(--e4);
+  font-size: 2.4rem;
+  line-height: 1.15;
+  color: #5b1f96;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
 }
 
 .escritura__linhas {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  font-size: 0.66rem;
+  gap: 2px;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
 }
 
 .escritura__linhas > div {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  gap: var(--e2);
-  padding: 5px 0;
-  border-bottom: 1px dashed rgba(0, 0, 0, 0.18);
+  gap: var(--e3);
+  padding: 7px 9px;
+  background: rgba(0, 0, 0, 0.045);
+  border-left: 4px solid rgba(0, 0, 0, 0.16);
 }
 
-.escritura__linhas > div:last-child { border-bottom: none; }
-.escritura__linhas dt { opacity: 0.6; }
-.escritura__linhas dd { font-weight: bold; }
+.escritura__linhas dt {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #5a5347;
+}
+
+.escritura__linhas dd {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #14140f;
+  white-space: nowrap;
+}
+
+/* A última linha é a que decide: fica com mais peso que as outras. */
+.escritura__linhas > div:last-child {
+  background: rgba(91, 31, 150, 0.1);
+  border-left-color: #5b1f96;
+}
+
+.escritura__linhas > div:last-child dt { color: #3f3a33; }
+
+.escritura__linhas > div:last-child dd {
+  font-size: 1.15rem;
+  color: #5b1f96;
+}
 
 /* Se a compra deixar o caixa curto, o número avisa sozinho. */
-.escritura__linhas dd.apertado { color: #c62828; }
+.escritura__linhas > div:last-child:has(dd.apertado) {
+  background: rgba(198, 40, 40, 0.12);
+  border-left-color: #b3261e;
+}
+
+.escritura__linhas dd.apertado { color: #b3261e; }
 
 .escritura__acoes {
   display: flex;
@@ -186,42 +225,54 @@
   text-transform: uppercase;
 }
 
+/* Mesma regra da escritura: nomes e valores saem da fonte de pixel, que
+   some em tamanho pequeno. */
 .recibo__fluxo {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--e2);
-  margin-bottom: var(--e2);
-  font-size: 0.72rem;
-  text-transform: uppercase;
+  margin-bottom: var(--e3);
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
 }
 
 .recibo__lado {
-  padding: 3px 8px;
+  padding: 5px 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #14140f;
   background: rgba(0, 0, 0, 0.07);
-  border: 2px solid rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(0, 0, 0, 0.3);
 }
 
 .recibo__lado--recebe {
-  background: rgba(124, 200, 60, 0.22);
-  border-color: #4a7c1f;
+  background: rgba(106, 168, 47, 0.25);
+  border-color: #3f6b17;
+  color: #234209;
 }
 
-.recibo__seta { color: var(--roxo, #7b2fbf); font-size: 1.1rem; }
+.recibo__seta { color: #5b1f96; font-size: 1.3rem; }
 
 .recibo__valor {
   display: block;
-  font-size: 2rem;
-  line-height: 1.3;
-  color: #b3261e;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-size: 2.3rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: #a81d16;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
   animation: soma-total 0.45s cubic-bezier(0.2, 1.7, 0.4, 1) 0.18s backwards;
 }
 
 .recibo__detalhe {
   margin-top: var(--e2);
-  font-size: 0.6rem;
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.76rem;
   line-height: 1.6;
-  opacity: 0.7;
+  letter-spacing: 0;
+  color: #4a4438;
 }
 
 /* Falência: o recibo muda de tom. */

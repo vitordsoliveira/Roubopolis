@@ -12,6 +12,7 @@ import { toast } from "../ui/toast.js";
 
 const elTabuleiro = document.querySelector("#tabuleiro");
 const elPeoes = document.querySelector("#peoes");
+const elConstrucoes = document.querySelector("#construcoes");
 const elPlacar = document.querySelector("#placar");
 const elLog = document.querySelector("#log");
 const elVezNome = document.querySelector("#vez-nome");
@@ -176,8 +177,12 @@ function desenharTabuleiro(dados) {
     itens.push(el);
   }
 
-  // Os peões ficam por cima de tudo, numa camada só.
-  elTabuleiro.replaceChildren(...itens, elPeoes);
+  // As duas camadas TÊM que ser reinseridas aqui: `replaceChildren` limpa o
+  // tabuleiro inteiro, e uma camada esquecida vira um elemento solto fora
+  // da página — o JS continua enchendo ela de conteúdo que ninguém vê.
+  // Foi exatamente o que aconteceu com as construções.
+  elTabuleiro.replaceChildren(...itens, elConstrucoes, elPeoes);
+  conferirCamadas();
 }
 
 const casaDe = (i) => elTabuleiro.querySelector(`.casa[data-i="${i}"]`);
@@ -290,9 +295,22 @@ async function andarPeao({ jogador_id, de, passos }) {
 
 // --- pintura ------------------------------------------------------------
 
-/** O grupo da casa vira o sufixo da classe da construção. */
-function construcaoDoGrupo(grupo) {
-  return `construcao construcao--${(grupo || "media").replace(/_/g, "-")}`;
+function construcaoDe(indice) {
+  return elConstrucoes.querySelector(`.construcao[data-i="${indice}"]`);
+}
+
+/* Guarda contra o bug que já aconteceu: uma camada fora do documento aceita
+   tudo que se joga nela e não mostra nada. Falha barulhenta é melhor que
+   um tabuleiro sem prédios sem ninguém saber por quê. */
+function conferirCamadas() {
+  for (const [nome, camada] of [["construcoes", elConstrucoes], ["peoes", elPeoes]]) {
+    if (!camada.isConnected) {
+      console.error(
+        `A camada "${nome}" saiu do documento. Provavelmente um ` +
+          "replaceChildren no tabuleiro esqueceu de reinseri-la.",
+      );
+    }
+  }
 }
 
 function pintarDonos() {
@@ -302,28 +320,45 @@ function pintarDonos() {
   for (const el of elTabuleiro.querySelectorAll(".casa")) {
     const indice = Number(el.dataset.i);
     const dono = donos[String(indice)]?.dono;
+    const existente = construcaoDe(indice);
 
     if (dono === undefined) {
       el.classList.remove("casa--comprada");
-      el.style.removeProperty("--cor-dono");
-      el.querySelector(".construcao")?.remove();
+      existente?.remove();
       continue;
     }
 
     el.classList.add("casa--comprada");
-    el.style.setProperty("--cor-dono", cores.get(dono) || "#fff");
 
-    // Só constrói uma vez: refazer a cada consulta reiniciaria a animação
-    // de subida em todas as casas do tabuleiro, de dois em dois segundos.
-    if (el.querySelector(".construcao")) continue;
+    // Já construída: só acerta a cor, caso o terreno tenha trocado de dono.
+    if (existente) {
+      existente.style.setProperty("--cor-dono", cores.get(dono) || "#fff");
+      continue;
+    }
 
+    // A construção fica na CAMADA, não dentro da casa — por isso é
+    // posicionada em porcentagem, igual aos peões.
     const casa = tabuleiro.casas[indice];
-    const predio = elemento("div", construcaoDoGrupo(casa.grupo));
-    predio.append(
-      elemento("span", "construcao__telhado"),
-      elemento("span", "construcao__corpo"),
+    const { x, y } = posicaoDaCasa(indice);
+    const grupo = (casa.grupo || "media").replace(/_/g, "-");
+
+    const marca = elemento("div", `construcao construcao--${grupo}`);
+    marca.dataset.i = String(indice);
+    marca.style.setProperty("--px", `${x}%`);
+    marca.style.setProperty("--py", `${y}%`);
+    marca.style.setProperty("--cor-dono", cores.get(dono) || "#fff");
+
+    const corpo = elemento("span", "construcao__corpo");
+    corpo.append(
+      elemento("i", "construcao__lateral"),
+      elemento("i", "construcao__janelas"),
+      elemento("i", "construcao__porta"),
     );
-    el.appendChild(predio);
+
+    const predio = elemento("div", "construcao__predio");
+    predio.append(elemento("span", "construcao__telhado"), corpo);
+    marca.appendChild(predio);
+    elConstrucoes.appendChild(marca);
   }
 }
 

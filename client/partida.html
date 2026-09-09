@@ -28,7 +28,9 @@
     <section class="mesa">
       <div class="mesa__palco">
         <div class="tabuleiro" id="tabuleiro">
-          <!-- As casas entram aqui; os peões ficam numa camada por cima. -->
+          <!-- As casas entram aqui. Construções e peões ficam em camadas
+               próprias, por cima: assim podem ser mais altos que a casa. -->
+          <div class="construcoes" id="construcoes"></div>
           <div class="peoes" id="peoes"></div>
         </div>
       </div>

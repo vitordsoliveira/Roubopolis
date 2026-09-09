@@ -185,6 +185,21 @@
   }
 }
 
+/* --- camada das construções ------------------------------------------ */
+
+/* Os prédios não moram dentro da casa: a casa tem 78px de lado, e depois da
+   inclinação sobram uns 35px úteis — menos que a altura de um arranha-céu.
+   Numa camada própria eles sobem livres, sem disputar espaço com o nome do
+   terreno nem serem cortados pela borda da casa. */
+.construcoes {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  /* Abaixo dos peões: o boneco nunca fica escondido atrás de um prédio. */
+  z-index: 1;
+}
+
 /* --- camada dos peões ------------------------------------------------ */
 
 /* Os peões não moram dentro da casa: ficam numa camada por cima do
@@ -195,6 +210,7 @@
   inset: 0;
   transform-style: preserve-3d;
   pointer-events: none;
+  z-index: 2;
 }
 
 .peao {

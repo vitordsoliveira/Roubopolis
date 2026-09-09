@@ -6,7 +6,7 @@
 
   "dinheiro": {
     "_sobre": "Quanto cada jogador tem ao começar.",
-    "caixa_inicial": 8000
+    "caixa_inicial": 10000
   },
 
   "dados": {

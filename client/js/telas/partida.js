@@ -76,6 +76,10 @@ let voltasDoDado = 0;
 let ultimoLanceVisto = 0;
 /** Quem está no tabuleiro agora — usado para saber quando remontar os peões. */
 let assinaturaDosPeoes = "";
+/** Impede duas consultas em voo ao mesmo tempo, que voltariam fora de ordem. */
+let consultando = false;
+/** Lance cuja compra o jogador já respondeu. Impede reabrir o mesmo modal. */
+let compraRespondida = 0;
 
 if (!codigo || !guardado.token()) {
   toast("Volte ao menu e entre numa sala.", "erro");
@@ -704,6 +708,11 @@ function abrirCompra() {
   const pendente = estado.compra_pendente;
   if (!pendente || !modalCompra.hidden) return;
 
+  /* Já respondi a compra DESTE lance: uma resposta atrasada do servidor
+     ainda traz `decidindo_compra`, e sem esta trava ela reabriria o modal
+     de um terreno que o jogador já decidiu. */
+  if ((estado.ultimo_movimento?.lance ?? 0) === compraRespondida) return;
+
   const casa = tabuleiro.casas[pendente.casa];
   const grupo = tabuleiro.grupos[casa.grupo] || {};
   const eu = estado.jogadores.find((j) => j.sou_eu);
@@ -729,6 +738,9 @@ function abrirCompra() {
 
 async function responderCompra(comprar) {
   modalCompra.hidden = true;
+  // Marca ANTES de chamar a rede: qualquer consulta que já estava em voo
+  // volta com o estado velho e precisa ser ignorada.
+  compraRespondida = estado.ultimo_movimento?.lance ?? 0;
   ocupado = true;
   try {
     som.tocar(comprar ? "confirmar" : "voltar");
@@ -855,9 +867,20 @@ document.querySelector("#sair").addEventListener("click", async () => {
 
 async function atualizar() {
   // Nunca redesenha no meio de uma jogada: o peão está andando.
-  if (document.hidden || ocupado) return;
+  // `consultando` evita duas consultas em voo — sem ele, a mais antiga pode
+  // voltar por último e reaplicar um estado já vencido.
+  if (document.hidden || ocupado || consultando) return;
+
+  consultando = true;
   try {
     const resposta = await api.verPartida(codigo);
+
+    /* A trava do topo foi verificada ANTES da rede responder. Nesses
+       ~200ms o jogador pode ter clicado em algo, e aí esta resposta já
+       nasceu velha. Descarta: a próxima consulta traz o estado certo.
+       Era isto que reabria o modal de compra depois de respondido. */
+    if (ocupado) return;
+
     // Chegou jogada de outro? Encena antes de aplicar — senão o peão
     // aparece pronto no destino.
     await encenarLanceDeOutro(resposta);
@@ -868,6 +891,8 @@ async function atualizar() {
       toast("A partida foi encerrada.", "erro");
       setTimeout(() => (location.href = "/"), 1600);
     }
+  } finally {
+    consultando = false;
   }
 }
 

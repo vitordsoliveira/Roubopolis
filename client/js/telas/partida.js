@@ -225,7 +225,9 @@ const casaDe = (i) => elTabuleiro.querySelector(`.casa[data-i="${i}"]`);
 /** Centro da casa em porcentagem da grade — não precisa medir o DOM. */
 function posicaoDaCasa(indice, assento = 0) {
   const casa = tabuleiro.casas[indice];
-  const desloc = [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]][assento % 4];
+  // Cada jogador fica num canto da casa. O afastamento cresceu junto com o
+  // boneco — com peões maiores, o espaçamento antigo os empilhava.
+  const desloc = [[-1.8, -1.5], [1.8, -1.5], [-1.8, 1.5], [1.8, 1.5]][assento % 4];
   return {
     x: ((casa.x + 0.5) / tabuleiro.largura) * 100 + desloc[0],
     y: ((casa.y + 0.5) / tabuleiro.altura) * 100 + desloc[1],

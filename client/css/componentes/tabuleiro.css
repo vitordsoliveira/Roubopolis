@@ -231,12 +231,25 @@
 
 /* Sombra achatada, colada no tabuleiro — é ela que "prende" o peão ao chão
    e faz o pulo ser lido como pulo. */
+/* Tamanho do boneco num lugar só: mexer em --peao-alt escala a figura, a
+   ficha, a base e a sombra juntas. Sem isso, aumentar o peão exigia acertar
+   cinco números à mão e sempre sobrava um desalinhado. */
+.peao {
+  /* Acompanha a altura da tela, como as etiquetas das casas: o tabuleiro é
+     dimensionado em vh, então um valor fixo deixaria o boneco enorme numa
+     janela baixa e minúsculo numa alta. */
+  --peao-alt: clamp(38px, 6.3vh, 66px);
+  --peao-larg: calc(var(--peao-alt) * 0.78);
+  --base-larg: calc(var(--peao-alt) * 0.5);
+  --base-alt: calc(var(--peao-alt) * 0.23);
+}
+
 .peao__sombra {
   position: absolute;
-  left: -9px;
-  top: -4px;
-  width: 18px;
-  height: 8px;
+  left: calc(var(--base-larg) / -2);
+  top: calc(var(--base-alt) / -2);
+  width: var(--base-larg);
+  height: var(--base-alt);
   background: rgba(0, 0, 0, 0.45);
   border-radius: 50%;
   filter: blur(1.5px);
@@ -247,15 +260,15 @@
    FORA do pino, para acompanhar a inclinação da mesa em vez de ficar em pé. */
 .peao__base {
   position: absolute;
-  left: -10px;
-  top: -5px;
-  width: 20px;
-  height: 10px;
+  left: calc(var(--base-larg) / -2);
+  top: calc(var(--base-alt) / -2);
+  width: var(--base-larg);
+  height: var(--base-alt);
   background: var(--cor-peao, #fff);
   border: 2px solid #10140f;
   border-radius: 50%;
   transform: translateZ(calc(var(--altura-casa, 10px) + 1px));
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.45);
 }
 
 /* Pino: a partir daqui tudo fica EM PÉ, com a rotação inversa à da mesa. */
@@ -273,14 +286,14 @@
    pescoço e ficava grotesco. */
 .peao__figura {
   display: block;
-  height: 38px;
+  height: var(--peao-alt);
   width: auto;
-  max-width: 30px;
-  margin-left: -15px; /* centraliza sobre a base */
+  max-width: var(--peao-larg);
+  margin-left: calc(var(--peao-larg) / -2); /* centraliza sobre a base */
   object-fit: contain;
   object-position: bottom center;
   image-rendering: pixelated;
-  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45));
   transform-origin: bottom center;
   animation: peao-balanca 1.2s ease-in-out infinite alternate;
 }
@@ -289,14 +302,14 @@
 .peao__ficha {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
-  margin-left: -12px;
+  width: calc(var(--peao-alt) * 0.62);
+  height: calc(var(--peao-alt) * 0.62);
+  margin-left: calc(var(--peao-alt) * -0.31);
   background: var(--cor-peao, #fff);
   color: #10140f;
-  font-size: 0.62rem;
+  font-size: calc(var(--peao-alt) * 0.3);
   line-height: 1;
-  border: 2px solid #10140f;
+  border: 3px solid #10140f;
   border-radius: 50%;
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
   transform-origin: bottom center;
@@ -337,7 +350,10 @@
 
 @keyframes peao-salto {
   50% {
-    transform: rotateX(calc(var(--inclinacao) * -1)) translateZ(var(--altura-casa, 10px)) translateY(-20px) scale(1.08);
+    /* O salto acompanha o tamanho do boneco: um peão maior precisa pular
+       mais alto para o pulo continuar sendo lido como pulo. */
+    transform: rotateX(calc(var(--inclinacao) * -1)) translateZ(var(--altura-casa, 10px))
+      translateY(calc(var(--peao-alt) * -0.45)) scale(1.08);
   }
 }
 

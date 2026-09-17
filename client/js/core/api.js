@@ -156,4 +156,7 @@ export const api = {
   marcarPronto: (codigo, pronto) =>
     pedir(`/api/salas/${codigo}/pronto`, { metodo: "POST", corpo: { pronto } }),
   sairDaSala: (codigo) => pedir(`/api/salas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
+  listarChat: (codigo) => pedir(`/api/salas/${codigo}/chat`),
+  enviarChat: (codigo, texto) =>
+    pedir(`/api/salas/${codigo}/chat`, { metodo: "POST", corpo: { texto } }),
 };

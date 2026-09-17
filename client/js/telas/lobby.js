@@ -13,10 +13,15 @@ const rotuloCodigo = document.querySelector("#codigo-sala");
 const botaoPronto = document.querySelector("#pronto");
 const botaoIniciar = document.querySelector("#iniciar");
 const aviso = document.querySelector("#aviso");
+const chatMensagens = document.querySelector("#chat-mensagens");
+const chatFormulario = document.querySelector("#chat-formulario");
+const chatTexto = document.querySelector("#chat-texto");
+const chatStatus = document.querySelector("#chat-status");
 
 const codigo = new URLSearchParams(location.search).get("codigo")?.toUpperCase() || "";
 let estado = null;
 let consulta = null;
+let consultaChat = null;
 
 if (!codigo || !guardado.token()) {
   toast("Volte ao menu e digite seu nome primeiro.", "erro");
@@ -31,6 +36,7 @@ async function entrar() {
   try {
     pintar(await api.entrarNaSala(codigo));
     som.tocar("entrar");
+    await atualizarChat();
     iniciarConsulta();
   } catch (erro) {
     som.tocar("erro");
@@ -156,6 +162,34 @@ function mensagemDeEspera(dados) {
   return "Todo mundo pronto. O tabuleiro entra na próxima fase do projeto.";
 }
 
+function pintarChat(mensagens) {
+  const estavaNoFim = chatMensagens.scrollTop + chatMensagens.clientHeight >= chatMensagens.scrollHeight - 24;
+  chatMensagens.replaceChildren();
+  if (!mensagens.length) {
+    const vazio = elemento("li", "chat__vazio", "Nenhuma mensagem ainda.");
+    chatMensagens.appendChild(vazio);
+  } else {
+    mensagens.forEach((mensagem) => {
+      const item = elemento("li", "chat__mensagem");
+      item.append(
+        elemento("strong", "chat__nome", mensagem.nome),
+        elemento("span", "chat__texto", mensagem.texto),
+      );
+      chatMensagens.appendChild(item);
+    });
+  }
+  if (estavaNoFim) chatMensagens.scrollTop = chatMensagens.scrollHeight;
+  chatStatus.textContent = `${mensagens.length} ${mensagens.length === 1 ? "mensagem" : "mensagens"}`;
+}
+
+async function atualizarChat() {
+  try {
+    pintarChat(await api.listarChat(codigo));
+  } catch {
+    chatStatus.textContent = "Chat indisponível";
+  }
+}
+
 // --- trocar de boneco ------------------------------------------------
 
 /** Só entram na roda os bonecos livres e o que já é meu. */
@@ -194,6 +228,23 @@ botaoPronto.addEventListener("click", async () => {
   } catch (erro) {
     som.tocar("erro");
     toast(erro.message, "erro");
+  }
+});
+
+chatFormulario.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  const texto = chatTexto.value.trim();
+  if (!texto) return;
+  chatTexto.disabled = true;
+  try {
+    await api.enviarChat(codigo, texto);
+    chatTexto.value = "";
+    await atualizarChat();
+  } catch (erro) {
+    toast(erro.message, "erro");
+  } finally {
+    chatTexto.disabled = false;
+    chatTexto.focus();
   }
 });
 
@@ -238,11 +289,14 @@ async function atualizar() {
 function iniciarConsulta() {
   pararConsulta();
   consulta = setInterval(atualizar, 2500);
+  consultaChat = setInterval(atualizarChat, 2500);
 }
 
 function pararConsulta() {
   if (consulta) clearInterval(consulta);
+  if (consultaChat) clearInterval(consultaChat);
   consulta = null;
+  consultaChat = null;
 }
 
 // Voltar para a aba mostra o estado atual sem esperar o próximo ciclo.

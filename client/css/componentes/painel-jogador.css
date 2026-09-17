@@ -50,6 +50,7 @@
   width: 100%;
   max-width: 190px;
   aspect-ratio: 1;
+  margin-top: var(--e5);
   overflow: hidden;
   background: var(--branco);
   color: var(--preto);

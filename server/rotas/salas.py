@@ -100,8 +100,8 @@ def _jogador_da_sala(sessao, codigo: str):
 @bp.get("/salas/<codigo>/chat")
 def listar_chat(codigo: str):
     sessao = Sessao()
-    _jogador_da_sala(sessao, codigo)
-    return jsonify(chat.listar(g.normalizar_codigo(codigo))), 200
+    _jogador, sala = _jogador_da_sala(sessao, codigo)
+    return jsonify(chat.listar(sessao, sala.id)), 200
 
 
 @bp.post("/salas/<codigo>/chat")
@@ -116,5 +116,5 @@ def enviar_chat(codigo: str):
         raise g.ErroDeSala(
             f"A mensagem pode ter no máximo {chat.LIMITE_TEXTO} caracteres."
         )
-    mensagem = chat.adicionar(sala.codigo, jogador.id, jogador.nome, texto)
+    mensagem = chat.adicionar(sessao, sala.id, jogador.id, jogador.nome, texto)
     return jsonify(mensagem), 201

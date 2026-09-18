@@ -1,30 +1,34 @@
-"""Mensagens temporarias do chat do lobby."""
+"""Mensagens do chat do lobby, guardadas no banco.
+
+Não usar memória do processo aqui: em produção o Passenger sobe mais de um
+processo, e cada um teria a sua própria lista de mensagens.
+"""
 
 from __future__ import annotations
 
-from collections import defaultdict, deque
-from datetime import datetime
-from threading import Lock
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from server.db.models import MensagemChat
 
 LIMITE_MENSAGENS = 100
 LIMITE_TEXTO = 280
 
-_mensagens: dict[str, deque[dict]] = defaultdict(lambda: deque(maxlen=LIMITE_MENSAGENS))
-_trava = Lock()
+
+def listar(sessao: Session, sala_id: int) -> list[dict]:
+    """As últimas mensagens da sala, da mais antiga para a mais nova."""
+    recentes = sessao.scalars(
+        select(MensagemChat)
+        .where(MensagemChat.sala_id == sala_id)
+        .order_by(MensagemChat.id.desc())
+        .limit(LIMITE_MENSAGENS)
+    ).all()
+    return [m.para_dict() for m in reversed(recentes)]
 
 
-def listar(codigo: str) -> list[dict]:
-    with _trava:
-        return list(_mensagens[codigo])
-
-
-def adicionar(codigo: str, jogador_id: int, nome: str, texto: str) -> dict:
-    mensagem = {
-        "jogador_id": jogador_id,
-        "nome": nome,
-        "texto": texto,
-        "enviada_em": datetime.now().isoformat(timespec="seconds"),
-    }
-    with _trava:
-        _mensagens[codigo].append(mensagem)
-    return mensagem
+def adicionar(sessao: Session, sala_id: int, jogador_id: int, nome: str, texto: str) -> dict:
+    mensagem = MensagemChat(sala_id=sala_id, jogador_id=jogador_id, nome=nome, texto=texto)
+    sessao.add(mensagem)
+    sessao.commit()
+    sessao.refresh(mensagem)
+    return mensagem.para_dict()

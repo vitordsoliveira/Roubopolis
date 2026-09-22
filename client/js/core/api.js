@@ -157,6 +157,11 @@ export const api = {
     pedir(`/api/salas/${codigo}/pronto`, { metodo: "POST", corpo: { pronto } }),
   sairDaSala: (codigo) => pedir(`/api/salas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 
+  // --- chat do lobby ---------------------------------------------------
+  listarChat: (codigo) => pedir(`/api/salas/${codigo}/chat`),
+  enviarChat: (codigo, texto) =>
+    pedir(`/api/salas/${codigo}/chat`, { metodo: "POST", corpo: { texto } }),
+
   // --- partida ---------------------------------------------------------
   /** Só o dono da sala, e só com todo mundo pronto. */
   iniciarPartida: (codigo) => pedir(`/api/salas/${codigo}/iniciar`, { metodo: "POST", corpo: {} }),

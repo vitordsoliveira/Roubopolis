@@ -238,7 +238,38 @@ class SalaJogador(Base):
         return f"<SalaJogador sala={self.sala_id} jogador={self.jogador_id}>"
 
 
-#: Ordem de criação (respeita as chaves estrangeiras).
+class Partida(Base):
+    """A partida em andamento de uma sala.
+
+    O estado inteiro do motor mora aqui como JSON, e não em memória, porque
+    o Passenger pode rodar em vários processos: memória local daria estados
+    diferentes conforme o processo que atendesse a requisição. Guardar no
+    banco também deixa a partida sobreviver a um restart.
+
+    O `engine/` continua sem saber que este model existe — quem traduz é
+    `server/salas/partida.py`.
+    """
+
+    __tablename__ = "partida"
+    __table_args__ = ARGS_MYSQL
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Uma partida por sala: a sala é o lobby, a partida é o que veio dele.
+    sala_id: Mapped[int] = mapped_column(
+        ForeignKey("sala.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    estado: Mapped[str] = mapped_column(Text, nullable=False)
+    criada_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+    atualizada_em: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    sala: Mapped["Sala"] = relationship()
+
+    def __repr__(self) -> str:
+        return f"<Partida sala={self.sala_id}>"
+
+
 class MensagemChat(Base):
     """Mensagem do chat do lobby.
 
@@ -262,6 +293,9 @@ class MensagemChat(Base):
 
     def para_dict(self) -> dict:
         return {
+            # A tela da partida usa o id para saber o que chegou de novo: a
+            # lista vem cortada nas últimas 100, então contar não serve.
+            "id": self.id,
             "jogador_id": self.jogador_id,
             "nome": self.nome,
             "texto": self.texto,
@@ -272,4 +306,5 @@ class MensagemChat(Base):
         return f"<MensagemChat sala={self.sala_id} jogador={self.jogador_id}>"
 
 
-TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador, MensagemChat)
+#: Ordem de criação (respeita as chaves estrangeiras).
+TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador, Partida, MensagemChat)

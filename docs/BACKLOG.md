@@ -101,12 +101,12 @@ outro. Falta um limite.
 
 Uma conta que muda a natureza da pergunta sobre upgrades.
 
-O tabuleiro tem **42 casas**. Numa partida de 15 minutos com turnos de até 15
+O tabuleiro tem **40 casas**. Numa partida de 15 minutos com turnos de até 15
 segundos, cada jogador tem entre **15 e 22 turnos**. Com 4 jogadores, os
 **adversários** de uma propriedade específica param nela:
 
 ```
-3 adversários × ~20 paradas ÷ 42 casas ≈ 1,4 vez por partida
+3 adversários × ~20 paradas ÷ 40 casas ≈ 1,5 vez por partida
 ```
 
 **Cada propriedade rende aluguel cerca de uma vez e meia na partida inteira.**

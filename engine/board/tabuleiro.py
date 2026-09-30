@@ -2,7 +2,8 @@
 
 O motor não sabe desenhar nada. Ele só sabe que existem N casas em ordem,
 que cada uma tem um tipo, e como andar de uma para outra. As coordenadas
-`x`/`y` vêm junto porque a tela precisa delas, mas o motor as ignora.
+`x`/`y` e o `cenario` dos cantos vêm junto porque a tela precisa deles, mas
+o motor os ignora.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ class Casa:
     grupo: str | None = None
     preco: int | None = None
     easter_egg: str | None = None
+    cenario: str | None = None
 
     @property
     def e_propriedade(self) -> bool:
@@ -45,6 +47,8 @@ class Casa:
             d["preco"] = self.preco
         if self.easter_egg:
             d["easter_egg"] = self.easter_egg
+        if self.cenario:
+            d["cenario"] = self.cenario
         return d
 
 
@@ -81,6 +85,10 @@ class Tabuleiro:
             "largura": self.largura,
             "altura": self.altura,
             "grupos": self.grupos,
+            # O jsonify do Flask devolve as chaves de `grupos` em ordem
+            # alfabética; a legenda precisa da ordem do arquivo (do mais caro
+            # ao mais barato), então ela vai à parte.
+            "ordem_dos_grupos": list(self.grupos),
             "casas": [c.para_dict() for c in self.casas],
         }
 
@@ -105,6 +113,7 @@ def carregar_tabuleiro(nome: str = "vila_original") -> Tabuleiro:
                 grupo=bruto.get("grupo"),
                 preco=bruto.get("preco"),
                 easter_egg=bruto.get("easter_egg"),
+                cenario=bruto.get("cenario"),
             )
         )
 

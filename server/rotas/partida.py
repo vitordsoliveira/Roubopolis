@@ -7,7 +7,7 @@ muda — só o transporte.
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from server.db.session import Sessao
 from server.rotas.auth import token_da_requisicao
@@ -48,11 +48,3 @@ def sair(codigo: str):
     """Abandona a partida em andamento. Avisa os outros pelo log."""
     sessao, sala, jogador = _sala_e_jogador(codigo)
     return jsonify(p.abandonar(sessao, sala, jogador)), 200
-
-
-@bp.post("/partidas/<codigo>/comprar")
-def comprar(codigo: str):
-    """`{"comprar": true}` compra; `false` recusa. Nos dois casos o turno passa."""
-    sessao, sala, jogador = _sala_e_jogador(codigo)
-    corpo = request.get_json(silent=True) or {}
-    return jsonify(p.decidir_compra(sessao, sala, jogador, bool(corpo.get("comprar")))), 200

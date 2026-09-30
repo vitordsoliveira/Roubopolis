@@ -11,6 +11,7 @@ const CHAVE_FOTO = "roubopolis.foto";
 const CHAVE_SOM = "roubopolis.som";
 const CHAVE_VOLUME_SOM = "roubopolis.volume-som";
 const CHAVE_ABA = "roubopolis.aba-propria";
+const CHAVE_CHAT = "roubopolis.chat-aberto";
 
 /* Abas do mesmo navegador dividem o localStorage — duas abas seriam sempre o
    MESMO jogador, o que impede testar uma sala sozinho. Abrir /?novo=1 marca a
@@ -60,6 +61,10 @@ export const guardado = {
   salvarFoto: (valor) => gravar(CHAVE_FOTO, valor || ""),
   salvarSom: (ligado) => gravar(CHAVE_SOM, ligado ? "1" : "0"),
   salvarVolumeSom: (valor) => gravar(CHAVE_VOLUME_SOM, String(valor)),
+  /** Se o chat da partida fica aberto: quem gosta de conversar não precisa
+      abrir de novo a cada partida. */
+  chatAberto: () => ler(CHAVE_CHAT, "0") === "1",
+  salvarChatAberto: (aberto) => gravar(CHAVE_CHAT, aberto ? "1" : "0"),
 
   /** Guarda tudo que o menu precisa para se desenhar sem consultar a rede. */
   salvarSessao(jogador) {
@@ -167,9 +172,6 @@ export const api = {
   iniciarPartida: (codigo) => pedir(`/api/salas/${codigo}/iniciar`, { metodo: "POST", corpo: {} }),
   verPartida: (codigo) => pedir(`/api/partidas/${codigo}`),
   rolarDados: (codigo) => pedir(`/api/partidas/${codigo}/rolar`, { metodo: "POST", corpo: {} }),
-  /** `comprar` false também passa o turno — recusar é uma decisão. */
-  decidirCompra: (codigo, comprar) =>
-    pedir(`/api/partidas/${codigo}/comprar`, { metodo: "POST", corpo: { comprar } }),
-  /** Abandona a partida: os terrenos voltam ao banco e a vez passa. */
+  /** Abandona a partida: o jogador sai da roda e a vez passa. */
   sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 };

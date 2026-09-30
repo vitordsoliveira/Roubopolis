@@ -1,36 +1,40 @@
-/* Dados como cubos de verdade.
+/* Dados como cubos de verdade, vermelhos de pontos brancos como na arte.
 
    Cada dado é um cubo de 6 faces montado com translateZ. Para mostrar um
    valor, o cubo gira até a face correspondente ficar de frente — e o JS
    soma voltas inteiras para ele tombar antes de assentar, em vez de trocar
    o número no susto. */
 
+/* Os dois dados ficam em cima do canto de baixo do tabuleiro. O JS grava
+   --dx/--dy (em % do tabuleiro) a partir do desenho. */
 .dados {
+  position: absolute;
+  left: var(--dx, 50%);
+  top: var(--dy, 90%);
+  translate: -50% -82%;
   display: flex;
-  justify-content: center;
-  gap: var(--e4);
-  /* Espaço em cima para o dado "cair de fora" sem ser cortado. */
-  padding: var(--e2) 0 var(--e3);
+  gap: 1.3cqw;
   perspective: 700px;
+  pointer-events: none;
 }
 
-/* A aresta é variável para o mesmo cubo servir no painel e, menor, na tela
-   de sorteio — as faces se posicionam a partir dela. */
+/* A aresta é variável para o mesmo cubo servir no tabuleiro e, menor, na
+   cena do sorteio — as faces se posicionam a partir dela. */
 .dado {
-  --aresta: 58px;
+  --aresta: 3.7cqw;
   width: var(--aresta);
   height: var(--aresta);
   transform-style: preserve-3d;
 }
 
-.dado--mini { --aresta: 30px; }
-.dado--mini .dado__face { padding: 4px; border-width: 1.5px; border-radius: 5px; }
-.dado--mini .dado__ponto { width: 5px; height: 5px; }
+.dado--mini { --aresta: clamp(22px, 3.4vh, 34px); }
+.dado--mini .dado__face { padding: 3px; border-width: 1.5px; border-radius: 5px; }
+.dado--mini .dado__ponto { width: 80%; height: 80%; }
 
 /* --- o arremesso ---------------------------------------------------
 
-   O dado cai de cima da tela, bate na mesa, quica duas vezes e assenta.
-   O salto fica no invólucro (.dado) e o tombo no cubo (.dado__cubo): duas
+   O dado cai de cima, bate na mesa, quica duas vezes e assenta. O salto
+   fica no invólucro (.dado) e o tombo no cubo (.dado__cubo): duas
    animações independentes, que é o que faz parecer objeto jogado em vez de
    figura trocando de imagem. */
 
@@ -38,15 +42,15 @@
 
 /* O segundo dado sai um pouco depois e de outro lado: cair em sincronia
    entrega que é animação. */
-#dado-b.dado--arremesso { animation-delay: 0.09s; --vindo-de: 34px; }
+#dado-b.dado--arremesso { animation-delay: 0.09s; --vindo-de: 3cqw; }
 
 @keyframes dado-arremesso {
-  0%   { transform: translate(var(--vindo-de, -34px), -170px) scale(0.45); opacity: 0; }
+  0%   { transform: translate(var(--vindo-de, -3cqw), -14cqw) scale(0.45); opacity: 0; }
   30%  { opacity: 1; }
-  52%  { transform: translate(0, 12px) scale(1.1); }
-  66%  { transform: translate(0, -14px) scale(0.96); }
-  80%  { transform: translate(0, 6px) scale(1.03); }
-  91%  { transform: translate(0, -4px) scale(0.99); }
+  52%  { transform: translate(0, 1cqw) scale(1.1); }
+  66%  { transform: translate(0, -1.2cqw) scale(0.96); }
+  80%  { transform: translate(0, 0.5cqw) scale(1.03); }
+  91%  { transform: translate(0, -0.3cqw) scale(0.99); }
   100% { transform: translate(0, 0) scale(1); }
 }
 
@@ -65,11 +69,11 @@
   inset: 0;
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-  padding: 8px;
-  background: linear-gradient(150deg, #fffdf6, #e6e0cd);
-  border: 2px solid #14100c;
-  border-radius: 9px;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.15);
+  padding: 14%;
+  background: linear-gradient(150deg, #ff4f4f, #c8141d);
+  border: 2px solid #4a060b;
+  border-radius: 16%;
+  box-shadow: inset 0 0 8px rgba(80, 0, 6, 0.35);
 }
 
 /* Cada face é empurrada meia aresta para fora do centro. */
@@ -81,13 +85,13 @@
 .dado__face--4 { transform: rotateX(-90deg) translateZ(calc(var(--aresta) / 2)); }
 
 .dado__ponto {
-  width: 10px;
-  height: 10px;
+  width: 70%;
+  height: 70%;
   align-self: center;
   justify-self: center;
-  background: radial-gradient(circle at 35% 30%, #4a4a4a, #111);
+  background: radial-gradient(circle at 35% 30%, #ffffff, #e4dede);
   border-radius: 50%;
-  box-shadow: inset 0 -1px 2px rgba(255, 255, 255, 0.25);
+  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.25);
 }
 
 /* Posição dos pontos na grade 3x3 de cada face. */
@@ -131,30 +135,31 @@
 /* --- a soma, acima dos dados ---------------------------------------- */
 
 .dados__soma {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  translate: -50% -0.6cqw;
   display: grid;
   place-items: center;
   gap: 2px;
-  min-height: 4.2em;
   text-align: center;
+  white-space: pre;
+  font-family: var(--fonte-pixel);
 }
 
 /* "3 + 4" pequeno em cima, o total grande embaixo. */
 .dados__soma-parcelas {
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  color: var(--branco, #fff);
-  opacity: 0.65;
+  font-size: 1.8cqw;
+  letter-spacing: 0.1em;
+  color: var(--branco);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.8);
 }
 
 .dados__soma-total {
-  display: grid;
-  place-items: center;
-  min-width: 2.4em;
-  padding: 0 var(--e2);
-  font-size: 2.3rem;
-  line-height: 1.1;
-  color: var(--verde-neon, #7CFC00);
-  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7), 0 0 22px rgba(124, 252, 0, 0.45);
+  font-size: 5.4cqw;
+  line-height: 1.05;
+  color: var(--verde-neon);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.75), 0 0 18px rgba(57, 255, 20, 0.55);
 }
 
 /* O total só entra depois que o dado assentou — e entra com baque. */

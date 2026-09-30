@@ -3,41 +3,68 @@
    A ideia é encenar o sorteio em vez de listar o resultado. Os bonecos
    entram pulando, os dados tombam no ar acima deles, cai o total de cada
    um, e só no fim aparecem as colocações — de último para primeiro, para
-   o vencedor ser a última coisa que a mesa descobre. */
+   o vencedor ser a última coisa que a mesa descobre.
+
+   O painel usa a mesma moldura roxa dos cartões e da legenda (ver
+   telas/partida.css). */
+
+.cortina {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--e3);
+  background: rgba(14, 5, 28, 0.74);
+  backdrop-filter: blur(3px);
+  animation: cortina-entra 0.18s ease-out;
+}
+
+@keyframes cortina-entra {
+  from { opacity: 0; }
+}
 
 .sorteio {
+  --moldura-fundo: #170a30;
   width: min(940px, 100%);
   max-height: 92vh;
   overflow-y: auto;
   padding: var(--e4) var(--e4) var(--e5);
   text-align: center;
-  background: #f7f3e6;
-  color: #1b1b1b;
-  border: 5px solid #10140f;
-  box-shadow: 0 22px 0 rgba(0, 0, 0, 0.35), 0 34px 60px rgba(0, 0, 0, 0.6);
+  color: var(--branco);
+  animation: sorteio-chega 0.42s cubic-bezier(0.18, 1.5, 0.4, 1);
 }
 
-/* O botão fica bem afastado da cena: com ele colado, o boneco do vencedor
-   — que pula mais alto que os outros — passava por cima dele. */
-.sorteio .escritura__acoes {
-  margin-top: var(--e4);
-  padding: var(--e3) 0 0;
-  background: none;
-  border-top: 3px dashed rgba(0, 0, 0, 0.15);
+/* Cai de cima e assenta — o "toc" da peça na mesa. */
+@keyframes sorteio-chega {
+  from { transform: translateY(-90px) scale(0.85); opacity: 0; }
+  70%  { transform: translateY(6px) scale(1.02); opacity: 1; }
+  to   { transform: none; opacity: 1; }
 }
 
 .sorteio__titulo {
-  font-size: 1.4rem;
+  font-size: clamp(1.2rem, 3.4vh, 1.8rem);
   line-height: 1.5;
   text-transform: uppercase;
-  color: var(--roxo, #7b2fbf);
+  color: var(--amarelo);
+  text-shadow: 0 3px 0 #6b4b00;
 }
 
 .sorteio__explica {
   margin-bottom: var(--e4);
-  font-size: 0.68rem;
+  font-size: clamp(0.62rem, 1.7vh, 0.85rem);
   line-height: 1.7;
-  opacity: 0.7;
+  opacity: 0.8;
+}
+
+/* O botão fica bem afastado da cena: com ele colado, o boneco do vencedor
+   — que pula mais alto que os outros — passava por cima dele. */
+.sorteio__acoes {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--e4);
+  padding-top: var(--e3);
+  border-top: 3px dashed rgba(155, 61, 255, 0.35);
 }
 
 /* --- a mesa de bonecos --------------------------------------------- */
@@ -49,8 +76,8 @@
   gap: clamp(var(--e2), 2.5vw, var(--e4));
   /* Folga extra embaixo: o vencedor pula 16px e não pode sair da caixa. */
   padding: var(--e3) 0 var(--e4);
-  /* Chão sob os bonecos, para eles não flutuarem no branco. */
-  background: linear-gradient(180deg, transparent 58%, rgba(123, 47, 191, 0.09) 58%);
+  /* Chão sob os bonecos, para eles não flutuarem. */
+  background: linear-gradient(180deg, transparent 58%, rgba(155, 61, 255, 0.16) 58%);
   perspective: 800px;
 }
 
@@ -103,11 +130,12 @@
   min-width: 2.1em;
   min-height: 1.5em;
   padding: 0 6px;
-  background: var(--cor, #7b2fbf);
+  background: var(--cor, var(--roxo));
   color: #fff;
   font-size: 1.35rem;
   line-height: 1.3;
-  border: 3px solid #10140f;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+  border: 3px solid #0d0418;
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
   opacity: 0;
 }
@@ -128,13 +156,13 @@
   min-height: 1.2em;
   font-size: 0.55rem;
   text-transform: uppercase;
-  color: var(--roxo, #7b2fbf);
+  color: var(--roxo-claro);
   opacity: 0;
 }
 
 .posto--revelado .posto__desempate { animation: aparece 0.3s ease-out 0.6s forwards; }
 
-@keyframes aparece { to { opacity: 0.8; } }
+@keyframes aparece { to { opacity: 0.9; } }
 
 /* --- o boneco -------------------------------------------------------- */
 
@@ -158,10 +186,10 @@
   object-fit: contain;
   object-position: bottom center;
   image-rendering: pixelated;
-  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.25));
+  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.35));
   transform-origin: bottom center;
-  /* Braços para cima é arte; o que dá a energia é o pulinho de empolgação,
-     que roda o tempo todo enquanto ninguém sabe o resultado. */
+  /* O pulinho de empolgação roda o tempo todo enquanto ninguém sabe o
+     resultado. */
   animation: comemora 0.42s ease-in-out infinite alternate;
   animation-delay: calc(var(--ordem, 0) * 0.09s);
 }
@@ -171,10 +199,10 @@
   place-items: center;
   width: 62px;
   height: 62px;
-  background: var(--cor, #7b2fbf);
+  background: var(--cor, var(--roxo));
   color: #fff;
   font-size: 1.6rem;
-  border: 4px solid #10140f;
+  border: 4px solid #0d0418;
   border-radius: 50%;
   animation: comemora 0.42s ease-in-out infinite alternate;
 }
@@ -198,7 +226,7 @@
 .posto--vencedor .posto__boneco img,
 .posto--vencedor .posto__ficha {
   animation: vitoria 0.36s ease-in-out infinite alternate;
-  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.25)) drop-shadow(0 0 14px var(--amarelo, #ffd83d));
+  filter: drop-shadow(0 5px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 14px var(--amarelo));
 }
 
 @keyframes vitoria {
@@ -222,8 +250,8 @@
   padding: 1px 9px;
   font-size: 0.7rem;
   color: #fff;
-  background: #10140f;
-  border-radius: 2px;
+  background: var(--roxo);
+  border: 2px solid #0d0418;
   opacity: 0;
 }
 
@@ -236,7 +264,7 @@
 }
 
 .posto--vencedor .posto__lugar {
-  background: var(--amarelo, #ffd83d);
+  background: var(--amarelo);
   color: #10140f;
 }
 
@@ -246,7 +274,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .posto, .posto__boneco img, .posto__ficha, .posto__total,
+  .cortina, .sorteio, .posto, .posto__boneco img, .posto__ficha, .posto__total,
   .posto__lugar, .posto__desempate, .posto--revelado .dado {
     animation: none !important;
     opacity: 1 !important;

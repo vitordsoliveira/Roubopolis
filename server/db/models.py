@@ -293,6 +293,9 @@ class MensagemChat(Base):
 
     def para_dict(self) -> dict:
         return {
+            # A tela da partida usa o id para saber o que chegou de novo: a
+            # lista vem cortada nas últimas 100, então contar não serve.
+            "id": self.id,
             "jogador_id": self.jogador_id,
             "nome": self.nome,
             "texto": self.texto,

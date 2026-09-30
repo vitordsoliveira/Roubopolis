@@ -1,4 +1,4 @@
-"""Motor da partida: sorteio de ordem, rolagem, movimento e compra.
+"""Motor da partida: sorteio de ordem, rolagem e movimento.
 
 Regras deste arquivo:
 
@@ -9,27 +9,25 @@ Regras deste arquivo:
 - Toda regra recusa em voz alta: ação fora de hora levanta `ErroDeRegra`
   com uma mensagem que pode ir direto para a tela.
 
-Por enquanto só existem três sistemas — rolar, andar e comprar. As casas de
-evento são reconhecidas e registradas no log, mas ainda não fazem nada.
+Por enquanto a partida é só isto: sortear quem começa, rolar e andar. O
+dinheiro existe e aparece na tela, mas nada o movimenta — a compra de
+terreno e o aluguel saíram do jogo até o tabuleiro novo estar redondo. As
+casas de evento ainda não fazem nada: parar nelas só registra no log.
 """
 
 from __future__ import annotations
 
 import copy
 
-from engine.board.tabuleiro import Tabuleiro, carregar_tabuleiro
-from engine.regras.balanceamento import (
-    carregar_balanceamento,
-    grupo_do_morro,
-    multiplicador_do_morro,
-)
+from engine.board.tabuleiro import carregar_tabuleiro
+from engine.regras.balanceamento import carregar_balanceamento
 from engine.rng.gerador import Gerador
 
-VERSAO_DO_ESTADO = 1
+#: v2: saíram a compra e o aluguel, e o tabuleiro passou de 42 para 40 casas.
+VERSAO_DO_ESTADO = 2
 
 FASE_SORTEIO = "sorteio_ordem"
 FASE_ROLAR = "aguardando_rolagem"
-FASE_COMPRA = "decidindo_compra"
 FASE_FIM = "encerrada"
 
 
@@ -83,112 +81,40 @@ def _exigir_vez(estado: dict, jogador_id: int) -> dict:
     return jogador
 
 
-def _dono(estado: dict, indice: int) -> int | None:
-    return (estado["propriedades"].get(str(indice)) or {}).get("dono")
-
-
 # --------------------------------------------------------------------------
-# aluguel
+# estado gravado por uma versão anterior
 # --------------------------------------------------------------------------
 
-def calcular_aluguel(estado: dict, tabuleiro: Tabuleiro, bal: dict, casa, dono_id: int) -> dict:
-    """Quanto custa parar nesta propriedade, e de onde veio cada fator.
+def _atualizar(estado: dict) -> dict:
+    """Traz para o formato atual um estado gravado por um motor mais velho.
 
-    A fórmula é:
-
-        aluguel = preço × base × (1 + por_nível × nível) × morro
-
-    Os níveis de upgrade somam sobre a base (não compõem entre si): três
-    níveis a 15% dão +45%, não 1,15³. É a leitura mais fácil de explicar ao
-    jogador — "20% do valor, mais 15% por nível, e o morro multiplica tudo".
-    O multiplicador do Morro só vale para o grupo definido em
-    `morro.grupo` do balanceamento, e conta quantas casas DAQUELE grupo o
-    dono tem no total.
+    A partida mora no banco como JSON: uma mesa que começou antes de uma
+    mudança aqui volta com o formato antigo. Sem esta conversão, quem
+    estava decidindo uma compra quando a compra saiu do jogo ficaria preso
+    para sempre numa fase que não existe mais.
     """
-    registro = estado["propriedades"].get(str(casa.indice)) or {}
-    nivel = registro.get("nivel", 0)
+    if estado.get("versao", 1) >= VERSAO_DO_ESTADO:
+        return estado
 
-    base = casa.preco * bal["aluguel"]["base"]
-    fator_upgrade = 1 + bal["aluguel"]["por_nivel_de_upgrade"] * nivel
+    estado = copy.deepcopy(estado)
 
-    fator_morro = 1.0
-    becos = 0
-    if casa.grupo == grupo_do_morro(bal):
-        becos = sum(
-            1
-            for indice, dados in estado["propriedades"].items()
-            if dados.get("dono") == dono_id
-            and tabuleiro.casa(int(indice)).grupo == casa.grupo
-        )
-        fator_morro = multiplicador_do_morro(bal, becos)
+    # v1 -> v2: compra e aluguel saíram, e o tabuleiro encolheu.
+    estava_comprando = estado.get("fase") == "decidindo_compra"
+    for chave in ("propriedades", "compra_pendente", "ultimo_aluguel"):
+        estado.pop(chave, None)
 
-    return {
-        "valor": int(round(base * fator_upgrade * fator_morro)),
-        "base": int(round(base)),
-        "nivel": nivel,
-        "fator_upgrade": fator_upgrade,
-        "fator_morro": fator_morro,
-        "becos_do_dono": becos,
-    }
+    total = len(carregar_tabuleiro(estado["tabuleiro"]))
+    for jogador in estado["jogadores"]:
+        jogador.pop("propriedades", None)
+        # A volta é circular: a casa 41 do tabuleiro antigo é a 1 do novo,
+        # a mesma conta que `Tabuleiro.avancar` faz.
+        jogador["posicao"] %= total
 
-
-def _cobrar_aluguel(estado: dict, devedor: dict, dono: dict, casa, conta: dict) -> None:
-    """Transfere o aluguel. Quem não tem como pagar sai da partida."""
-    valor = conta["valor"]
-    detalhe = ""
-    if conta["fator_morro"] > 1:
-        detalhe = f" (bônus do morro {conta['fator_morro']:.1f}× com {conta['becos_do_dono']} becos)"
-    elif conta["nivel"]:
-        detalhe = f" (nível {conta['nivel']})"
-
-    # A tela mostra um aviso com estes dados; o `lance` é o que permite ao
-    # espectador saber que o pagamento é desta jogada e não de uma anterior.
-    estado["ultimo_aluguel"] = {
-        "lance": estado.get("lances", 0),
-        "de": devedor["nome"],
-        "de_id": devedor["jogador_id"],
-        "para": dono["nome"],
-        "para_id": dono["jogador_id"],
-        "casa": casa.indice,
-        "casa_nome": casa.nome,
-        "grupo": casa.grupo,
-        "valor": valor,
-        "detalhe": detalhe.strip(" ()") or None,
-        "faliu": False,
-    }
-
-    if devedor["caixa"] >= valor:
-        devedor["caixa"] -= valor
-        dono["caixa"] += valor
-        _log(
-            estado,
-            "aluguel",
-            f"{devedor['nome']} pagou {_reais(valor)} de aluguel a {dono['nome']} "
-            f"por {casa.nome}{detalhe}.",
-            devedor["jogador_id"],
-        )
-        return
-
-    # Caixa não cobre. A especificação manda eliminar quem não consegue
-    # pagar; a venda forçada de propriedades para cobrir a dívida ainda não
-    # está definida (item 3 do backlog), então aqui ele entrega o que tem.
-    pago = devedor["caixa"]
-    devedor["caixa"] = 0
-    dono["caixa"] += pago
-    devedor["falido"] = True
-    estado["ultimo_aluguel"]["faliu"] = True
-    estado["ultimo_aluguel"]["pago"] = pago
-    for indice in devedor["propriedades"]:
-        estado["propriedades"].pop(str(indice), None)
-    devedor["propriedades"] = []
-
-    _log(
-        estado,
-        "falencia",
-        f"{devedor['nome']} devia {_reais(valor)} a {dono['nome']} e só tinha {_reais(pago)}. "
-        f"Faliu — os terrenos dele voltaram ao banco.",
-        devedor["jogador_id"],
-    )
+    estado["versao"] = VERSAO_DO_ESTADO
+    if estava_comprando:
+        # Quem decidia a compra já tinha andado: a vez segue adiante.
+        estado = passar_turno(estado)
+    return estado
 
 
 # --------------------------------------------------------------------------
@@ -228,19 +154,14 @@ def criar_partida(
                 "personagem": j.get("personagem"),
                 "caixa": caixa,
                 "posicao": 0,
-                "propriedades": [],
                 "falido": False,
             }
             for j in jogadores
         ],
-        "propriedades": {},
         "sorteio": [],
         #: Contador de rolagens. A tela usa para saber o que já encenou.
         "lances": 0,
         "ultimo_movimento": None,
-        #: Ultimo aluguel cobrado, para a tela avisar quem pagou a quem.
-        "ultimo_aluguel": None,
-        "compra_pendente": None,
         "log": [],
     }
 
@@ -340,6 +261,7 @@ def sortear_ordem(estado: dict) -> dict:
 # --------------------------------------------------------------------------
 
 def rolar(estado: dict, jogador_id: int) -> dict:
+    estado = _atualizar(estado)
     if estado["fase"] != FASE_ROLAR:
         raise ErroDeRegra("Não dá para rolar os dados agora.", http=409)
 
@@ -362,9 +284,6 @@ def rolar(estado: dict, jogador_id: int) -> dict:
     # que chegou uma jogada nova e encená-la — sem isso o espectador só via
     # o peão aparecer no destino, como se teletransportasse.
     estado["lances"] = estado.get("lances", 0) + 1
-    # Zera o aviso da jogada anterior: sem isso a tela repetiria o aluguel
-    # antigo a cada rolagem.
-    estado["ultimo_aluguel"] = None
 
     estado["ultimo_movimento"] = {
         "lance": estado["lances"],
@@ -381,75 +300,8 @@ def rolar(estado: dict, jogador_id: int) -> dict:
          f"{jogador['nome']} tirou {' + '.join(map(str, dados))} = {passos} e parou em {casa.nome}.",
          jogador_id)
 
-    return _resolver_casa(estado, jogador, casa, tabuleiro)
-
-
-def _resolver_casa(estado: dict, jogador: dict, casa, tabuleiro: Tabuleiro) -> dict:
-    """O que acontece ao parar. Só a compra existe por enquanto."""
-    if casa.e_propriedade:
-        dono = _dono(estado, casa.indice)
-
-        if dono is None:
-            if jogador["caixa"] >= casa.preco:
-                estado["fase"] = FASE_COMPRA
-                estado["compra_pendente"] = {"casa": casa.indice, "preco": casa.preco}
-                _log(estado, "compra",
-                     f"{casa.nome} está à venda por {_reais(casa.preco)}.", jogador["jogador_id"])
-                return estado
-            _log(estado, "compra",
-                 f"{casa.nome} custa {_reais(casa.preco)} e {jogador['nome']} não tem esse dinheiro.",
-                 jogador["jogador_id"])
-
-        elif dono == jogador["jogador_id"]:
-            _log(estado, "info", f"{casa.nome} já é de {jogador['nome']}.", jogador["jogador_id"])
-
-        else:
-            proprietario = _jogador_por_id(estado, dono)
-            bal = carregar_balanceamento(estado["perfil"])
-            conta = calcular_aluguel(estado, tabuleiro, bal, casa, dono)
-            _cobrar_aluguel(estado, jogador, proprietario, casa, conta)
-
-    elif casa.tipo == "inicial":
-        _log(estado, "info", f"{jogador['nome']} está no início.", jogador["jogador_id"])
-    elif casa.tipo == "neutra":
-        _log(estado, "info", "Nada acontece aqui.", jogador["jogador_id"])
-    else:
-        _log(estado, "info", f"{casa.nome} ainda não foi construída.", jogador["jogador_id"])
-
-    return passar_turno(estado)
-
-
-# --------------------------------------------------------------------------
-# 3. comprar
-# --------------------------------------------------------------------------
-
-def decidir_compra(estado: dict, jogador_id: int, comprar: bool) -> dict:
-    if estado["fase"] != FASE_COMPRA:
-        raise ErroDeRegra("Não há nada para comprar agora.", http=409)
-
-    estado = copy.deepcopy(estado)
-    jogador = _exigir_vez(estado, jogador_id)
-
-    pendente = estado["compra_pendente"] or {}
-    indice = pendente.get("casa")
-    preco = pendente.get("preco", 0)
-    casa = carregar_tabuleiro(estado["tabuleiro"]).casa(indice)
-
-    if not comprar:
-        _log(estado, "compra", f"{jogador['nome']} não quis {casa.nome}.", jogador_id)
-    elif jogador["caixa"] < preco:
-        # Caixa pode ter mudado entre a oferta e a resposta.
-        raise ErroDeRegra(f"Você não tem {_reais(preco)} em caixa.")
-    else:
-        jogador["caixa"] -= preco
-        jogador["propriedades"].append(indice)
-        estado["propriedades"][str(indice)] = {"dono": jogador_id, "nivel": 0}
-        _log(estado, "compra",
-             f"{jogador['nome']} comprou {casa.nome} por {_reais(preco)}. "
-             f"Sobrou {_reais(jogador['caixa'])}.",
-             jogador_id)
-
-    estado["compra_pendente"] = None
+    # Parar numa casa ainda não tem consequência nenhuma: compra, aluguel e
+    # eventos entram depois. A vez passa direto.
     return passar_turno(estado)
 
 
@@ -460,30 +312,20 @@ def decidir_compra(estado: dict, jogador_id: int, comprar: bool) -> dict:
 def abandonar(estado: dict, jogador_id: int) -> dict:
     """Jogador saiu no meio da partida.
 
-    Ele é marcado como fora e as propriedades dele voltam ao banco — mesmo
-    tratamento da falência. Sem isto o turno dele travava a mesa, porque a
-    vez ficava esperando alguém que não está mais ali.
+    Ele é marcado como fora e sai da roda. Sem isto o turno dele travava a
+    mesa, porque a vez ficava esperando alguém que não está mais ali.
     """
-    estado = copy.deepcopy(estado)
+    estado = copy.deepcopy(_atualizar(estado))
     jogador = _jogador_por_id(estado, jogador_id)
 
     if jogador["falido"]:
         return estado
 
     jogador["falido"] = True
-    for indice in jogador["propriedades"]:
-        estado["propriedades"].pop(str(indice), None)
-    jogador["propriedades"] = []
+    _log(estado, "saida", f"{jogador['nome']} abandonou a partida.", jogador_id)
 
-    _log(estado, "saida", f"{jogador['nome']} abandonou a partida. Os terrenos voltaram ao banco.",
-         jogador_id)
-
-    era_a_vez = _jogador_da_vez(estado)["jogador_id"] == jogador_id
-    if era_a_vez:
-        # Se ele estava decidindo uma compra, a oferta morre junto.
-        estado["compra_pendente"] = None
+    if _jogador_da_vez(estado)["jogador_id"] == jogador_id:
         return passar_turno(estado)
-
     return estado
 
 
@@ -518,9 +360,10 @@ def passar_turno(estado: dict) -> dict:
 # --------------------------------------------------------------------------
 
 def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
-    """Nestes três sistemas nada é secreto — todo mundo vê o mesmo tabuleiro.
-    A função existe para marcar quem é 'você' e para não vazar a semente, que
-    permitiria prever os dados."""
+    """Nada aqui é secreto — todo mundo vê o mesmo tabuleiro. A função existe
+    para marcar quem é 'você' e para não vazar a semente, que permitiria
+    prever os dados."""
+    estado = _atualizar(estado)
     da_vez = _jogador_da_vez(estado)
     return {
         "fase": estado["fase"],
@@ -537,16 +380,12 @@ def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
                 "personagem": j["personagem"],
                 "caixa": j["caixa"],
                 "posicao": j["posicao"],
-                "propriedades": j["propriedades"],
                 "falido": j["falido"],
                 "sou_eu": j["jogador_id"] == jogador_id,
             }
             for j in estado["jogadores"]
         ],
-        "propriedades": estado["propriedades"],
         "sorteio": estado["sorteio"],
         "ultimo_movimento": estado["ultimo_movimento"],
-        "ultimo_aluguel": estado.get("ultimo_aluguel"),
-        "compra_pendente": estado["compra_pendente"],
         "log": estado["log"][-25:],
     }

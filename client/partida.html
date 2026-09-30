@@ -6,118 +6,99 @@
   <title>Partida — Roubopolis</title>
 
   <link rel="preload" href="/assets/fontes/VCRosdNEUE.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="/assets/tabuleiro/cidade.webp" as="image">
 
   <link rel="stylesheet" href="/css/base/reset.css">
   <link rel="stylesheet" href="/css/base/variaveis.css">
   <link rel="stylesheet" href="/css/base/tipografia.css">
-  <link rel="stylesheet" href="/css/componentes/botao.css">
+  <!-- Só pelo aviso passageiro (toast), que mora lá. -->
+  <link rel="stylesheet" href="/css/componentes/modal.css">
   <link rel="stylesheet" href="/css/componentes/tabuleiro.css">
-  <link rel="stylesheet" href="/css/componentes/construcao.css">
   <link rel="stylesheet" href="/css/componentes/dados.css">
-  <link rel="stylesheet" href="/css/componentes/escritura.css">
   <link rel="stylesheet" href="/css/componentes/sorteio.css">
   <link rel="stylesheet" href="/css/telas/partida.css">
 </head>
 
-<body class="tema-mesa">
+<body class="tela-partida">
+
+  <div class="fundo-partida" aria-hidden="true"></div>
 
   <main class="partida">
 
-    <aside class="placar" id="placar" aria-label="Jogadores"></aside>
+    <img class="partida__logo" src="/assets/logo/roubodopolis.png" alt="Roubopolis">
 
-    <section class="mesa">
-      <div class="mesa__palco">
-        <div class="tabuleiro" id="tabuleiro">
-          <!-- As casas entram aqui. Construções e peões ficam em camadas
-               próprias, por cima: assim podem ser mais altos que a casa. -->
-          <div class="construcoes" id="construcoes"></div>
-          <div class="peoes" id="peoes"></div>
+    <!-- O lema pichado da arte, embaixo do primeiro jogador. -->
+    <p class="lema" aria-hidden="true">
+      <span>Investir</span><span>Negociar</span><span>Construir</span><span>Dominar</span>
+      <span class="lema__coroa" data-icone="coroa"></span>
+    </p>
+
+    <!-- Um cartão em cada canto da tela, na ordem de jogada. -->
+    <ol class="jogadores" id="jogadores" aria-label="Jogadores"></ol>
+
+    <section class="mesa" aria-label="Tabuleiro">
+      <div class="tabuleiro" id="tabuleiro">
+        <svg class="tabuleiro__svg" id="tabuleiro-svg" role="img" aria-label="Tabuleiro de Roubopolis"></svg>
+        <!-- Os dados ficam no canto de baixo do tabuleiro, como na arte. -->
+        <div class="dados" id="dados">
+          <div class="dados__soma" id="dados-soma" aria-live="polite"></div>
+          <div class="dado" id="dado-a"><div class="dado__cubo" id="cubo-a"></div></div>
+          <div class="dado" id="dado-b"><div class="dado__cubo" id="cubo-b"></div></div>
         </div>
+        <div class="peoes" id="peoes"></div>
       </div>
     </section>
 
-    <aside class="painel">
-      <div class="painel__topo">
-        <span class="painel__rodada" id="vez-rodada">rodada 1</span>
-        <div class="vez" id="vez">
-          <span class="vez__rotulo">Vez de</span>
-          <strong class="vez__nome" id="vez-nome">—</strong>
-        </div>
-      </div>
-
-      <!-- A soma fica ACIMA dos dados: é o número que decide a jogada, e o
-           olho sobe até ele depois de ler as duas faces. -->
-      <div class="dados__soma" id="dados-soma" aria-live="polite"></div>
-      <div class="dados" id="dados">
-        <div class="dado" id="dado-a"><div class="dado__cubo" id="cubo-a"></div></div>
-        <div class="dado" id="dado-b"><div class="dado__cubo" id="cubo-b"></div></div>
-      </div>
-
-      <button class="botao botao--verde botao--rolar" type="button" id="rolar">
-        <span class="botao--rolar__texto">Rolar os dados</span>
-      </button>
-      <p class="painel__aviso" id="aviso" role="status"></p>
-
-      <h2 class="painel__titulo-log">O que aconteceu</h2>
-      <ol class="log" id="log"></ol>
-
-      <button class="botao botao--pequeno botao--roxo" type="button" id="sair">Sair da partida</button>
+    <aside class="legenda moldura" aria-labelledby="legenda-titulo">
+      <h2 class="legenda__titulo" id="legenda-titulo">Legenda</h2>
+      <ul class="legenda__itens" id="legenda"></ul>
     </aside>
+
+    <!-- O mesmo chat do lobby: a conversa da sala continua na partida. -->
+    <section class="chat-jogo moldura" id="chat" aria-labelledby="chat-titulo" hidden>
+      <header class="chat-jogo__topo">
+        <h2 class="chat-jogo__titulo" id="chat-titulo">Chat da sala</h2>
+        <span class="chat-jogo__status" id="chat-status" role="status">Conectando...</span>
+        <button class="chat-jogo__fechar" type="button" id="chat-fechar" aria-label="Fechar o chat">×</button>
+      </header>
+      <ol class="chat-jogo__mensagens" id="chat-mensagens" aria-live="polite"></ol>
+      <form class="chat-jogo__formulario" id="chat-formulario">
+        <label class="visualmente-oculto" for="chat-texto">Mensagem</label>
+        <input id="chat-texto" name="texto" maxlength="280" autocomplete="off" placeholder="Escreva para a mesa...">
+        <button class="chat-jogo__enviar" type="submit">Enviar</button>
+      </form>
+    </section>
+
+    <nav class="acoes" aria-label="Opções">
+      <button class="acao moldura" type="button" id="chat-abrir" aria-controls="chat" aria-expanded="false">
+        <span data-icone="balao"></span>Chat<span class="acao__contador" id="chat-contador" hidden></span>
+      </button>
+      <button class="acao moldura" type="button" id="regras"><span data-icone="regras"></span>Regras</button>
+      <button class="acao moldura" type="button" id="ranking"><span data-icone="trofeu"></span>Ranking</button>
+      <button class="acao moldura" type="button" id="config"><span data-icone="engrenagem"></span>Config.</button>
+      <button class="acao moldura" type="button" id="sair"><span data-icone="sair"></span>Sair</button>
+    </nav>
+
+    <div class="jogar">
+      <span class="jogar__seta jogar__seta--esquerda" data-icone="chevron" aria-hidden="true"></span>
+      <button class="jogar__botao moldura" type="button" id="jogar" disabled>Jogar</button>
+      <span class="jogar__seta" data-icone="chevron" aria-hidden="true"></span>
+      <p class="jogar__aviso" id="aviso" role="status"></p>
+    </div>
 
   </main>
 
   <!-- Anúncio da vez, atravessa a tela na troca de turno -->
   <div class="anuncio" id="anuncio" aria-hidden="true"><span id="anuncio-texto"></span></div>
 
-  <!-- Números que sobem quando o caixa muda -->
-  <div class="flutuantes" id="flutuantes" aria-hidden="true"></div>
-
-  <!-- Escritura do terreno: a carta de compra -->
-  <div class="cortina" id="modal-compra" hidden>
-    <div class="escritura" role="dialog" aria-modal="true" aria-labelledby="compra-titulo">
-      <header class="escritura__cabecalho" id="compra-cabecalho">
-        <span class="escritura__grupo" id="compra-grupo">—</span>
-        <h2 class="escritura__nome" id="compra-titulo">—</h2>
-      </header>
-      <div class="escritura__corpo">
-        <p class="escritura__rotulo">Preço de tabela</p>
-        <strong class="escritura__preco" id="compra-preco">—</strong>
-        <dl class="escritura__linhas">
-          <div><dt>Aluguel base</dt><dd id="compra-aluguel">—</dd></div>
-          <div><dt>Seu caixa</dt><dd id="compra-caixa">—</dd></div>
-          <div><dt>Depois da compra</dt><dd id="compra-sobra">—</dd></div>
-        </dl>
-      </div>
-      <div class="escritura__acoes">
-        <button class="botao botao--pequeno botao--verde" type="button" id="comprar-sim">Comprar</button>
-        <button class="botao botao--pequeno botao--roxo" type="button" id="comprar-nao">Deixar passar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Cobrança de aluguel: quem pagou, a quem, quanto e onde -->
-  <div class="cortina" id="modal-aluguel" hidden>
-    <div class="recibo" role="dialog" aria-modal="true" aria-labelledby="aluguel-titulo">
-      <h2 class="recibo__titulo" id="aluguel-titulo">Aluguel</h2>
-      <p class="recibo__casa" id="aluguel-casa">—</p>
-      <div class="recibo__fluxo">
-        <span class="recibo__lado" id="aluguel-de">—</span>
-        <span class="recibo__seta">→</span>
-        <span class="recibo__lado recibo__lado--recebe" id="aluguel-para">—</span>
-      </div>
-      <strong class="recibo__valor" id="aluguel-valor">—</strong>
-      <p class="recibo__detalhe" id="aluguel-detalhe" hidden></p>
-    </div>
-  </div>
-
-  <!-- Abertura: todo mundo junto jogando os dados -->
+  <!-- Abertura: todo mundo junto jogando os dados para ver quem começa -->
   <div class="cortina" id="modal-ordem" hidden>
-    <div class="sorteio" role="dialog" aria-modal="true" aria-labelledby="ordem-titulo">
+    <div class="sorteio moldura" role="dialog" aria-modal="true" aria-labelledby="ordem-titulo">
       <h2 class="sorteio__titulo" id="ordem-titulo">Quem começa</h2>
       <p class="sorteio__explica">Todo mundo joga junto. Quem tirar mais, começa.</p>
       <div class="sorteio__mesa" id="sorteio-mesa"></div>
-      <div class="escritura__acoes">
-        <button class="botao botao--pequeno botao--verde" type="button" id="ordem-fechar" disabled>
+      <div class="sorteio__acoes">
+        <button class="jogar__botao jogar__botao--pequeno moldura" type="button" id="ordem-fechar" disabled>
           Bora jogar
         </button>
       </div>

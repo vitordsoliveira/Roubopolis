@@ -126,16 +126,6 @@ def abandonar(sessao: Session, sala: Sala, jogador) -> dict:
     return _envelope(estado, jogador, sala)
 
 
-def decidir_compra(sessao: Session, sala: Sala, jogador, comprar: bool) -> dict:
-    linha = buscar_partida(sessao, sala)
-    try:
-        estado = motor.decidir_compra(_ler(linha), jogador.id, comprar)
-    except motor.ErroDeRegra as erro:
-        raise _erro(erro)
-    _gravar(sessao, linha, estado)
-    return _envelope(estado, jogador, sala)
-
-
 # --------------------------------------------------------------------------
 
 def _envelope(estado: dict, jogador, sala: Sala) -> dict:
@@ -149,7 +139,5 @@ def _envelope(estado: dict, jogador, sala: Sala) -> dict:
         "regras": {
             "segundos_por_turno": bal["tempo"]["segundos_por_turno"],
             "dados": bal["dados"],
-            # A escritura mostra quanto o terreno renderia de aluguel.
-            "aluguel": bal["aluguel"],
         },
     }

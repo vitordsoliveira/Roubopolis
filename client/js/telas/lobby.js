@@ -6,6 +6,7 @@
 
 import { api, guardado } from "../core/api.js";
 import { som } from "../core/som.js";
+import { montarChat } from "../ui/chat.js";
 import { toast } from "../ui/toast.js";
 
 const fila = document.querySelector("#slots");
@@ -13,15 +14,23 @@ const rotuloCodigo = document.querySelector("#codigo-sala");
 const botaoPronto = document.querySelector("#pronto");
 const botaoIniciar = document.querySelector("#iniciar");
 const aviso = document.querySelector("#aviso");
-const chatMensagens = document.querySelector("#chat-mensagens");
-const chatFormulario = document.querySelector("#chat-formulario");
-const chatTexto = document.querySelector("#chat-texto");
-const chatStatus = document.querySelector("#chat-status");
 
 const codigo = new URLSearchParams(location.search).get("codigo")?.toUpperCase() || "";
 let estado = null;
 let consulta = null;
-let consultaChat = null;
+
+// O mesmo chat da tela da partida: a conversa segue quando o jogo começa.
+const chat = montarChat({
+  codigo,
+  lista: document.querySelector("#chat-mensagens"),
+  formulario: document.querySelector("#chat-formulario"),
+  campo: document.querySelector("#chat-texto"),
+  status: document.querySelector("#chat-status"),
+  // Cada nome na cor do boneco que a pessoa escolheu — a mesma cor da base
+  // do peão dela na partida. Trocou de boneco, o nome troca de cor junto.
+  corDe: (jogadorId) =>
+    estado?.participantes.find((p) => p.jogador_id === jogadorId)?.personagem?.cor ?? null,
+});
 
 if (!codigo || !guardado.token()) {
   toast("Volte ao menu e digite seu nome primeiro.", "erro");
@@ -36,7 +45,7 @@ async function entrar() {
   try {
     pintar(await api.entrarNaSala(codigo));
     som.tocar("entrar");
-    await atualizarChat();
+    await chat.atualizar();
     iniciarConsulta();
   } catch (erro) {
     som.tocar("erro");
@@ -214,58 +223,6 @@ botaoIniciar.addEventListener("click", async () => {
   }
 });
 
-// --- chat da sala ----------------------------------------------------
-
-function pintarChat(mensagens) {
-  // Só arrasta a lista para baixo se a pessoa já estava lendo o fim; quem
-  // subiu para reler uma mensagem antiga não perde o lugar.
-  const estavaNoFim =
-    chatMensagens.scrollTop + chatMensagens.clientHeight >= chatMensagens.scrollHeight - 24;
-
-  chatMensagens.replaceChildren();
-  if (!mensagens.length) {
-    chatMensagens.appendChild(elemento("li", "chat__vazio", "Nenhuma mensagem ainda."));
-  } else {
-    mensagens.forEach((mensagem) => {
-      const item = elemento("li", "chat__mensagem");
-      item.append(
-        elemento("strong", "chat__nome", mensagem.nome),
-        elemento("span", "chat__texto", mensagem.texto),
-      );
-      chatMensagens.appendChild(item);
-    });
-  }
-
-  if (estavaNoFim) chatMensagens.scrollTop = chatMensagens.scrollHeight;
-  chatStatus.textContent = `${mensagens.length} ${mensagens.length === 1 ? "mensagem" : "mensagens"}`;
-}
-
-async function atualizarChat() {
-  try {
-    pintarChat(await api.listarChat(codigo));
-  } catch {
-    chatStatus.textContent = "Chat indisponível";
-  }
-}
-
-chatFormulario.addEventListener("submit", async (evento) => {
-  evento.preventDefault();
-  const texto = chatTexto.value.trim();
-  if (!texto) return;
-  chatTexto.disabled = true;
-  try {
-    await api.enviarChat(codigo, texto);
-    chatTexto.value = "";
-    await atualizarChat();
-  } catch (erro) {
-    som.tocar("erro");
-    toast(erro.message, "erro");
-  } finally {
-    chatTexto.disabled = false;
-    chatTexto.focus();
-  }
-});
-
 // --- trocar de boneco ------------------------------------------------
 
 /** Só entram na roda os bonecos livres e o que já é meu. */
@@ -358,14 +315,13 @@ async function atualizar() {
 function iniciarConsulta() {
   pararConsulta();
   consulta = setInterval(atualizar, 2500);
-  consultaChat = setInterval(atualizarChat, 2500);
+  chat.iniciar();
 }
 
 function pararConsulta() {
   if (consulta) clearInterval(consulta);
-  if (consultaChat) clearInterval(consultaChat);
   consulta = null;
-  consultaChat = null;
+  chat.parar();
 }
 
 // Voltar para a aba mostra o estado atual sem esperar o próximo ciclo.

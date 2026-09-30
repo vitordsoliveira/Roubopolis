@@ -1,10 +1,3 @@
-"""Flask do Roubodopolis.
-
-Serve os arquivos de `client/` e a API do menu e do lobby. Os canais de
-tempo real (server/sockets/) entram na fase de multiplayer; até lá a tela
-do lobby consulta a API por conta própria.
-"""
-
 from __future__ import annotations
 
 from flask import Flask, jsonify, send_from_directory
@@ -21,19 +14,11 @@ from server.salas.gerenciador import ErroDeSala
 
 
 def criar_app() -> Flask:
-    # O create_all não altera tabelas existentes; esta chamada também aplica
-    # migrações pequenas, como as colunas da conta adicionadas depois.
     garantir_tabelas()
     popular()
     app = Flask(__name__, static_folder=None)
     app.config["SECRET_KEY"] = Config.SECRET_KEY
     app.config["JSON_SORT_KEYS"] = False
-    # Todo arquivo de client/ é revalidado a cada abertura (max-age=0): o
-    # servidor responde 304 quando nada mudou, então custa pouco. Sem isto
-    # o Flask não manda cabeçalho de cache, e o Chromium do Electron
-    # estimava sozinho por quanto tempo reaproveitar o arquivo — dias, para
-    # um arquivo antigo. Depois de publicar, a janela seguia com o JS e as
-    # imagens de antes.
     app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
     app.register_blueprint(bp_auth)
@@ -71,7 +56,6 @@ def criar_app() -> Flask:
     # ---- ciclo de vida ------------------------------------------------
     @app.teardown_appcontext
     def encerrar_sessao(_exc=None):
-        # Devolve a conexão ao pool ao fim de cada request.
         Sessao.remove()
 
     return app

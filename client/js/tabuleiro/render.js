@@ -17,6 +17,7 @@
    cobriria de verdade. Os nomes das casas vêm por último, por cima de
    tudo, para nunca sumirem atrás de uma árvore. */
 
+import { animarCidade } from "./cidade_viva.js";
 import { grupoPixel, medidas } from "./pixel.js";
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -441,21 +442,26 @@ function desenharBase(pai, lu, lv) {
   face(pai, [[f, f, 0], [lu - f, f, 0], [lu - f, lv - f, 0], [f, lv - f, 0]], COR_ASFALTO);
 }
 
+/** Desenha a pintura da cidade e devolve um grupo por cima dela em que uma
+    unidade é um pixel da pintura — é nele que a cidade ganha vida. */
 function desenharCidade(pai, lu, lv) {
   const lado = Math.min(lu, lv) - 2 * FUNDO_CASA - 2 * RECUO_CIDADE;
   const escala = (lado * A) / CIDADE.meiaLargura;
   // O meio-fio da pintura assenta na base: o chão da cidade sobe a altura dele.
   const zChao = (CIDADE.meioFio * escala) / C;
   const [cx, cy] = tela(lu / 2, lv / 2, zChao);
+  const x = cx - CIDADE.centroX * escala;
+  const y = cy - CIDADE.centroY * escala;
   no("image", {
     href: CIDADE.arquivo,
-    x: (cx - CIDADE.centroX * escala).toFixed(1),
-    y: (cy - CIDADE.centroY * escala).toFixed(1),
+    x: x.toFixed(1),
+    y: y.toFixed(1),
     width: (CIDADE.largura * escala).toFixed(1),
     height: (CIDADE.altura * escala).toFixed(1),
     preserveAspectRatio: "none",
     class: "tabuleiro__cidade",
   }, pai);
+  return no("g", { transform: `translate(${x.toFixed(2)} ${y.toFixed(2)}) scale(${escala.toFixed(5)})` }, pai);
 }
 
 function desenharCasa(pai, item, dados, ctx) {
@@ -515,7 +521,9 @@ export function montarTabuleiro(svg, dados) {
   desenharBase(no("g", { class: "tabuleiro__base" }, svg), lu, lv);
   const fundo = no("g", {}, svg);
   itens.filter((i) => i.geo.doFundo).sort(porProfundidade).forEach((i) => desenharCasa(fundo, i, dados, ctx));
-  desenharCidade(svg, lu, lv);
+  // A cidade e o que anda nela ficam entre as casas do fundo e as da frente:
+  // um carro chegando na esquina passa atrás das casas da borda de baixo.
+  animarCidade(desenharCidade(svg, lu, lv));
   const frente = no("g", {}, svg);
   itens.filter((i) => !i.geo.doFundo).sort(porProfundidade).forEach((i) => desenharCasa(frente, i, dados, ctx));
   const rotulos = no("g", { class: "tabuleiro__rotulos" }, svg);

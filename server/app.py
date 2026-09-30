@@ -28,6 +28,13 @@ def criar_app() -> Flask:
     app = Flask(__name__, static_folder=None)
     app.config["SECRET_KEY"] = Config.SECRET_KEY
     app.config["JSON_SORT_KEYS"] = False
+    # Todo arquivo de client/ é revalidado a cada abertura (max-age=0): o
+    # servidor responde 304 quando nada mudou, então custa pouco. Sem isto
+    # o Flask não manda cabeçalho de cache, e o Chromium do Electron
+    # estimava sozinho por quanto tempo reaproveitar o arquivo — dias, para
+    # um arquivo antigo. Depois de publicar, a janela seguia com o JS e as
+    # imagens de antes.
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
     app.register_blueprint(bp_auth)
     app.register_blueprint(bp_perfil)

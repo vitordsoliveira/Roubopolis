@@ -1,0 +1,76 @@
+{
+  "_leia_isto": "Gerado por ferramentas/preparar_assets.py — não edite à mão.",
+  "cidade": {
+    "largura": 1536,
+    "altura": 1024
+  },
+  "frente": "/assets/tabuleiro/cidade-frente.webp",
+  "carros": {
+    "carro-vermelho": {
+      "sprite": "/assets/tabuleiro/carros/carro-vermelho.png",
+      "largura": 123,
+      "altura": 93,
+      "ancora": [
+        44.5,
+        68.0
+      ],
+      "pintado_em": [
+        267.5,
+        695.0
+      ],
+      "direcao": "desce-direita",
+      "rua": 0.5467
+    },
+    "taxi": {
+      "sprite": "/assets/tabuleiro/carros/taxi.png",
+      "largura": 103,
+      "altura": 85,
+      "ancora": [
+        67.0,
+        62.0
+      ],
+      "pintado_em": [
+        1162.0,
+        764.0
+      ],
+      "direcao": "desce-esquerda",
+      "rua": -0.6071
+    },
+    "carro-azul": {
+      "sprite": "/assets/tabuleiro/carros/carro-azul.png",
+      "largura": 123,
+      "altura": 93,
+      "ancora": [
+        44.5,
+        68.0
+      ],
+      "pintado_em": null,
+      "direcao": "desce-direita",
+      "rua": 0.5467
+    },
+    "carro-verde": {
+      "sprite": "/assets/tabuleiro/carros/carro-verde.png",
+      "largura": 123,
+      "altura": 93,
+      "ancora": [
+        44.5,
+        68.0
+      ],
+      "pintado_em": null,
+      "direcao": "desce-direita",
+      "rua": 0.5467
+    },
+    "carro-roxo": {
+      "sprite": "/assets/tabuleiro/carros/carro-roxo.png",
+      "largura": 123,
+      "altura": 93,
+      "ancora": [
+        44.5,
+        68.0
+      ],
+      "pintado_em": null,
+      "direcao": "desce-direita",
+      "rua": 0.5467
+    }
+  }
+}

@@ -306,20 +306,21 @@ export function medidas(nome) {
 /* Um retângulo por trecho contínuo da mesma cor, e não um por pixel: o
    ícone maior tem ~200 pixels pintados, e juntar a linha reduz os
    elementos do SVG a menos de um terço. */
-function pintar(pai, nome) {
-  ICONES[nome].forEach((linha, y) => {
+function pintar(pai, linhas, paleta) {
+  linhas.forEach((linha, y) => {
     let x = 0;
     while (x < linha.length) {
       const cor = linha[x];
       let fim = x + 1;
       while (fim < linha.length && linha[fim] === cor) fim += 1;
       if (cor !== ".") {
+        if (!paleta[cor]) throw new Error(`Cor "${cor}" sem valor na paleta do desenho.`);
         const r = document.createElementNS(SVG, "rect");
         r.setAttribute("x", String(x));
         r.setAttribute("y", String(y));
         r.setAttribute("width", String(fim - x));
         r.setAttribute("height", "1");
-        r.setAttribute("fill", PALETA[cor]);
+        r.setAttribute("fill", paleta[cor]);
         pai.appendChild(r);
       }
       x = fim;
@@ -327,13 +328,19 @@ function pintar(pai, nome) {
   });
 }
 
+/** Qualquer desenho em texto, com a paleta que quem chama quiser — é assim
+    que o mesmo menino sai com camisa de time diferente. */
+export function grupoDoMapa(linhas, paleta = PALETA) {
+  const g = document.createElementNS(SVG, "g");
+  g.setAttribute("shape-rendering", "crispEdges");
+  pintar(g, linhas, paleta);
+  return g;
+}
+
 /** Grupo SVG com o ícone, na escala de 1 unidade por pixel do mapa. Quem
     chama posiciona e escala com `transform`. */
 export function grupoPixel(nome) {
-  const g = document.createElementNS(SVG, "g");
-  g.setAttribute("shape-rendering", "crispEdges");
-  pintar(g, nome);
-  return g;
+  return grupoDoMapa(ICONES[nome]);
 }
 
 /** O ícone como um <svg> solto, para usar no meio do HTML. O tamanho vem

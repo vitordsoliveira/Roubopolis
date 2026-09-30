@@ -225,6 +225,13 @@ def gerar_copias() -> None:
         print(f"  {saida:<32} {im.width}x{im.height}  {destino.stat().st_size // 1024} KB{mudou}")
 
 
+def _salvar_webp(im: Image.Image, saida: str, **opcoes) -> None:
+    destino = DESTINO / saida
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    im.save(destino, "WEBP", method=6, **opcoes)
+    print(f"  {saida:<32} {im.width}x{im.height}  {destino.stat().st_size // 1024} KB")
+
+
 def gerar_tabuleiro() -> None:
     for arquivo, saida in TABULEIRO.items():
         origem = ORIGEM_TABULEIRO / arquivo
@@ -235,10 +242,59 @@ def gerar_tabuleiro() -> None:
         im = Image.open(origem)
         # A cidade é recortada (fundo transparente); o céu não tem alfa.
         im = im.convert("RGBA" if "A" in im.getbands() else "RGB")
+        if arquivo == "CIDADE.png":
+            gerar_cidade_viva(im)
+            continue
+        _salvar_webp(im, saida, quality=QUALIDADE_WEBP)
+
+
+def gerar_cidade_viva(cidade: Image.Image) -> None:
+    """A cidade sem as figuras que a partida anima, e o que a animação usa.
+
+    O trabalho de imagem está em limpar_cidade.py; aqui só se grava. O
+    manifesto `figurantes.json` diz à tela o tamanho de cada carro e onde
+    fica o ponto dele que corre pela faixa — números que saem do recorte e
+    mudariam se a arte mudasse, por isso não ficam escritos à mão no JS.
+    """
+    import json
+
+    import limpar_cidade
+
+    print("  (limpando a cidade — leva uns 20 segundos)")
+    r = limpar_cidade.processar(cidade)
+    _salvar_webp(r["cidade"], TABULEIRO["CIDADE.png"], quality=QUALIDADE_WEBP)
+    # Sem perda: a camada é quase toda transparente e a borda do poste
+    # precisa ficar idêntica à da pintura embaixo.
+    _salvar_webp(r["frente"], "tabuleiro/cidade-frente.webp", lossless=True)
+
+    carros = {}
+    for nome, carro in r["carros"].items():
+        saida = f"tabuleiro/carros/{nome}.png"
         destino = DESTINO / saida
         destino.parent.mkdir(parents=True, exist_ok=True)
-        im.save(destino, "WEBP", quality=QUALIDADE_WEBP, method=6)
-        print(f"  {saida:<32} {im.width}x{im.height}  {destino.stat().st_size // 1024} KB")
+        carro["imagem"].save(destino, optimize=True)
+        print(f"  {saida:<32} {carro['imagem'].width}x{carro['imagem'].height}  {destino.stat().st_size // 1024} KB")
+        carros[nome] = {
+            "sprite": f"/assets/{saida}",
+            "largura": carro["imagem"].width,
+            "altura": carro["imagem"].height,
+            "ancora": [round(v, 1) for v in carro["ancora"]],
+            "pintado_em": list(carro["pintado_em"]) if carro["pintado_em"] else None,
+            "direcao": carro["direcao"],
+            # Inclinação da rua em que o carro foi pintado: y desce isto por
+            # pixel andado para a direita.
+            "rua": carro["rua"],
+        }
+
+    manifesto = {
+        "_leia_isto": "Gerado por ferramentas/preparar_assets.py — não edite à mão.",
+        "cidade": {"largura": cidade.width, "altura": cidade.height},
+        "frente": "/assets/tabuleiro/cidade-frente.webp",
+        "carros": carros,
+    }
+    destino = DESTINO / "tabuleiro" / "figurantes.json"
+    destino.write_text(json.dumps(manifesto, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"  tabuleiro/figurantes.json")
 
 
 def copiar_fontes() -> None:

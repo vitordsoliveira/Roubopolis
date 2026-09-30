@@ -12,7 +12,6 @@ from server.rotas.perfil import bp as bp_perfil
 from server.rotas.salas import bp as bp_salas
 from server.salas.gerenciador import ErroDeSala
 
-
 def criar_app() -> Flask:
     garantir_tabelas()
     popular()
@@ -57,5 +56,4 @@ def criar_app() -> Flask:
     @app.teardown_appcontext
     def encerrar_sessao(_exc=None):
         Sessao.remove()
-
     return app

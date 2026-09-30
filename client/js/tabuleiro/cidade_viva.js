@@ -430,7 +430,17 @@ const ROTEIRO = [
   { dur: 0.55, braco: [360, 360], levanta: true },
 ];
 
-function criarMuro(pai) {
+/* A surra precisa ser VISTA: um carro passando na frente do muro bem na
+   hora da paulada tapava a cena inteira. Então o policial só começa com o
+   trecho da rua em frente ao muro livre pelos próximos segundos, e enquanto
+   bate nenhum carro novo entra naquela rua. `x` é o trecho em que um carro
+   daquela faixa cobre a cena (o carro ocupa uns 80 px para trás da âncora
+   e 45 para a frente); `segundos` é a surra toda, da primeira erguida do
+   cassetete até o noia ir ao chão, com folga. */
+const PALCO = { faixa: "taxi", x: [1120, 1340], segundos: 2.8 };
+
+/** `palco` diz se a rua está livre e avisa o trânsito que a surra começou. */
+function criarMuro(pai, palco) {
   const grupo = no("g", { class: "cidade-viva__muro" }, pai);
 
   const noia = no("g", { transform: `translate(${NOIA_EM[0]} ${NOIA_EM[1]})` }, grupo);
@@ -467,6 +477,14 @@ function criarMuro(pai) {
     agora += dt;
     let atual = ROTEIRO[passo];
     while (agora - inicioDoPasso >= atual.dur) {
+      if (passo === 0) {
+        if (!palco.podeComecar()) {
+          // Carro vindo: o policial espera ele passar.
+          inicioDoPasso = agora - atual.dur;
+          break;
+        }
+        palco.comecou();
+      }
       inicioDoPasso += atual.dur;
       if (atual.pancada) {
         gritar(grito, atual.pancada, NOIA_EM[0] - 2, NOIA_EM[1] - 50, 0.6);
@@ -551,6 +569,7 @@ const ESMAECER = 45;
 function criarTransito(pai, { parado = false } = {}) {
   const grupo = no("g", { class: "cidade-viva__transito" }, pai);
   const carros = [];
+  let relogio = 0;
 
   const faixas = FAIXAS.map((f) => {
     const ref = figurantes.carros[f.pintado];
@@ -562,8 +581,10 @@ function criarTransito(pai, { parado = false } = {}) {
       sentido: Math.sign(f.ate - f.de),
       espera: sorteio(1, 3),
       ultimo: null,
+      seguraAte: 0,
     };
   });
+  const faixaDo = (pintado) => faixas.find((f) => f.pintado === pintado);
 
   const yNa = (faixa, x) => faixa.y0 + faixa.inclinacao * (x - faixa.x0);
 
@@ -594,7 +615,25 @@ function criarTransito(pai, { parado = false } = {}) {
   // arte, e só então o trânsito anda.
   for (const f of faixas) novoCarro(f, f.x0, [f.pintado, false]);
 
+  /** Nenhum carro da faixa passa entre `xMin` e `xMax` nos próximos
+      `segundos`? Conta com a velocidade de cada um; se ele frear atrás de
+      outro, chega ainda mais tarde, então a resposta continua valendo. */
+  function livre(pintado, [xMin, xMax], segundos) {
+    const f = faixaDo(pintado);
+    return !carros.some((c) => {
+      if (c.faixa !== f) return false;
+      const depois = c.x + c.velocidade * f.sentido * segundos;
+      return Math.max(c.x, depois) >= xMin && Math.min(c.x, depois) <= xMax;
+    });
+  }
+
+  /** Nenhum carro novo entra na faixa pelos próximos `segundos`. */
+  function segurar(pintado, segundos) {
+    faixaDo(pintado).seguraAte = relogio + segundos;
+  }
+
   function atualizar(dt) {
+    relogio += dt;
     for (const f of faixas) {
       const daFaixa = carros.filter((c) => c.faixa === f).sort((a, b) => (b.x - a.x) * f.sentido);
       let frente = null;
@@ -614,7 +653,7 @@ function criarTransito(pai, { parado = false } = {}) {
       f.espera -= dt;
       const ultimo = daFaixa[daFaixa.length - 1];
       const temEspaco = !ultimo || Math.abs(ultimo.x - f.de) > DISTANCIA_ENTRE_CARROS + 20;
-      if (f.espera <= 0 && temEspaco) {
+      if (f.espera <= 0 && temEspaco && relogio >= f.seguraAte) {
         novoCarro(f, f.de);
         f.espera = sorteio(...ESPERA_ENTRE_CARROS);
       }
@@ -623,7 +662,7 @@ function criarTransito(pai, { parado = false } = {}) {
     ordenarPorAltura(grupo, carros);
   }
 
-  return { atualizar };
+  return { atualizar, livre, segurar };
 }
 
 // ==========================================================================
@@ -637,8 +676,14 @@ export function animarCidade(camada) {
   const quieto = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
   const pelada = criarPelada(atores);
-  const muro = criarMuro(atores);
-  const transito = criarTransito(atores, { parado: quieto });
+  // O muro nasce antes do trânsito para os carros serem desenhados na frente
+  // da cena; por isso o palco consulta o trânsito só quando já existe.
+  let transito = null;
+  const muro = criarMuro(atores, {
+    podeComecar: () => transito.livre(PALCO.faixa, PALCO.x, PALCO.segundos),
+    comecou: () => transito.segurar(PALCO.faixa, PALCO.segundos),
+  });
+  transito = criarTransito(atores, { parado: quieto });
 
   // Os postes da calçada da frente, por cima de tudo: o carro passa atrás.
   no("image", {

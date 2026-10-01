@@ -46,6 +46,24 @@
       "sprite": "/assets/personagens/festa.png",
       "passiva": null,
       "ordem": 5
+    },
+    {
+      "slug": "drake",
+      "nome": "Drake",
+      "descricao": "Juliet na testa, Cyclone na cintura e Kenner no pé.",
+      "cor": "#ff5fb0",
+      "sprite": "/assets/personagens/drake.png",
+      "passiva": null,
+      "ordem": 6
+    },
+    {
+      "slug": "jade",
+      "nome": "Jade",
+      "descricao": "Cachos ruivos, olho verde e o terreno dos outros na mira.",
+      "cor": "#ff9a1f",
+      "sprite": "/assets/personagens/jade.png",
+      "passiva": null,
+      "ordem": 7
     }
   ]
 }

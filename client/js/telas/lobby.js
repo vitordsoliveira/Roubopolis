@@ -6,6 +6,7 @@
 
 import { api, guardado } from "../core/api.js";
 import { som } from "../core/som.js";
+import { montarChat } from "../ui/chat.js";
 import { toast } from "../ui/toast.js";
 
 const fila = document.querySelector("#slots");
@@ -13,10 +14,22 @@ const rotuloCodigo = document.querySelector("#codigo-sala");
 const botaoPronto = document.querySelector("#pronto");
 const botaoIniciar = document.querySelector("#iniciar");
 const aviso = document.querySelector("#aviso");
-
 const codigo = new URLSearchParams(location.search).get("codigo")?.toUpperCase() || "";
 let estado = null;
 let consulta = null;
+
+// O mesmo chat da tela da partida: a conversa segue quando o jogo começa.
+const chat = montarChat({
+  codigo,
+  lista: document.querySelector("#chat-mensagens"),
+  formulario: document.querySelector("#chat-formulario"),
+  campo: document.querySelector("#chat-texto"),
+  status: document.querySelector("#chat-status"),
+  // Cada nome na cor do boneco que a pessoa escolheu — a mesma cor da base
+  // do peão dela na partida. Trocou de boneco, o nome troca de cor junto.
+  corDe: (jogadorId) =>
+    estado?.participantes.find((p) => p.jogador_id === jogadorId)?.personagem?.cor ?? null,
+});
 
 if (!codigo || !guardado.token()) {
   toast("Volte ao menu e digite seu nome primeiro.", "erro");
@@ -31,6 +44,7 @@ async function entrar() {
   try {
     pintar(await api.entrarNaSala(codigo));
     som.tocar("entrar");
+    await chat.atualizar();
     iniciarConsulta();
   } catch (erro) {
     som.tocar("erro");
@@ -138,14 +152,50 @@ function montarSlots(dados) {
 }
 
 function pintar(dados) {
+  const anterior = estado;
   estado = dados;
+
+  // Quem começou a partida arrasta todo mundo junto: os demais descobrem
+  // pela consulta periódica que a sala saiu do lobby.
+  if (dados.status === "em_partida") {
+    irParaAPartida();
+    return;
+  }
+
+  if (anterior) avisarEntradasESaidas(anterior, dados);
+
   montarSlots(dados);
 
   const eu = dados.participantes.find((p) => p.sou_eu);
   botaoPronto.disabled = !eu?.personagem;
   botaoPronto.textContent = eu?.pronto ? "NÃO ESTOU PRONTO" : "ESTOU PRONTO";
   botaoIniciar.hidden = !dados.sou_dono;
+  botaoIniciar.disabled = !dados.pode_iniciar;
   aviso.textContent = mensagemDeEspera(dados);
+}
+
+/** Compara a lista de antes com a de agora e avisa quem chegou e quem foi. */
+function avisarEntradasESaidas(anterior, atual) {
+  const antes = new Map(anterior.participantes.map((p) => [p.jogador_id, p.nome]));
+  const agora = new Map(atual.participantes.map((p) => [p.jogador_id, p.nome]));
+
+  for (const [id, nome] of agora) {
+    if (!antes.has(id)) {
+      som.tocar("entrar");
+      toast(`${nome} entrou na sala.`, "ok");
+    }
+  }
+  for (const [id, nome] of antes) {
+    if (!agora.has(id)) {
+      som.tocar("aviso");
+      toast(`${nome} saiu da sala.`, "erro");
+    }
+  }
+}
+
+function irParaAPartida() {
+  pararConsulta();
+  location.href = `/partida?codigo=${codigo}`;
 }
 
 function mensagemDeEspera(dados) {
@@ -153,8 +203,24 @@ function mensagemDeEspera(dados) {
     return `Passe o código ${dados.codigo} para alguém entrar. Faltam jogadores.`;
   }
   if (!dados.pode_iniciar) return "Esperando todo mundo ficar pronto.";
-  return "Todo mundo pronto. O tabuleiro entra na próxima fase do projeto.";
+  return dados.sou_dono
+    ? "Todo mundo pronto. Pode começar!"
+    : "Todo mundo pronto. Esperando o dono começar.";
 }
+
+botaoIniciar.addEventListener("click", async () => {
+  if (botaoIniciar.disabled) return;
+  botaoIniciar.disabled = true;
+  try {
+    await api.iniciarPartida(codigo);
+    som.tocar("confirmar");
+    irParaAPartida();
+  } catch (erro) {
+    som.tocar("erro");
+    toast(erro.message, "erro");
+    botaoIniciar.disabled = false;
+  }
+});
 
 // --- trocar de boneco ------------------------------------------------
 
@@ -198,15 +264,25 @@ botaoPronto.addEventListener("click", async () => {
 });
 
 document.querySelector("#copiar").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(codigo);
-    som.tocar("copiar");
-    toast(`Código ${codigo} copiado.`, "ok");
-  } catch {
-    som.tocar("aviso");
-    // Sem permissão de área de transferência: mostrar já resolve.
-    toast(`Anote o código: ${codigo}`);
+  const desktop = window.roubodopolis?.desktop ? window.roubodopolis : null;
+
+  // Pelo Electron sempre funciona. A `navigator.clipboard` do navegador só
+  // existe em contexto seguro (https ou localhost) — pelo IP da rede local
+  // ela nem é definida, e era isso que fazia o botão não copiar nada.
+  if (desktop?.copiar) {
+    try {
+      await desktop.copiar(codigo);
+      som.tocar("copiar");
+      toast(`Código ${codigo} copiado.`, "ok");
+      return;
+    } catch {
+      /* cai para o aviso honesto abaixo */
+    }
   }
+
+  som.tocar("aviso");
+  // Nunca fingir que copiou: mostra o código para a pessoa anotar.
+  toast(`Não consegui copiar. Anote o código: ${codigo}`, "erro");
 });
 
 document.querySelector("#voltar").addEventListener("click", async () => {
@@ -238,11 +314,13 @@ async function atualizar() {
 function iniciarConsulta() {
   pararConsulta();
   consulta = setInterval(atualizar, 2500);
+  chat.iniciar();
 }
 
 function pararConsulta() {
   if (consulta) clearInterval(consulta);
   consulta = null;
+  chat.parar();
 }
 
 // Voltar para a aba mostra o estado atual sem esperar o próximo ciclo.

@@ -107,7 +107,11 @@ function mostrarJogo(jogador) {
   document.querySelector(".menu__login").hidden = true;
   opcoes.hidden = false;
   pintarAtalho(jogador);
-  opcoes.querySelector("button")?.focus();
+  // Foco no CONTÊINER, não no primeiro botão. Focar o botão acendia a
+  // setinha do `:focus-visible` no JOGAR, que ficava parecendo uma seleção
+  // travada e concorria com a setinha do mouse. Assim o leitor de tela
+  // entra no menu e nada acende.
+  opcoes.focus({ preventScroll: true });
 }
 
 function voltarAoLogin() {
@@ -307,7 +311,9 @@ async function salvarPerfil() {
 
   try {
     const dados = await api.salvarPerfil(corpo);
-    guardado.salvarNome(dados.jogador.nome);
+    // Atualiza o cache do navegador junto: é ele que desenha o menu na
+    // próxima abertura, antes de qualquer consulta ao servidor.
+    guardado.salvarSessao(dados.jogador);
     preencherPerfil(dados);
     fotoPendente = undefined;
     perfilSenhaAtual.value = "";
@@ -387,10 +393,21 @@ controleVolumeSom.addEventListener("input", () => {
 
 controleVolumeSom.addEventListener("change", () => som.tocar("clique"));
 
+/* O Roubopolis é jogado pelo aplicativo instalado — a página nunca é o
+   produto final. Tudo que depende da janela passa por esta ponte, e a
+   ausência dela é DEFEITO, não um segundo modo de uso. Ter um caminho
+   alternativo aqui só serviria para esconder o defeito. */
+
+function ponteDesktop() {
+  return window.roubodopolis?.desktop ? window.roubodopolis : null;
+}
+
+function avisarSemPonte() {
+  toast("Não consegui falar com o aplicativo. Abra o jogo pelo Roubopolis, não pelo navegador.", "erro");
+}
+
 function estaEmTelaCheia() {
-  return window.roubodopolis?.desktop
-    ? Boolean(window.roubodopolis.telaCheia?.())
-    : Boolean(document.fullscreenElement);
+  return Boolean(ponteDesktop()?.telaCheia?.());
 }
 
 function pintarTelaCheia() {
@@ -398,16 +415,19 @@ function pintarTelaCheia() {
 }
 
 async function aplicarModoExibicao() {
+  const desktop = ponteDesktop();
+  if (!desktop) {
+    // Antes caía em document.requestFullscreen(), que no Electron até
+    // funciona — mas é o fullscreen do HTML, e não o da janela nativa.
+    // O seletor e a janela real passavam a discordar em silêncio.
+    avisarSemPonte();
+    return;
+  }
+
   const deveFicarEmTelaCheia = modoExibicao.value === "tela-cheia";
   try {
-    if (window.roubodopolis?.desktop) {
-      if (deveFicarEmTelaCheia !== estaEmTelaCheia()) {
-        await window.roubodopolis.alternarTelaCheia();
-      }
-    } else if (deveFicarEmTelaCheia && !document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
-    } else if (!deveFicarEmTelaCheia && document.fullscreenElement) {
-      await document.exitFullscreen();
+    if (deveFicarEmTelaCheia !== estaEmTelaCheia()) {
+      await desktop.alternarTelaCheia();
     }
     pintarTelaCheia();
   } catch {
@@ -418,8 +438,9 @@ async function aplicarModoExibicao() {
 
 botaoAplicarModoExibicao.addEventListener("click", aplicarModoExibicao);
 botaoAplicarModoExibicao.addEventListener("click", () => som.tocar("confirmar"));
-document.addEventListener("fullscreenchange", pintarTelaCheia);
-window.roubodopolis?.aoMudarTelaCheia?.(pintarTelaCheia);
+// Quem avisa que a janela mudou é o processo do Electron (F11 inclusive),
+// não o evento `fullscreenchange` do HTML.
+ponteDesktop()?.aoMudarTelaCheia?.(pintarTelaCheia);
 pintarTelaCheia();
 
 // --- roteamento dos cliques ----------------------------------------
@@ -440,12 +461,14 @@ const acoes = {
     toast("Você saiu da conta.", "ok");
   },
   "sair-jogo": () => {
-    if (window.roubodopolis?.desktop) {
-      window.roubodopolis.sairDoJogo();
+    const desktop = ponteDesktop();
+    if (desktop) {
+      desktop.sairDoJogo();
       return;
     }
-    window.close();
-    toast("Feche esta aba para sair do jogo.", "");
+    // Antes caía num `window.close()` que o navegador ignora em silêncio,
+    // e o botão parecia simplesmente quebrado.
+    avisarSemPonte();
   },
 };
 
@@ -472,6 +495,33 @@ document.addEventListener("click", (evento) => {
 campoNome.addEventListener("keydown", (e) => e.key === "Enter" && jogar());
 campoCodigo.addEventListener("keydown", (e) => e.key === "Enter" && entrarComCodigo());
 
+/* Entrada da tela.
+
+   Antes esta decisão esperava a resposta do `GET /api/jogador`, e nessa ida
+   e volta pela rede a tela de login aparecia para quem já estava logado —
+   o "pisca" ao voltar do lobby. Pior: a troca de DOM acontecia com o cursor
+   parado, e o Chromium não reavalia `:hover` nesse caso, então as opções
+   ficavam sem realce até o primeiro clique.
+
+   Agora o que está guardado no navegador pinta na hora, antes de qualquer
+   rede, e o servidor apenas confirma depois. */
+
 if (guardado.token()) {
-  api.quemSouEu?.().then(mostrarJogo).catch(() => guardado.esquecer());
+  mostrarJogo({ nome: guardado.nome(), foto: guardado.foto() });
+
+  api.quemSouEu()
+    .then((jogador) => {
+      // O servidor é a verdade: corrige nome/foto se mudaram em outra máquina.
+      guardado.salvarSessao(jogador);
+      pintarAtalho(jogador);
+    })
+    .catch((erro) => {
+      // Só derruba a sessão se o servidor DISSE que o token não vale mais.
+      // Rede fora do ar não pode deslogar quem estava logado.
+      if (erro.status === 401) {
+        guardado.esquecer();
+        voltarAoLogin();
+        toast("Sua sessão expirou. Entre de novo.", "erro");
+      }
+    });
 }

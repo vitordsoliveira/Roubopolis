@@ -38,8 +38,24 @@
         </div>
       </header>
 
-      <!-- Um lugar por jogador; o boneco fica no carrossel abaixo de cada um. -->
-      <ul class="slots" id="slots"></ul>
+      <div class="lobby__conteudo">
+        <!-- Um lugar por jogador; o boneco fica no carrossel abaixo de cada um. -->
+        <ul class="slots" id="slots"></ul>
+
+        <section class="chat" aria-labelledby="chat-titulo">
+          <div class="chat__cabecalho">
+            <h2 id="chat-titulo">Chat da sala</h2>
+            <span id="chat-status" role="status">Conectando...</span>
+          </div>
+          <ol class="chat__mensagens" id="chat-mensagens" aria-live="polite"></ol>
+          <form class="chat__formulario" id="chat-formulario">
+            <label class="visualmente-oculto" for="chat-texto">Mensagem</label>
+            <input id="chat-texto" name="texto" maxlength="280" autocomplete="off"
+                   placeholder="Escreva para a sala...">
+            <button class="botao botao--roxo botao--pequeno" type="submit">Enviar</button>
+          </form>
+        </section>
+      </div>
 
       <footer class="lobby__acoes">
         <p class="lobby__aviso" id="aviso" role="status"></p>

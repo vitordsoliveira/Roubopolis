@@ -228,10 +228,3 @@
 @keyframes sombra-encolhe {
   50% { transform: scale(0.6); opacity: 0.35; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .peao, .peao__figura, .peao__ficha, .peao__pino, .peao__sombra, .peao__base, .casa--destacada {
-    animation: none !important;
-    transition: none !important;
-  }
-}

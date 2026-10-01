@@ -566,7 +566,7 @@ const ESPERA_ENTRE_CARROS = [2.5, 8];
 /** Quantos pixels o carro leva para aparecer e sumir nas pontas da faixa. */
 const ESMAECER = 45;
 
-function criarTransito(pai, { parado = false } = {}) {
+function criarTransito(pai) {
   const grupo = no("g", { class: "cidade-viva__transito" }, pai);
   const carros = [];
   let relogio = 0;
@@ -608,7 +608,7 @@ function criarTransito(pai, { parado = false } = {}) {
       `translate(${c.x.toFixed(1)} ${c.y.toFixed(1)}) scale(${c.espelhado ? -1 : 1} 1) translate(${-ax} ${-ay})`,
     );
     const borda = Math.min(Math.abs(c.x - f.de), Math.abs(f.ate - c.x));
-    c.raiz.setAttribute("opacity", parado ? "1" : Math.min(1, borda / ESMAECER).toFixed(2));
+    c.raiz.setAttribute("opacity", Math.min(1, borda / ESMAECER).toFixed(2));
   }
 
   // Os dois carros da pintura começam onde estavam: a cidade abre igual à
@@ -673,7 +673,6 @@ function criarTransito(pai, { parado = false } = {}) {
  */
 export function animarCidade(camada) {
   const atores = no("g", { class: "cidade-viva" }, camada);
-  const quieto = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
   const pelada = criarPelada(atores);
   // O muro nasce antes do trânsito para os carros serem desenhados na frente
@@ -683,7 +682,7 @@ export function animarCidade(camada) {
     podeComecar: () => transito.livre(PALCO.faixa, PALCO.x, PALCO.segundos),
     comecou: () => transito.segurar(PALCO.faixa, PALCO.segundos),
   });
-  transito = criarTransito(atores, { parado: quieto });
+  transito = criarTransito(atores);
 
   // Os postes da calçada da frente, por cima de tudo: o carro passa atrás.
   no("image", {
@@ -695,8 +694,6 @@ export function animarCidade(camada) {
 
   pelada.pintar();
   muro.pintar();
-  // Movimento reduzido pedido pelo sistema: a cena fica montada, parada.
-  if (quieto) return;
 
   let antes = null;
   function quadro(agora) {

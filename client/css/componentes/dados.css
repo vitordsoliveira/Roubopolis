@@ -181,11 +181,3 @@
   75%  { transform: scale(0.94) rotate(-2deg); }
   100% { transform: scale(1) rotate(0); opacity: 1; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .dado__cubo { transition: none; }
-  .dados--rolando .dado__cubo,
-  .dado--arremesso,
-  .dados__soma--novo .dados__soma-parcelas,
-  .dados__soma--novo .dados__soma-total { animation: none; }
-}

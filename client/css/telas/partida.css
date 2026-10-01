@@ -631,11 +631,3 @@
   top: 2vh;
   bottom: auto;
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .cartao--da-vez,
-  .jogar--minha-vez .jogar__botao,
-  .jogar--minha-vez .jogar__seta,
-  .anuncio--passando { animation: none; }
-  .anuncio--passando { opacity: 1; }
-}

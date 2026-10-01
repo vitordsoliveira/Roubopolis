@@ -272,11 +272,3 @@
   .sorteio__mesa { flex-wrap: wrap; min-height: 0; }
   .posto__boneco { height: 74px; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .cortina, .sorteio, .posto, .posto__boneco img, .posto__ficha, .posto__total,
-  .posto__lugar, .posto__desempate, .posto--revelado .dado {
-    animation: none !important;
-    opacity: 1 !important;
-  }
-}

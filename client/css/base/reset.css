@@ -65,12 +65,10 @@ a {
   border: 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
-}
+/* Sem @media (prefers-reduced-motion) em nenhum CSS do jogo, de propósito.
+   O Roubopolis é pixel art animado de ponta a ponta: peão andando, dado
+   girando, figurante na cidade. Seguindo essa preferência do sistema, a
+   opção "Efeitos de animação" desligada no Windows — que também chega como
+   reduced-motion — deixava o jogo inteiro parado, com cara de quebrado e sem
+   dica nenhuma do motivo. Quem quiser menos movimento desliga o jogo, não a
+   animação. */

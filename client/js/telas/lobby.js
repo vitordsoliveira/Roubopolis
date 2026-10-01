@@ -14,7 +14,6 @@ const rotuloCodigo = document.querySelector("#codigo-sala");
 const botaoPronto = document.querySelector("#pronto");
 const botaoIniciar = document.querySelector("#iniciar");
 const aviso = document.querySelector("#aviso");
-
 const codigo = new URLSearchParams(location.search).get("codigo")?.toUpperCase() || "";
 let estado = null;
 let consulta = null;

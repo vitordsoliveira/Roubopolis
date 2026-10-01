@@ -27,7 +27,7 @@
   transform-style: preserve-3d;
 }
 
-.dado--mini { --aresta: clamp(22px, 3.4vh, 34px); }
+.dado--mini { --aresta: clamp(28px, 5.2vh, 50px); }
 .dado--mini .dado__face { padding: 3px; border-width: 1.5px; border-radius: 5px; }
 .dado--mini .dado__ponto { width: 80%; height: 80%; }
 

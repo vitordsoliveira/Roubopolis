@@ -57,6 +57,32 @@
   letter-spacing: 0.04em;
 }
 
+/* --- a cidade viva (js/tabuleiro/cidade_viva.js) -------------------- */
+
+/* "GOL!" na quadra e "PÁ!" no muro. O tamanho é em pixels da pintura da
+   cidade, que a tela desenha a pouco mais da metade: 40 aqui dá uns 20 na
+   janela. */
+.cidade-viva__grito {
+  font-family: var(--fonte-pixel);
+  font-size: 24px;
+  fill: var(--amarelo);
+  stroke: #1a1020;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  pointer-events: none;
+}
+
+.cidade-viva__grito--gol {
+  font-size: 40px;
+  fill: var(--verde-neon);
+}
+
+.cidade-viva,
+.cidade-viva__frente {
+  pointer-events: none;
+}
+
 /* --- casa em que o peão parou --------------------------------------- */
 
 .casa--destacada {

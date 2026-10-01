@@ -1,16 +1,3 @@
-"""Porta de entrada do Passenger (cPanel → Setup Python App).
-
-O cPanel não executa `run.py`. Ele procura, na raiz do aplicativo, um
-`passenger_wsgi.py` que exponha uma variável chamada `application`. É só
-isso que este arquivo faz: monta o mesmo Flask que o `run.py` monta.
-
-Diferença para o `run.py`:
-    run.py            -> `app.run(...)`, servidor de desenvolvimento, sua máquina
-    passenger_wsgi.py -> só expõe `application`, quem serve é o Passenger
-
-Nunca chame `app.run()` aqui: isso prenderia o processo do Passenger.
-"""
-
 import sys
 from pathlib import Path
 

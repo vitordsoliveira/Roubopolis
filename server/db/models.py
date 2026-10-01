@@ -238,5 +238,73 @@ class SalaJogador(Base):
         return f"<SalaJogador sala={self.sala_id} jogador={self.jogador_id}>"
 
 
+class Partida(Base):
+    """A partida em andamento de uma sala.
+
+    O estado inteiro do motor mora aqui como JSON, e não em memória, porque
+    o Passenger pode rodar em vários processos: memória local daria estados
+    diferentes conforme o processo que atendesse a requisição. Guardar no
+    banco também deixa a partida sobreviver a um restart.
+
+    O `engine/` continua sem saber que este model existe — quem traduz é
+    `server/salas/partida.py`.
+    """
+
+    __tablename__ = "partida"
+    __table_args__ = ARGS_MYSQL
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Uma partida por sala: a sala é o lobby, a partida é o que veio dele.
+    sala_id: Mapped[int] = mapped_column(
+        ForeignKey("sala.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    estado: Mapped[str] = mapped_column(Text, nullable=False)
+    criada_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+    atualizada_em: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    sala: Mapped["Sala"] = relationship()
+
+    def __repr__(self) -> str:
+        return f"<Partida sala={self.sala_id}>"
+
+
+class MensagemChat(Base):
+    """Mensagem do chat do lobby.
+
+    Fica no banco, e não na memória, porque em produção o Passenger roda
+    vários processos: cada um teria a sua lista e o chat "piscaria"
+    conforme a consulta caísse num processo ou noutro.
+    """
+
+    __tablename__ = "mensagem_chat"
+    __table_args__ = ARGS_MYSQL
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    sala_id: Mapped[int] = mapped_column(
+        ForeignKey("sala.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    jogador_id: Mapped[int] = mapped_column(ForeignKey("jogador.id"), nullable=False)
+    # Copiado no envio: a mensagem continua com o nome que o jogador tinha na hora.
+    nome: Mapped[str] = mapped_column(String(64), nullable=False)
+    texto: Mapped[str] = mapped_column(String(280), nullable=False)
+    enviada_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+    def para_dict(self) -> dict:
+        return {
+            # A tela da partida usa o id para saber o que chegou de novo: a
+            # lista vem cortada nas últimas 100, então contar não serve.
+            "id": self.id,
+            "jogador_id": self.jogador_id,
+            "nome": self.nome,
+            "texto": self.texto,
+            "enviada_em": self.enviada_em.isoformat(timespec="seconds") if self.enviada_em else None,
+        }
+
+    def __repr__(self) -> str:
+        return f"<MensagemChat sala={self.sala_id} jogador={self.jogador_id}>"
+
+
 #: Ordem de criação (respeita as chaves estrangeiras).
-TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador)
+TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador, Partida, MensagemChat)

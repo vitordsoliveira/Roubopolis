@@ -1,0 +1,230 @@
+/* O tabuleiro isométrico e os peões.
+
+   O desenho em si (casas, prédios, a cidade do miolo) é um SVG montado por
+   js/tabuleiro/render.js — aqui só mora o que é estilo: a letra dos nomes,
+   o pulo da casa em que o peão parou, e os peões, que são HTML por cima do
+   SVG para poderem andar com transição de CSS.
+
+   O quadro `.tabuleiro` tem a MESMA proporção do desenho (o JS grava
+   --proporcao). É isso que faz a porcentagem de um peão cair exatamente em
+   cima da casa certa, em qualquer tamanho de janela. */
+
+.tabuleiro {
+  position: relative;
+  width: 100%;
+  aspect-ratio: var(--proporcao, 1.3);
+  /* As medidas do peão e do dado são em cqw: acompanham o tabuleiro, não a
+     janela. */
+  container-type: inline-size;
+}
+
+.tabuleiro__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 2.4cqw 2.2cqw rgba(8, 2, 20, 0.6));
+}
+
+/* --- nomes das casas ---------------------------------------------- */
+
+/* Fonte comum, condensada e em negrito, como na arte — a de pixel do resto
+   do jogo borra nesse tamanho. O tamanho é em unidades do SVG: cresce e
+   encolhe junto com o tabuleiro. */
+.tabuleiro__nome {
+  font-family: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+  font-stretch: condensed;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-anchor: middle;
+  fill: #ffffff;
+  stroke: rgba(22, 8, 34, 0.78);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  pointer-events: none;
+}
+
+.tabuleiro__nome--escuro {
+  fill: #1d1030;
+  stroke: rgba(255, 255, 255, 0.55);
+}
+
+.tabuleiro__nome--inicial {
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+/* --- a cidade viva (js/tabuleiro/cidade_viva.js) -------------------- */
+
+/* "GOL!" na quadra e "PÁ!" no muro. O tamanho é em pixels da pintura da
+   cidade, que a tela desenha a pouco mais da metade: 40 aqui dá uns 20 na
+   janela. */
+.cidade-viva__grito {
+  font-family: var(--fonte-pixel);
+  font-size: 24px;
+  fill: var(--amarelo);
+  stroke: #1a1020;
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke;
+  pointer-events: none;
+}
+
+.cidade-viva__grito--gol {
+  font-size: 40px;
+  fill: var(--verde-neon);
+}
+
+.cidade-viva,
+.cidade-viva__frente {
+  pointer-events: none;
+}
+
+/* --- casa em que o peão parou --------------------------------------- */
+
+.casa--destacada {
+  animation: casa-pulsa 0.5s ease-out 3;
+}
+
+@keyframes casa-pulsa {
+  50% {
+    transform: translateY(-5px);
+    filter: brightness(1.3);
+  }
+}
+
+/* --- peões -------------------------------------------------------- */
+
+.peoes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.peao {
+  /* Só o valor de partida: quem manda é o JS, que grava --ms-passo no
+     tabuleiro a partir de MS_POR_CASA. Se este número divergir do de lá,
+     o peão é puxado para a casa seguinte antes de pousar e passa a
+     deslizar em vez de andar. */
+  --ms-passo: 330ms;
+  /* Tamanho do boneco num lugar só: a figura, a base e a sombra saem dele. */
+  --peao-alt: 6cqw;
+  --base-larg: calc(var(--peao-alt) * 0.5);
+  --base-alt: calc(var(--peao-alt) * 0.2);
+  position: absolute;
+  width: 0;
+  height: 0;
+  /* Os pés do peão; o JS calcula a porcentagem de cada casa. */
+  left: var(--px, 0%);
+  top: var(--py, 0%);
+  transition: left var(--ms-passo) linear, top var(--ms-passo) linear;
+}
+
+/* Sombra achatada no chão — é ela que "prende" o peão à casa e faz o pulo
+   ser lido como pulo. */
+.peao__sombra,
+.peao__base {
+  position: absolute;
+  left: calc(var(--base-larg) / -2);
+  top: calc(var(--base-alt) / -2);
+  width: var(--base-larg);
+  height: var(--base-alt);
+  border-radius: 50%;
+}
+
+.peao__sombra {
+  background: rgba(0, 0, 0, 0.45);
+  filter: blur(1.5px);
+  transform: translateY(2px) scale(1.15);
+}
+
+/* O disco colorido deitado no chão, como peça de tabuleiro: é a cor que
+   liga o boneco ao cartão do jogador. */
+.peao__base {
+  background: var(--cor-peao, #fff);
+  border: 2px solid #10140f;
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.45);
+}
+
+/* Daqui para cima tudo fica em pé. O `translate` centraliza e o
+   `transform` fica livre para o pulo — as duas propriedades somam. */
+.peao__pino {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  translate: -50% 0;
+  transform-origin: bottom center;
+}
+
+/* O boneco INTEIRO, sem recorte: a altura manda e a proporção fica. */
+.peao__figura {
+  display: block;
+  height: var(--peao-alt);
+  width: auto;
+  max-width: calc(var(--peao-alt) * 0.8);
+  object-fit: contain;
+  object-position: bottom center;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45));
+  transform-origin: bottom center;
+  animation: peao-balanca 1.2s ease-in-out infinite alternate;
+}
+
+/* Sem sprite: uma ficha redonda com a inicial. */
+.peao__ficha {
+  display: grid;
+  place-items: center;
+  width: calc(var(--peao-alt) * 0.62);
+  height: calc(var(--peao-alt) * 0.62);
+  background: var(--cor-peao, #fff);
+  color: #10140f;
+  font-size: calc(var(--peao-alt) * 0.3);
+  line-height: 1;
+  border: 3px solid #10140f;
+  border-radius: 50%;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
+  transform-origin: bottom center;
+  animation: peao-balanca 1.2s ease-in-out infinite alternate;
+}
+
+/* Parado: balança de um lado para o outro, como boneco de joguinho. */
+@keyframes peao-balanca {
+  from { transform: translateX(-2px) rotate(-6deg); }
+  to   { transform: translateX(2px) rotate(6deg); }
+}
+
+/* De quem é a vez: brilha e o anel da base acende. */
+.peao--da-vez .peao__figura,
+.peao--da-vez .peao__ficha {
+  animation: peao-anima 0.6s ease-in-out infinite alternate;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.45)) drop-shadow(0 0 6px var(--amarelo));
+}
+
+.peao--da-vez .peao__base {
+  border-color: var(--amarelo);
+  box-shadow: 0 0 12px var(--amarelo);
+}
+
+@keyframes peao-anima {
+  from { transform: translateY(0) scale(1) rotate(-4deg); }
+  to   { transform: translateY(-4px) scale(1.06) rotate(4deg); }
+}
+
+/* Andando: pulo em arco a cada casa. A sombra encolhe junto, que é o que
+   vende a altura. A duração acompanha --ms-passo para o salto casar com o
+   deslocamento — se as duas discordarem, o boneco desliza no ar. */
+.peao--andando .peao__pino { animation: peao-salto var(--ms-passo) ease-in-out; }
+.peao--andando .peao__sombra,
+.peao--andando .peao__base { animation: sombra-encolhe var(--ms-passo) ease-in-out; }
+
+@keyframes peao-salto {
+  /* O pulo acompanha o tamanho do boneco. */
+  50% { transform: translateY(calc(var(--peao-alt) * -0.42)) scale(1.06); }
+}
+
+@keyframes sombra-encolhe {
+  50% { transform: scale(0.6); opacity: 0.35; }
+}

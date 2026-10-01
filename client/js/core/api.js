@@ -4,9 +4,14 @@
 
 const CHAVE_TOKEN = "roubopolis.token";
 const CHAVE_NOME = "roubopolis.nome";
+/* A foto fica guardada junto do nome para o menu conseguir se desenhar
+   inteiro antes de falar com o servidor — sem isso o avatar aparecia
+   depois, com um salto. */
+const CHAVE_FOTO = "roubopolis.foto";
 const CHAVE_SOM = "roubopolis.som";
 const CHAVE_VOLUME_SOM = "roubopolis.volume-som";
 const CHAVE_ABA = "roubopolis.aba-propria";
+const CHAVE_CHAT = "roubopolis.chat-aberto";
 
 /* Abas do mesmo navegador dividem o localStorage — duas abas seriam sempre o
    MESMO jogador, o que impede testar uma sala sozinho. Abrir /?novo=1 marca a
@@ -48,15 +53,30 @@ function apagar(chave) {
 export const guardado = {
   token: () => ler(CHAVE_TOKEN),
   nome: () => ler(CHAVE_NOME),
+  foto: () => ler(CHAVE_FOTO) || null,
   som: () => ler(CHAVE_SOM, "1") === "1",
   volumeSom: () => Number(ler(CHAVE_VOLUME_SOM, "100")),
   salvarToken: (valor) => gravar(CHAVE_TOKEN, valor),
   salvarNome: (valor) => gravar(CHAVE_NOME, valor),
+  salvarFoto: (valor) => gravar(CHAVE_FOTO, valor || ""),
   salvarSom: (ligado) => gravar(CHAVE_SOM, ligado ? "1" : "0"),
   salvarVolumeSom: (valor) => gravar(CHAVE_VOLUME_SOM, String(valor)),
+  /** Se o chat da partida fica aberto: quem gosta de conversar não precisa
+      abrir de novo a cada partida. */
+  chatAberto: () => ler(CHAVE_CHAT, "0") === "1",
+  salvarChatAberto: (aberto) => gravar(CHAVE_CHAT, aberto ? "1" : "0"),
+
+  /** Guarda tudo que o menu precisa para se desenhar sem consultar a rede. */
+  salvarSessao(jogador) {
+    gravar(CHAVE_TOKEN, jogador.token ?? ler(CHAVE_TOKEN));
+    gravar(CHAVE_NOME, jogador.nome ?? "");
+    gravar(CHAVE_FOTO, jogador.foto || "");
+  },
+
   esquecer: () => {
     apagar(CHAVE_TOKEN);
     apagar(CHAVE_NOME);
+    apagar(CHAVE_FOTO);
   },
 
   /** Só para testar: dá a esta aba um jogador independente das outras. */
@@ -116,8 +136,7 @@ export const api = {
   salvarPerfil: (dados) => pedir("/api/perfil", { metodo: "POST", corpo: dados }),
   async entrar(login, senha) {
     const jogador = await pedir("/api/auth/entrar", { metodo: "POST", corpo: { login, senha } });
-    guardado.salvarToken(jogador.token);
-    guardado.salvarNome(jogador.nome);
+    guardado.salvarSessao(jogador);
     return jogador;
   },
   async cadastrar(login, senha, nome) {
@@ -125,15 +144,13 @@ export const api = {
       metodo: "POST",
       corpo: { login, senha, nome },
     });
-    guardado.salvarToken(jogador.token);
-    guardado.salvarNome(jogador.nome);
+    guardado.salvarSessao(jogador);
     return jogador;
   },
   /** Menu: manda o nome, recebe e guarda o token. */
   async identificar(nome) {
     const jogador = await pedir("/api/jogador", { metodo: "POST", corpo: { nome } });
-    guardado.salvarToken(jogador.token);
-    guardado.salvarNome(jogador.nome);
+    guardado.salvarSessao(jogador);
     return jogador;
   },
   criarSala: () => pedir("/api/salas", { metodo: "POST", corpo: {} }),
@@ -144,7 +161,16 @@ export const api = {
   marcarPronto: (codigo, pronto) =>
     pedir(`/api/salas/${codigo}/pronto`, { metodo: "POST", corpo: { pronto } }),
   sairDaSala: (codigo) => pedir(`/api/salas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
+  // --- chat do lobby ---------------------------------------------------
   listarChat: (codigo) => pedir(`/api/salas/${codigo}/chat`),
   enviarChat: (codigo, texto) =>
     pedir(`/api/salas/${codigo}/chat`, { metodo: "POST", corpo: { texto } }),
+
+  // --- partida ---------------------------------------------------------
+  /** Só o dono da sala, e só com todo mundo pronto. */
+  iniciarPartida: (codigo) => pedir(`/api/salas/${codigo}/iniciar`, { metodo: "POST", corpo: {} }),
+  verPartida: (codigo) => pedir(`/api/partidas/${codigo}`),
+  rolarDados: (codigo) => pedir(`/api/partidas/${codigo}/rolar`, { metodo: "POST", corpo: {} }),
+  /** Abandona a partida: o jogador sai da roda e a vez passa. */
+  sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 };

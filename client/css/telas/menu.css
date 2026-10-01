@@ -175,6 +175,13 @@
   gap: clamp(2px, 0.6vh, 8px);
 }
 
+/* O contêiner recebe foco por script (tabindex=-1) só para levar o leitor
+   de tela ao menu. Contorno aqui seria ruído visual: quem navega por
+   teclado vê o realce no botão, no Tab seguinte. */
+.menu__opcoes:focus {
+  outline: none;
+}
+
 /* O cursor de seta da arte, aparecendo no item sob o ponteiro. */
 .opcao {
   position: relative;

@@ -1,0 +1,72 @@
+{
+  "_leia_isto": "As 40 casas, na ordem em que o peão anda. 'x' e 'y' são a posição na grade 11x11: x cresce do canto de cima (Mansão) para o da direita (Prisão), y cresce do canto de cima para o da esquerda (Represa). A tela desenha a grade em isométrico, então o canto x=10,y=10 (Praça) é o que fica embaixo, mais perto de quem joga.",
+
+  "_de_onde_veio": "Desenho de img/tabuleiro/TELA TABULEIRO_5.jpg.jpeg, com os erros da arte corrigidos: Itaim Bibi fora da linha de casas, Ipiranga e Alto de Pinheiros repetidos, Santana pintada como casa neutra, 'Brasília dia' no lugar de Brasilândia e 'Alto Pinheiros' sem o 'de'. No lugar da Ipiranga repetida entrou a Av. Augusta; as outras vagas viraram Vila Olímpia e uma casa neutra.",
+
+  "nome": "vila_original",
+  "largura": 11,
+  "altura": 11,
+
+  "_sentido": "Começa na INICIAL (no meio da borda de baixo à esquerda) e anda em direção à Praça, sobe até a Prisão, volta pela borda de cima até a Mansão e desce até a Represa. O preço cresce no caminho: barato perto da saída, extremamente caro no fim da volta.",
+
+  "_preco": "Nenhuma casa é comprada por enquanto — a compra saiu do jogo. O preço fica aqui para quando ela voltar.",
+
+  "_cenario": "Só nos cantos: diz qual desenho a tela põe em cima da casa.",
+
+  "casas": [
+    { "i": 0,  "x": 6,  "y": 10, "tipo": "inicial",      "nome": "Inicial" },
+    { "i": 1,  "x": 7,  "y": 10, "tipo": "propriedade", "nome": "Capão Redondo",       "grupo": "barata",            "preco": 650 },
+    { "i": 2,  "x": 8,  "y": 10, "tipo": "propriedade", "nome": "Itaquera",            "grupo": "barata",            "preco": 700 },
+    { "i": 3,  "x": 9,  "y": 10, "tipo": "coletor",     "nome": "Casa do Imposto" },
+    { "i": 4,  "x": 10, "y": 10, "tipo": "neutra",      "nome": "Praça",               "cenario": "praca" },
+
+    { "i": 5,  "x": 10, "y": 9,  "tipo": "neutra",      "nome": "Casa neutra" },
+    { "i": 6,  "x": 10, "y": 8,  "tipo": "propriedade", "nome": "Mooca",               "grupo": "media",             "preco": 1400 },
+    { "i": 7,  "x": 10, "y": 7,  "tipo": "propriedade", "nome": "Ipiranga",            "grupo": "media",             "preco": 1500 },
+    { "i": 8,  "x": 10, "y": 6,  "tipo": "propriedade", "nome": "Av. Augusta",         "grupo": "media",             "preco": 1600,
+      "easter_egg": "Você fica encantado com uma bela pessoa." },
+    { "i": 9,  "x": 10, "y": 5,  "tipo": "propriedade", "nome": "Santana",             "grupo": "media",             "preco": 1700 },
+    { "i": 10, "x": 10, "y": 4,  "tipo": "propriedade", "nome": "Casa Verde",          "grupo": "media",             "preco": 1800 },
+    { "i": 11, "x": 10, "y": 3,  "tipo": "coringa",     "nome": "Casa Coringa" },
+    { "i": 12, "x": 10, "y": 2,  "tipo": "portal",      "nome": "Casa Portal" },
+    { "i": 13, "x": 10, "y": 1,  "tipo": "propriedade", "nome": "Perdizes",            "grupo": "cara",              "preco": 2400 },
+    { "i": 14, "x": 10, "y": 0,  "tipo": "prisao",      "nome": "Prisão",              "cenario": "prisao" },
+
+    { "i": 15, "x": 9,  "y": 0,  "tipo": "propriedade", "nome": "Vila Conceição",      "grupo": "cara",              "preco": 2600 },
+    { "i": 16, "x": 8,  "y": 0,  "tipo": "neutra",      "nome": "Casa neutra" },
+    { "i": 17, "x": 7,  "y": 0,  "tipo": "propriedade", "nome": "Vila Madalena",       "grupo": "muito_cara",        "preco": 3200 },
+    { "i": 18, "x": 6,  "y": 0,  "tipo": "propriedade", "nome": "Brooklin",            "grupo": "muito_cara",        "preco": 3400 },
+    { "i": 19, "x": 5,  "y": 0,  "tipo": "propriedade", "nome": "Moema",               "grupo": "muito_cara",        "preco": 3600 },
+    { "i": 20, "x": 4,  "y": 0,  "tipo": "propriedade", "nome": "Brasilândia",         "grupo": "barata",            "preco": 800 },
+    { "i": 21, "x": 3,  "y": 0,  "tipo": "roubo",       "nome": "Casa do Roubo" },
+    { "i": 22, "x": 2,  "y": 0,  "tipo": "propriedade", "nome": "Pinheiros",           "grupo": "muito_cara",        "preco": 3800 },
+    { "i": 23, "x": 1,  "y": 0,  "tipo": "propriedade", "nome": "Alto de Pinheiros",   "grupo": "muito_cara",        "preco": 4000 },
+    { "i": 24, "x": 0,  "y": 0,  "tipo": "neutra",      "nome": "Mansão",              "cenario": "mansao" },
+
+    { "i": 25, "x": 0,  "y": 1,  "tipo": "neutra",      "nome": "Casa neutra" },
+    { "i": 26, "x": 0,  "y": 2,  "tipo": "propriedade", "nome": "Vila Olímpia",        "grupo": "cara",              "preco": 2800 },
+    { "i": 27, "x": 0,  "y": 3,  "tipo": "propriedade", "nome": "Cidade Jardim",       "grupo": "extremamente_cara", "preco": 4600 },
+    { "i": 28, "x": 0,  "y": 4,  "tipo": "prejuizo",    "nome": "Casa do Prejuízo" },
+    { "i": 29, "x": 0,  "y": 5,  "tipo": "propriedade", "nome": "Jardim Paulista",     "grupo": "extremamente_cara", "preco": 4700 },
+    { "i": 30, "x": 0,  "y": 6,  "tipo": "propriedade", "nome": "Ibirapuera",          "grupo": "extremamente_cara", "preco": 4800 },
+    { "i": 31, "x": 0,  "y": 7,  "tipo": "propriedade", "nome": "Itaim Bibi",          "grupo": "extremamente_cara", "preco": 4900 },
+    { "i": 32, "x": 0,  "y": 8,  "tipo": "reconstrucao","nome": "Casa da Reconstrução" },
+    { "i": 33, "x": 0,  "y": 9,  "tipo": "neutra",      "nome": "Casa neutra" },
+    { "i": 34, "x": 0,  "y": 10, "tipo": "neutra",      "nome": "Represa",             "cenario": "represa" },
+
+    { "i": 35, "x": 1,  "y": 10, "tipo": "neutra",      "nome": "Casa neutra" },
+    { "i": 36, "x": 2,  "y": 10, "tipo": "ganho",       "nome": "Casa do Ganho" },
+    { "i": 37, "x": 3,  "y": 10, "tipo": "propriedade", "nome": "Vila Nova Conceição", "grupo": "extremamente_cara", "preco": 5000 },
+    { "i": 38, "x": 4,  "y": 10, "tipo": "propriedade", "nome": "Parelheiros",         "grupo": "barata",            "preco": 600 },
+    { "i": 39, "x": 5,  "y": 10, "tipo": "propriedade", "nome": "Cidade Tiradentes",   "grupo": "barata",            "preco": 750 }
+  ],
+
+  "grupos": {
+    "_sobre": "Só cor e rótulo para a tela — a legenda sai daqui, na ordem abaixo. As cores foram medidas na legenda da arte.",
+    "extremamente_cara": { "rotulo": "Extremamente cara", "cor": "#fb00fe" },
+    "muito_cara":        { "rotulo": "Muito cara",        "cor": "#8e01c2" },
+    "cara":              { "rotulo": "Cara",              "cor": "#0032c7" },
+    "media":             { "rotulo": "Média",             "cor": "#fbc300" },
+    "barata":            { "rotulo": "Barata",            "cor": "#bb192f" }
+  }
+}

@@ -37,6 +37,8 @@ const precoCompra = document.querySelector("#compra-preco");
 const saldoCompra = document.querySelector("#compra-saldo");
 const tempoCompra = document.querySelector("#compra-tempo");
 const botoesCompra = [document.querySelector("#compra-nao"), document.querySelector("#compra-sim")];
+const painelConfigPartida = document.querySelector("#painel-config-partida");
+const botaoAnimacoesPartida = document.querySelector("#animacoes-partida");
 const painelChat = document.querySelector("#chat");
 const botaoChat = document.querySelector("#chat-abrir");
 const contadorChat = document.querySelector("#chat-contador");
@@ -44,6 +46,20 @@ const campoChat = document.querySelector("#chat-texto");
 const listaChat = document.querySelector("#chat-mensagens");
 
 const CORES_RESERVA = ["#e94f37", "#7cb342", "#a855f7", "#ffd83d", "#2563c9", "#c9a227"];
+
+function aplicarPreferenciaAnimacoes() {
+  document.documentElement.classList.toggle("sem-animacao", !guardado.animacoes());
+  window.dispatchEvent(new Event("roubopolis:animacoes"));
+}
+
+function pintarPreferenciaAnimacoes() {
+  const ligadas = guardado.animacoes();
+  botaoAnimacoesPartida.setAttribute("aria-pressed", String(ligadas));
+  botaoAnimacoesPartida.textContent = ligadas ? "LIGADAS" : "DESLIGADAS";
+  aplicarPreferenciaAnimacoes();
+}
+
+pintarPreferenciaAnimacoes();
 
 /* --- ritmo da partida -------------------------------------------------
 
@@ -138,7 +154,7 @@ async function abrir() {
 
 // --- utilidades -------------------------------------------------------
 
-const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const espera = (duracao) => new Promise((resolver) => setTimeout(resolver, guardado.animacoes() ? duracao : 0));
 const reais = (v) => "R$ " + Number(v || 0).toLocaleString("pt-BR");
 const inicial = (n) => (n || "?").trim().charAt(0).toUpperCase();
 
@@ -334,6 +350,13 @@ async function andarPeao({ jogador_id, de, passos }) {
   if (!peao || !tabuleiro) return;
 
   const total = tabuleiro.casas.length;
+  if (!guardado.animacoes()) {
+    colocarPeao(peao, (de - (passos % total) + total) % total);
+    peao.classList.remove("peao--andando");
+    desenho.destacar((de - (passos % total) + total) % total);
+    return;
+  }
+
   for (let passo = 1; passo <= passos; passo += 1) {
     colocarPeao(peao, (de - (passo % total) + total) % total);
     peao.classList.remove("peao--andando");
@@ -551,6 +574,7 @@ async function encenarLanceDeOutro(resposta) {
   // Se fui eu que rolei, já vi acontecer.
   const eu = resposta.partida.jogadores.find((j) => j.sou_eu);
   if (eu && movimento.jogador_id === eu.jogador_id) return false;
+  if (!guardado.animacoes()) return false;
 
   const peao = peaoDe(movimento.jogador_id);
   if (!peao) return false;
@@ -781,15 +805,40 @@ document.querySelector("#chat-fechar").addEventListener("click", () => {
 
 // --- opções do canto ------------------------------------------------------
 
-/* REGRAS, RANKING e CONFIG. estão no desenho, mas ainda não foram
+/* REGRAS e RANKING estão no desenho, mas ainda não foram
    construídas nesta tela. O clique responde em voz alta, como AMIGOS e
    LOJA no menu, em vez de não fazer nada. */
-for (const [id, nome] of [["regras", "REGRAS"], ["ranking", "RANKING"], ["config", "CONFIG."]]) {
+for (const [id, nome] of [["regras", "REGRAS"], ["ranking", "RANKING"]]) {
   document.querySelector(`#${id}`).addEventListener("click", () => {
     som.tocar("aviso");
     toast(`${nome} ainda não foi construído aqui. Em breve.`);
   });
 }
+
+function abrirConfiguracaoPartida() {
+  pintarPreferenciaAnimacoes();
+  painelConfigPartida.hidden = false;
+  botaoAnimacoesPartida.focus();
+}
+
+function fecharConfiguracaoPartida() {
+  painelConfigPartida.hidden = true;
+  document.querySelector("#config").focus();
+}
+
+document.querySelector("#config").addEventListener("click", abrirConfiguracaoPartida);
+document.querySelector("#config-partida-fechar").addEventListener("click", fecharConfiguracaoPartida);
+botaoAnimacoesPartida.addEventListener("click", () => {
+  guardado.salvarAnimacoes(!guardado.animacoes());
+  pintarPreferenciaAnimacoes();
+  som.tocar("clique");
+});
+painelConfigPartida.addEventListener("click", (evento) => {
+  if (evento.target === painelConfigPartida) fecharConfiguracaoPartida();
+});
+document.addEventListener("keydown", (evento) => {
+  if (evento.key === "Escape" && !painelConfigPartida.hidden) fecharConfiguracaoPartida();
+});
 
 document.querySelector("#sair").addEventListener("click", async () => {
   if (!confirm("Sair da partida? Você não volta para esta mesa.")) return;

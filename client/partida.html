@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/css/base/tipografia.css">
   <!-- Só pelo aviso passageiro (toast), que mora lá. -->
   <link rel="stylesheet" href="/css/componentes/modal.css">
+  <link rel="stylesheet" href="/css/componentes/animacoes.css">
   <link rel="stylesheet" href="/css/componentes/tabuleiro.css">
   <link rel="stylesheet" href="/css/componentes/dados.css">
   <link rel="stylesheet" href="/css/componentes/sorteio.css">
@@ -119,6 +120,19 @@
         <button class="jogar__botao jogar__botao--pequeno compra__aceitar moldura" type="button" id="compra-sim">Comprar</button>
       </div>
     </section>
+  </div>
+
+  <div class="painel" id="painel-config-partida" hidden>
+    <div class="painel__caixa" role="dialog" aria-modal="true" aria-labelledby="titulo-config-partida">
+      <h2 class="painel__titulo" id="titulo-config-partida">Configuração</h2>
+      <div class="painel__linha">
+        <span>Animações</span>
+        <button class="interruptor" type="button" id="animacoes-partida" aria-pressed="true">LIGADAS</button>
+      </div>
+      <div class="painel__acoes">
+        <button class="botao botao--pequeno botao--roxo" type="button" id="config-partida-fechar">Voltar</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="/js/telas/partida.js"></script>

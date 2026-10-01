@@ -24,6 +24,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
         estado["vez"] = 0
         estado["jogadores"][0]["posicao"] = 4
         estado["jogadores"][0]["caixa"] = caixa
+        estado["prazo_vez"] = 4_000_000_000
         return estado
 
     def rolar_dois(self, estado):
@@ -102,6 +103,56 @@ class CompraPropriedadeTestes(unittest.TestCase):
         self.assertFalse(tabuleiro.passou_pelo_inicio(4, 1))
         self.assertTrue(tabuleiro.passou_pelo_inicio(5, 1))
         self.assertTrue(tabuleiro.passou_pelo_inicio(4, len(tabuleiro)))
+
+    def test_prazo_padrao_e_trinta_segundos(self):
+        estado = self.criar_estado()
+
+        self.assertEqual(estado["segundos_por_turno"], 30)
+
+    def test_sorteio_inicia_cronometro_de_trinta_segundos(self):
+        estado = partida.criar_partida(
+            [
+                {"jogador_id": 1, "nome": "Ana"},
+                {"jogador_id": 2, "nome": "Bia"},
+            ],
+            semente=123,
+        )
+        with patch("engine.partida.time.time", return_value=1_000):
+            estado = partida.sortear_ordem(estado)
+
+        self.assertEqual(estado["prazo_vez"], 1_030)
+
+    def test_oferta_de_compra_reinicia_prazo_completo(self):
+        estado = self.criar_estado()
+        with (
+            patch.object(partida, "_gerador", return_value=DadosFixos()),
+            patch("engine.partida.time.time", return_value=1_000),
+        ):
+            estado = partida.rolar(estado, 1)
+
+        self.assertEqual(estado["fase"], partida.FASE_COMPRA)
+        self.assertEqual(estado["prazo_vez"], 1_030)
+
+    def test_tempo_esgotado_passa_a_vez_e_inicia_novo_prazo(self):
+        estado = self.criar_estado()
+        estado["prazo_vez"] = 100
+
+        atualizado = partida.atualizar_tempo(estado, agora=100)
+
+        self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
+        self.assertEqual(atualizado["prazo_vez"], 130)
+        self.assertTrue(any(log["tipo"] == "tempo" for log in atualizado["log"]))
+
+    def test_tempo_esgotado_na_compra_recusa_e_nao_cobra(self):
+        estado = self.rolar_dois(self.criar_estado())
+        estado["prazo_vez"] = 100
+
+        atualizado = partida.atualizar_tempo(estado, agora=100)
+
+        self.assertEqual(atualizado["propriedades"], {})
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 10_000)
+        self.assertIsNone(atualizado["compra_pendente"])
+        self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
 
 
 if __name__ == "__main__":

@@ -35,8 +35,11 @@ injusto. Solução usual: terminar a rodada em curso.
 3. Ações livres, se estiver habilitado: leilão, desafio ou upgrade.
 4. O turno passa.
 
-**Limite: 15 segundos por turno.** Estourou, executa a ação padrão — não
+**Limite: 30 segundos por turno.** Estourou, executa a ação padrão — não
 comprar, não desafiar.
+
+Quando uma propriedade livre é oferecida para compra, começa um novo prazo
+de **30 segundos** para decidir; se acabar, a oferta é recusada.
 
 ## 4. Propriedades
 

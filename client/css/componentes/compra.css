@@ -50,6 +50,14 @@
   font-size: clamp(0.95rem, 1.8vw, 1.15rem);
 }
 
+.compra__tempo {
+  margin-top: 12px;
+  color: var(--amarelo);
+  font-family: var(--fonte-pixel);
+  font-size: clamp(0.9rem, 2vh, 1.15rem);
+  text-shadow: 0 2px 0 #704d00;
+}
+
 .compra__acoes {
   display: flex;
   flex-wrap: wrap-reverse;

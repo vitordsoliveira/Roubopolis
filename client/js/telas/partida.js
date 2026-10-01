@@ -35,6 +35,7 @@ const modalCompra = document.querySelector("#modal-compra");
 const tituloCompra = document.querySelector("#compra-titulo");
 const precoCompra = document.querySelector("#compra-preco");
 const saldoCompra = document.querySelector("#compra-saldo");
+const tempoCompra = document.querySelector("#compra-tempo");
 const botoesCompra = [document.querySelector("#compra-nao"), document.querySelector("#compra-sim")];
 const painelChat = document.querySelector("#chat");
 const botaoChat = document.querySelector("#chat-abrir");
@@ -79,6 +80,7 @@ let tabuleiro = null;
 /** O que `montarTabuleiro` devolveu: onde fica cada casa na tela. */
 let desenho = null;
 let estado = null;
+let prazoLocalMs = null;
 let consulta = null;
 let ocupado = false;
 let ordemMostrada = false;
@@ -412,20 +414,37 @@ function pintarJogar() {
   botaoJogar.disabled = !podeRolar || ocupado;
   document.querySelector(".jogar").classList.toggle("jogar--minha-vez", podeRolar && !ocupado);
 
+  let mensagem;
   if (resumo && Date.now() < resumo.ate) {
-    elAviso.textContent = resumo.texto;
-    return;
-  }
-  resumo = null;
-
-  if (estado.fase === "encerrada") {
+    mensagem = resumo.texto;
+  } else if (estado.fase === "encerrada") {
+    resumo = null;
     const vencedor = ativos()[0];
-    elAviso.textContent = vencedor ? `A partida acabou — ${vencedor.nome} ficou sozinho.` : "A partida acabou.";
+    mensagem = vencedor ? `A partida acabou — ${vencedor.nome} ficou sozinho.` : "A partida acabou.";
   } else if (estado.fase === "decidindo_compra") {
-    elAviso.textContent = minha ? "Escolha se deseja comprar o terreno" : `${estado.vez.nome} está decidindo uma compra`;
+    resumo = null;
+    mensagem = minha ? "Escolha se deseja comprar o terreno" : `${estado.vez.nome} está decidindo uma compra`;
   } else {
-    elAviso.textContent = podeRolar ? "Role os dados e faça sua jogada" : `Esperando ${estado.vez.nome} jogar`;
+    resumo = null;
+    mensagem = podeRolar ? "Role os dados e faça sua jogada" : `Esperando ${estado.vez.nome} jogar`;
   }
+
+  const restante = segundosRestantes();
+  if (restante !== null && estado.fase !== "encerrada" && estado.fase !== "sorteio_ordem") {
+    mensagem += ` · ${formatarTempo(restante)}`;
+  }
+  elAviso.textContent = mensagem;
+}
+
+function segundosRestantes() {
+  if (prazoLocalMs == null) return null;
+  return Math.max(0, Math.ceil((prazoLocalMs - performance.now()) / 1000));
+}
+
+function formatarTempo(segundos) {
+  const minutos = Math.floor(segundos / 60);
+  const resto = segundos % 60;
+  return `${String(minutos).padStart(2, "0")}:${String(resto).padStart(2, "0")}`;
 }
 
 /** O que o servidor contou da última rolagem vira o aviso por uns segundos. */
@@ -467,6 +486,9 @@ function aplicar(resposta) {
   const primeiraVez = !tabuleiro;
   const antes = estado;
   estado = resposta.partida;
+  prazoLocalMs = estado.segundos_restantes == null
+    ? null
+    : performance.now() + estado.segundos_restantes * 1000;
   if (primeiraVez) {
     tabuleiro = resposta.tabuleiro;
     desenharTabuleiro(tabuleiro, estado.propriedades);
@@ -504,7 +526,15 @@ function atualizarModalCompra() {
   tituloCompra.textContent = casa?.nome || "Terreno";
   precoCompra.textContent = `Preço: ${reais(pendente.preco)}`;
   saldoCompra.textContent = `Seu caixa: ${reais(eu?.caixa)} · após comprar: ${reais((eu?.caixa || 0) - pendente.preco)}`;
+  const restante = segundosRestantes();
+  tempoCompra.textContent = restante === null ? "Sem limite de tempo" : `Tempo para decidir: ${formatarTempo(restante)}`;
 }
+
+setInterval(() => {
+  if (!estado) return;
+  pintarJogar();
+  if (!modalCompra.hidden) atualizarModalCompra();
+}, 1000);
 
 /* Encena o lance de OUTRO jogador.
 

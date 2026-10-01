@@ -16,13 +16,14 @@ casas de evento ainda não fazem parte desta etapa.
 from __future__ import annotations
 
 import copy
+import time
 
 from engine.board.tabuleiro import carregar_tabuleiro
 from engine.regras.balanceamento import carregar_balanceamento
 from engine.rng.gerador import Gerador
 
-#: v3: compra básica de terrenos; posse guardada pelo índice da casa.
-VERSAO_DO_ESTADO = 3
+#: v4: prazo autoritativo por turno, compartilhado entre todos os clientes.
+VERSAO_DO_ESTADO = 4
 
 FASE_SORTEIO = "sorteio_ordem"
 FASE_ROLAR = "aguardando_rolagem"
@@ -80,6 +81,11 @@ def _exigir_vez(estado: dict, jogador_id: int) -> dict:
     return jogador
 
 
+def _definir_prazo(estado: dict, agora: float | None = None) -> None:
+    duracao = int(estado.get("segundos_por_turno", 0))
+    estado["prazo_vez"] = (agora if agora is not None else time.time()) + duracao if duracao > 0 else None
+
+
 # --------------------------------------------------------------------------
 # estado gravado por uma versão anterior
 # --------------------------------------------------------------------------
@@ -92,26 +98,35 @@ def _atualizar(estado: dict) -> dict:
     estava decidindo uma compra quando a compra saiu do jogo ficaria preso
     para sempre numa fase que não existe mais.
     """
-    if estado.get("versao", 1) >= VERSAO_DO_ESTADO:
+    versao = estado.get("versao", 1)
+    if versao >= VERSAO_DO_ESTADO:
         return estado
 
     estado = copy.deepcopy(estado)
 
-    # v1 -> v2: o tabuleiro encolheu; posse antiga não é compatível por índice.
-    estava_comprando = estado.get("fase") == "decidindo_compra"
-    for chave in ("propriedades", "compra_pendente", "ultimo_aluguel"):
-        estado.pop(chave, None)
+    estava_comprando = False
+    if versao < 3:
+        # v1 -> v2: o tabuleiro encolheu; posse antiga não é compatível por índice.
+        estava_comprando = estado.get("fase") == "decidindo_compra"
+        for chave in ("propriedades", "compra_pendente", "ultimo_aluguel"):
+            estado.pop(chave, None)
 
-    total = len(carregar_tabuleiro(estado["tabuleiro"]))
-    for jogador in estado["jogadores"]:
-        jogador.pop("propriedades", None)
-        # A volta é circular: a casa 41 do tabuleiro antigo é a 1 do novo,
-        # a mesma conta que `Tabuleiro.avancar` faz.
-        jogador["posicao"] %= total
+        total = len(carregar_tabuleiro(estado["tabuleiro"]))
+        for jogador in estado["jogadores"]:
+            jogador.pop("propriedades", None)
+            jogador["posicao"] %= total
 
-    # v2 -> v3: terrenos começam sem dono; dados anteriores não registravam posse.
-    estado["propriedades"] = {}
-    estado["compra_pendente"] = None
+        # Estados anteriores à v3 não guardavam posse compatível com o mapa atual.
+        estado["propriedades"] = {}
+        estado["compra_pendente"] = None
+
+    if versao < 4:
+        bal = carregar_balanceamento(estado.get("perfil", "padrao"))
+        estado["segundos_por_turno"] = int(
+            estado.get("segundos_por_turno", bal["tempo"]["segundos_por_turno"])
+        )
+        _definir_prazo(estado)
+
     estado["versao"] = VERSAO_DO_ESTADO
     if estava_comprando:
         # Quem decidia a compra já tinha andado: a vez segue adiante.
@@ -147,6 +162,8 @@ def criar_partida(
         "consumidos": 0,
         "tabuleiro": tabuleiro,
         "perfil": perfil,
+        "segundos_por_turno": int(bal["tempo"]["segundos_por_turno"]),
+        "prazo_vez": None,
         "fase": FASE_SORTEIO,
         "rodada": 1,
         "vez": 0,
@@ -253,6 +270,7 @@ def sortear_ordem(estado: dict) -> dict:
     estado["vez"] = 0
     estado["fase"] = FASE_ROLAR
     _guardar_gerador(estado, gerador)
+    _definir_prazo(estado)
 
     ordem = " → ".join(t["nome"] for t in ordenadas)
     _log(estado, "sorteio", f"Ordem de jogada: {ordem}.")
@@ -266,7 +284,7 @@ def sortear_ordem(estado: dict) -> dict:
 # --------------------------------------------------------------------------
 
 def rolar(estado: dict, jogador_id: int) -> dict:
-    estado = _atualizar(estado)
+    estado = atualizar_tempo(estado)
     if estado["fase"] != FASE_ROLAR:
         raise ErroDeRegra("Não dá para rolar os dados agora.", http=409)
 
@@ -309,6 +327,7 @@ def rolar(estado: dict, jogador_id: int) -> dict:
     if casa.tipo == "propriedade" and propriedade is None:
         if jogador["caixa"] >= casa.preco:
             estado["fase"] = FASE_COMPRA
+            _definir_prazo(estado)
             estado["compra_pendente"] = {
                 "casa": para,
                 "preco": casa.preco,
@@ -324,7 +343,7 @@ def rolar(estado: dict, jogador_id: int) -> dict:
 
 def decidir_compra(estado: dict, jogador_id: int, comprar: bool) -> dict:
     """Compra ou recusa o terreno oferecido e encerra o turno atual."""
-    estado = _atualizar(estado)
+    estado = atualizar_tempo(estado)
     if estado["fase"] != FASE_COMPRA or not estado.get("compra_pendente"):
         raise ErroDeRegra("Não há uma compra para decidir agora.", http=409)
 
@@ -377,11 +396,12 @@ def abandonar(estado: dict, jogador_id: int) -> dict:
     return estado
 
 
-def passar_turno(estado: dict) -> dict:
+def passar_turno(estado: dict, agora: float | None = None) -> dict:
     estado["compra_pendente"] = None
     vivos = [i for i, j in enumerate(estado["jogadores"]) if not j["falido"]]
     if len(vivos) <= 1:
         estado["fase"] = FASE_FIM
+        estado["prazo_vez"] = None
         if vivos:
             _log(estado, "fim", f"{estado['jogadores'][vivos[0]]['nome']} ficou de pé sozinho.")
         return estado
@@ -399,9 +419,32 @@ def passar_turno(estado: dict) -> dict:
 
     estado["vez"] = proximo
     estado["fase"] = FASE_ROLAR
+    _definir_prazo(estado, agora)
     _log(estado, "vez", f"É a vez de {estado['jogadores'][proximo]['nome']}.",
          estado["jogadores"][proximo]["jogador_id"])
     return estado
+
+
+def atualizar_tempo(estado: dict, agora: float | None = None) -> dict:
+    """Aplica a ação padrão quando o prazo do turno termina."""
+    estado = _atualizar(estado)
+    prazo = estado.get("prazo_vez")
+    if prazo is None or estado["fase"] in (FASE_SORTEIO, FASE_FIM):
+        return estado
+
+    instante = time.time() if agora is None else agora
+    if instante < prazo:
+        return estado
+
+    estado = copy.deepcopy(estado)
+    jogador = _jogador_da_vez(estado)
+    if estado["fase"] == FASE_COMPRA and estado.get("compra_pendente"):
+        _log(estado, "tempo", f"Tempo esgotado: {jogador['nome']} não comprou o terreno.", jogador["jogador_id"])
+    else:
+        _log(estado, "tempo", f"Tempo esgotado: a vez de {jogador['nome']} passou.", jogador["jogador_id"])
+
+    estado["prazo_vez"] = None
+    return passar_turno(estado, agora=instante)
 
 
 # --------------------------------------------------------------------------
@@ -414,8 +457,12 @@ def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
     prever os dados."""
     estado = _atualizar(estado)
     da_vez = _jogador_da_vez(estado)
+    prazo = estado.get("prazo_vez")
+    restante = None if prazo is None else max(0, int(prazo - time.time() + 0.999))
     return {
         "fase": estado["fase"],
+        "prazo_vez": estado.get("prazo_vez"),
+        "segundos_restantes": restante,
         "rodada": estado["rodada"],
         "vez": {
             "jogador_id": da_vez["jogador_id"],

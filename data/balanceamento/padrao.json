@@ -2,7 +2,7 @@
   "_leia_isto": "TODOS os números do jogo ficam aqui. Mexer neste arquivo muda o jogo sem tocar em uma linha de código — é só reiniciar o servidor. Os preços das propriedades ficam no tabuleiro (data/tabuleiros/vila_original.json), junto de cada casa.",
 
   "nome": "padrao",
-  "descricao": "Perfil principal — partida de 15 minutos.",
+  "descricao": "Perfil principal — partida de 15 minutos, com 30 segundos por turno.",
 
   "dinheiro": {
     "_sobre": "Quanto cada jogador tem ao começar.",
@@ -17,7 +17,7 @@
 
   "tempo": {
     "_sobre": "Segundos. 0 desliga o limite.",
-    "segundos_por_turno": 15,
+    "segundos_por_turno": 30,
     "segundos_de_leilao": 12,
     "minutos_de_partida": 15
   },

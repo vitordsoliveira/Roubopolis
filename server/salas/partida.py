@@ -42,6 +42,14 @@ def _gravar(sessao: Session, linha: Partida, estado: dict) -> None:
     sessao.commit()
 
 
+def _atualizar_tempo(sessao: Session, linha: Partida) -> dict:
+    original = _ler(linha)
+    estado = motor.atualizar_tempo(original)
+    if estado != original:
+        _gravar(sessao, linha, estado)
+    return estado
+
+
 # --------------------------------------------------------------------------
 
 def iniciar(sessao: Session, sala: Sala, jogador) -> dict:
@@ -98,13 +106,14 @@ def iniciar(sessao: Session, sala: Sala, jogador) -> dict:
 
 def estado_para(sessao: Session, sala: Sala, jogador) -> dict:
     linha = buscar_partida(sessao, sala)
-    return _envelope(_ler(linha), jogador, sala)
+    return _envelope(_atualizar_tempo(sessao, linha), jogador, sala)
 
 
 def rolar(sessao: Session, sala: Sala, jogador) -> dict:
     linha = buscar_partida(sessao, sala)
+    estado_atual = _atualizar_tempo(sessao, linha)
     try:
-        estado = motor.rolar(_ler(linha), jogador.id)
+        estado = motor.rolar(estado_atual, jogador.id)
     except motor.ErroDeRegra as erro:
         raise _erro(erro)
     _gravar(sessao, linha, estado)
@@ -113,8 +122,9 @@ def rolar(sessao: Session, sala: Sala, jogador) -> dict:
 
 def decidir_compra(sessao: Session, sala: Sala, jogador, comprar: bool) -> dict:
     linha = buscar_partida(sessao, sala)
+    estado_atual = _atualizar_tempo(sessao, linha)
     try:
-        estado = motor.decidir_compra(_ler(linha), jogador.id, comprar)
+        estado = motor.decidir_compra(estado_atual, jogador.id, comprar)
     except motor.ErroDeRegra as erro:
         raise _erro(erro)
     _gravar(sessao, linha, estado)

@@ -122,7 +122,7 @@
   /* Pela altura: o losango é mais largo que alto, e a altura é o que
      acaba primeiro em tela de computador. A --proporcao é gravada pelo JS
      aqui na mesa, e o .tabuleiro herda. */
-  width: min(97vw, calc(87vh * var(--proporcao, 1.4)));
+  width: min(97vw, calc(80vh * var(--proporcao, 1.4)));
 }
 
 /* --- jogadores ---------------------------------------------------------- */
@@ -517,9 +517,10 @@
 
 .jogar__botao:disabled {
   cursor: not-allowed;
-  color: #8b7a4a;
-  text-shadow: none;
-  --moldura-borda: #5b3a8a;
+  color: #ffe17a;
+  text-shadow: 0 2px 0 #3b2a00;
+  --moldura-borda: #8a6a28;
+  --moldura-fundo: #21162b;
 }
 
 .jogar__botao:not(:disabled):hover,

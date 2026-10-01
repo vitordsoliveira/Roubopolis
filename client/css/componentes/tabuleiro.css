@@ -52,9 +52,25 @@
   stroke: rgba(255, 255, 255, 0.55);
 }
 
-.tabuleiro__nome--inicial {
-  font-size: 18px;
+.inicio-marcador {
+  position: absolute;
+  z-index: 1100;
+  left: var(--inicio-x, 50%);
+  top: var(--inicio-y, 50%);
+  translate: -50% -50%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #ffd93d;
+  font-family: var(--fonte-pixel);
+  font-size: clamp(11px, 1.15cqw, 14px);
+  line-height: 1;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+  -webkit-text-stroke: 0.6px #160b25;
+  paint-order: stroke fill;
+  text-shadow: 0 1px 2px #160b25;
+  pointer-events: none;
 }
 
 /* --- a cidade viva (js/tabuleiro/cidade_viva.js) -------------------- */

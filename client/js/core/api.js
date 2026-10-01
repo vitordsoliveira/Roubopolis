@@ -171,6 +171,8 @@ export const api = {
   iniciarPartida: (codigo) => pedir(`/api/salas/${codigo}/iniciar`, { metodo: "POST", corpo: {} }),
   verPartida: (codigo) => pedir(`/api/partidas/${codigo}`),
   rolarDados: (codigo) => pedir(`/api/partidas/${codigo}/rolar`, { metodo: "POST", corpo: {} }),
+  decidirCompra: (codigo, comprar) =>
+    pedir(`/api/partidas/${codigo}/comprar`, { metodo: "POST", corpo: { comprar } }),
   /** Abandona a partida: o jogador sai da roda e a vez passa. */
   sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 };

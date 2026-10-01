@@ -28,6 +28,7 @@ class Casa:
     preco: int | None = None
     easter_egg: str | None = None
     cenario: str | None = None
+    inicio: bool = False
 
     @property
     def e_propriedade(self) -> bool:
@@ -49,6 +50,8 @@ class Casa:
             d["easter_egg"] = self.easter_egg
         if self.cenario:
             d["cenario"] = self.cenario
+        if self.inicio:
+            d["inicio"] = True
         return d
 
 
@@ -66,15 +69,27 @@ class Tabuleiro:
     def casa(self, indice: int) -> Casa:
         return self.casas[indice % len(self.casas)]
 
+    @property
+    def indice_inicial(self) -> int:
+        """Índice marcado como início; tabuleiros antigos usam a casa zero."""
+        return next((c.indice for c in self.casas if c.inicio), 0)
+
     def avancar(self, de: int, passos: int) -> int:
-        """Nova posição depois de andar `passos`, dando a volta no tabuleiro."""
-        return (de + passos) % len(self.casas)
+        """Avança `passos` casas no sentido horário a partir da posição atual."""
+        return (de - passos) % len(self.casas)
 
     def passou_pelo_inicio(self, de: int, passos: int) -> bool:
-        """Se o trajeto cruzou a casa 0. Ainda não há prêmio por isso — a
-        especificação não define salário de volta —, mas o motor já sabe
-        responder quando a regra existir."""
-        return de + passos >= len(self.casas)
+        """Se o trajeto cruzou a casa inicial no sentido horário.
+
+        Ainda não há prêmio por isso — a especificação não define salário de
+        volta —, mas o motor já sabe responder quando a regra existir.
+        """
+        if passos <= 0:
+            return False
+        distancia = (de - self.indice_inicial) % len(self.casas)
+        if distancia == 0:
+            return passos >= len(self.casas)
+        return passos >= distancia
 
     def propriedades_do_grupo(self, grupo: str) -> tuple[Casa, ...]:
         return tuple(c for c in self.casas if c.grupo == grupo)
@@ -114,6 +129,7 @@ def carregar_tabuleiro(nome: str = "vila_original") -> Tabuleiro:
                 preco=bruto.get("preco"),
                 easter_egg=bruto.get("easter_egg"),
                 cenario=bruto.get("cenario"),
+                inicio=bruto.get("inicio", bruto.get("tipo") == "inicial"),
             )
         )
 

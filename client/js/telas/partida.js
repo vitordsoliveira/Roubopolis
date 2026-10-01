@@ -1,9 +1,8 @@
 /* Partida: o tabuleiro isométrico, com o servidor mandando e a tela só
    contando a história.
 
-   Por enquanto a partida é sortear quem começa, rolar e andar — a compra e
-   o aluguel saíram do jogo (ver engine/partida.py). O dinheiro continua no
-   cartão de cada jogador, parado.
+  A tela encena o sorteio, a rolagem, o movimento e a compra de terrenos;
+  aluguel e efeitos das casas ainda não estão ativos.
 
    A ordem importa. Quando alguém rola, o servidor JÁ resolveu tudo; o que
    a tela faz depois é encenar na sequência certa: o dado tomba, assenta, o
@@ -20,6 +19,7 @@ import { iconePixel } from "../tabuleiro/pixel.js";
 const elTabuleiro = document.querySelector("#tabuleiro");
 const elSvg = document.querySelector("#tabuleiro-svg");
 const elPeoes = document.querySelector("#peoes");
+const elInicio = document.querySelector("#inicio-marcador");
 const elJogadores = document.querySelector("#jogadores");
 const elLegenda = document.querySelector("#legenda");
 const elAviso = document.querySelector("#aviso");
@@ -31,6 +31,11 @@ const botaoJogar = document.querySelector("#jogar");
 const cubos = [document.querySelector("#cubo-a"), document.querySelector("#cubo-b")];
 const dadosEl = [document.querySelector("#dado-a"), document.querySelector("#dado-b")];
 const modalOrdem = document.querySelector("#modal-ordem");
+const modalCompra = document.querySelector("#modal-compra");
+const tituloCompra = document.querySelector("#compra-titulo");
+const precoCompra = document.querySelector("#compra-preco");
+const saldoCompra = document.querySelector("#compra-saldo");
+const botoesCompra = [document.querySelector("#compra-nao"), document.querySelector("#compra-sim")];
 const painelChat = document.querySelector("#chat");
 const botaoChat = document.querySelector("#chat-abrir");
 const contadorChat = document.querySelector("#chat-contador");
@@ -85,6 +90,7 @@ let ultimoLanceVisto = 0;
 let assinaturaDosPeoes = "";
 /** Quem está nos cartões — idem, para os cartões. */
 let assinaturaDosCartoes = "";
+let assinaturaDasPropriedades = "";
 /** Impede duas consultas em voo ao mesmo tempo, que voltariam fora de ordem. */
 let consultando = false;
 /** A última jogada, contada embaixo do JOGAR por alguns segundos. */
@@ -209,16 +215,23 @@ function limparSoma() {
 
 // --- tabuleiro (desenhado uma vez) ------------------------------------
 
-function desenharTabuleiro(dados) {
-  desenho = montarTabuleiro(elSvg, dados);
+function assinaturaPropriedades(propriedades = {}) {
+  return Object.entries(propriedades)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([indice, propriedade]) => `${indice}:${propriedade.dono}`)
+    .join("|");
+}
+
+function desenharTabuleiro(dados, propriedades = {}) {
+  desenho = montarTabuleiro(elSvg, dados, propriedades);
+  assinaturaDasPropriedades = assinaturaPropriedades(propriedades);
+  const inicio = desenho.pontoInicio();
+  elInicio.style.setProperty("--inicio-x", `${inicio.x}%`);
+  elInicio.style.setProperty("--inicio-y", `${inicio.y}%`);
   // O quadro do tabuleiro tem a proporção do desenho: é isso que faz a
   // porcentagem de um peão cair exatamente em cima da casa certa. Vai na
   // mesa, que usa o número para o próprio tamanho, e o tabuleiro herda.
   elTabuleiro.parentElement.style.setProperty("--proporcao", desenho.proporcao.toFixed(4));
-
-  const { x, y } = desenho.pontoDosDados();
-  elDados.style.setProperty("--dx", `${x}%`);
-  elDados.style.setProperty("--dy", `${y}%`);
 
   aplicarRitmo();
   montarLegenda(dados);
@@ -320,7 +333,7 @@ async function andarPeao({ jogador_id, de, passos }) {
 
   const total = tabuleiro.casas.length;
   for (let passo = 1; passo <= passos; passo += 1) {
-    colocarPeao(peao, (de + passo) % total);
+    colocarPeao(peao, (de - (passo % total) + total) % total);
     peao.classList.remove("peao--andando");
     void peao.offsetWidth; // reinicia a animação do salto
     peao.classList.add("peao--andando");
@@ -328,7 +341,7 @@ async function andarPeao({ jogador_id, de, passos }) {
     await espera(MS_POR_CASA);
   }
   peao.classList.remove("peao--andando");
-  desenho.destacar((de + passos) % total);
+  desenho.destacar((de - (passos % total) + total) % total);
 }
 
 // --- cartões dos jogadores ----------------------------------------------
@@ -408,6 +421,8 @@ function pintarJogar() {
   if (estado.fase === "encerrada") {
     const vencedor = ativos()[0];
     elAviso.textContent = vencedor ? `A partida acabou — ${vencedor.nome} ficou sozinho.` : "A partida acabou.";
+  } else if (estado.fase === "decidindo_compra") {
+    elAviso.textContent = minha ? "Escolha se deseja comprar o terreno" : `${estado.vez.nome} está decidindo uma compra`;
   } else {
     elAviso.textContent = podeRolar ? "Role os dados e faça sua jogada" : `Esperando ${estado.vez.nome} jogar`;
   }
@@ -450,12 +465,15 @@ function anunciarVez() {
 
 function aplicar(resposta) {
   const primeiraVez = !tabuleiro;
-  if (primeiraVez) {
-    tabuleiro = resposta.tabuleiro;
-    desenharTabuleiro(tabuleiro);
-  }
   const antes = estado;
   estado = resposta.partida;
+  if (primeiraVez) {
+    tabuleiro = resposta.tabuleiro;
+    desenharTabuleiro(tabuleiro, estado.propriedades);
+  } else if (assinaturaPropriedades(estado.propriedades) !== assinaturaDasPropriedades) {
+    desenho.atualizarPropriedades(estado.propriedades);
+    assinaturaDasPropriedades = assinaturaPropriedades(estado.propriedades);
+  }
 
   // Na primeira pintura, o lance que já estava no estado não é encenado:
   // seria repetir uma jogada que aconteceu antes de eu abrir a tela.
@@ -469,9 +487,23 @@ function aplicar(resposta) {
   posicionarPeoes();
   pintarCartoes();
   pintarJogar();
+  atualizarModalCompra();
 
   if (!ordemMostrada && estado.sorteio?.length) mostrarOrdem();
   anunciarVez();
+}
+
+function atualizarModalCompra() {
+  const pendente = estado?.fase === "decidindo_compra" ? estado.compra_pendente : null;
+  const minhaDecisao = Boolean(pendente && estado.vez.sou_eu);
+  modalCompra.hidden = !minhaDecisao;
+  if (!minhaDecisao) return;
+
+  const casa = tabuleiro.casas[pendente.casa];
+  const eu = estado.jogadores.find((jogador) => jogador.sou_eu);
+  tituloCompra.textContent = casa?.nome || "Terreno";
+  precoCompra.textContent = `Preço: ${reais(pendente.preco)}`;
+  saldoCompra.textContent = `Seu caixa: ${reais(eu?.caixa)} · após comprar: ${reais((eu?.caixa || 0) - pendente.preco)}`;
 }
 
 /* Encena o lance de OUTRO jogador.
@@ -560,6 +592,27 @@ botaoJogar.addEventListener("click", async () => {
     if (estado) pintarJogar();
   }
 });
+
+async function responderCompra(comprar) {
+  if (ocupado || modalCompra.hidden) return;
+  ocupado = true;
+  botoesCompra.forEach((botao) => (botao.disabled = true));
+  pintarJogar();
+  som.tocar(comprar ? "confirmar" : "voltar");
+  try {
+    aplicar(await api.decidirCompra(codigo, comprar));
+  } catch (erro) {
+    som.tocar("erro");
+    toast(erro.message, "erro");
+  } finally {
+    ocupado = false;
+    botoesCompra.forEach((botao) => (botao.disabled = false));
+    if (estado) pintarJogar();
+  }
+}
+
+document.querySelector("#compra-nao").addEventListener("click", () => responderCompra(false));
+document.querySelector("#compra-sim").addEventListener("click", () => responderCompra(true));
 
 // --- abertura ------------------------------------------------------------
 

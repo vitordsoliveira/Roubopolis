@@ -1,0 +1,84 @@
+/* Decisão de compra de terreno. */
+.compra-cortina {
+  z-index: 80;
+  background: rgba(10, 4, 20, 0.78);
+}
+
+.compra {
+  --moldura-borda: #ffd93d;
+  --moldura-fundo: #170a30;
+  width: min(560px, 100%);
+  padding: clamp(22px, 4vw, 42px);
+  color: var(--branco);
+  text-align: center;
+  box-shadow: 0 12px 0 rgba(0, 0, 0, 0.5), 0 0 42px rgba(0, 0, 0, 0.55);
+  animation: compra-chega 0.28s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes compra-chega {
+  from { transform: translateY(22px) scale(0.94); opacity: 0; }
+}
+
+.compra__chamada {
+  margin-bottom: 8px;
+  color: var(--verde-neon);
+  font-family: var(--fonte-pixel);
+  font-size: clamp(0.75rem, 1.5vw, 1rem);
+  text-transform: uppercase;
+}
+
+.compra__titulo {
+  margin-bottom: 14px;
+  color: var(--amarelo);
+  font-family: var(--fonte-pixel);
+  font-size: clamp(1.3rem, 3.4vw, 2.2rem);
+  line-height: 1.35;
+  text-transform: uppercase;
+  text-shadow: 0 3px 0 #704d00;
+}
+
+.compra__preco {
+  font-family: var(--fonte-hud);
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  font-weight: 800;
+}
+
+.compra__saldo {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  font-family: var(--fonte-hud);
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+}
+
+.compra__acoes {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.compra__acoes .jogar__botao {
+  flex: 1 1 190px;
+  min-width: 0;
+  min-height: 54px;
+  font-size: clamp(0.9rem, 2.2vh, 1.35rem);
+}
+
+.compra__aceitar {
+  --moldura-borda: #39ff14;
+  --moldura-fundo: #10240a;
+  color: #c5ffb9;
+  text-shadow: 0 2px 0 #174d0b;
+}
+
+.compra__recusar {
+  --moldura-borda: #a855f7;
+  --moldura-fundo: #211034;
+  color: #e1c2ff;
+  text-shadow: 0 2px 0 #351452;
+}
+
+.compra__acoes .jogar__botao:disabled {
+  opacity: 0.55;
+}

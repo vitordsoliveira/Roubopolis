@@ -1,11 +1,9 @@
 # Roubopolis — regras do jogo
 
-Especificação de design — o alvo, não o estado atual. Hoje o `engine/` faz só
-o sorteio de quem começa, a rolagem e o movimento: a compra de terreno e o
-aluguel foram desligados enquanto o tabuleiro novo se assenta (a última
-versão com eles é o commit `cad81ac`). Onde um wireframe discordar deste
-documento, **este documento manda**: os wireframes foram desenhados antes das
-regras.
+Especificação de design. O motor já sorteia quem começa, rola, movimenta e
+permite comprar terrenos sem dono; aluguel e demais efeitos ainda não estão
+ativos. Onde um wireframe discordar deste documento, **este documento manda**:
+os wireframes foram desenhados antes das regras.
 
 Pontos ainda em aberto estão marcados com **⚠ EM ABERTO**.
 
@@ -47,6 +45,9 @@ Caro · Médio · Barato**.
 
 - **Aluguel base:** 20% do valor da propriedade.
 - **Upgrade:** máximo de 3 níveis; cada nível aumenta o aluguel em 15%.
+- Ao parar em um terreno sem dono, o jogador pode comprá-lo pelo preço da
+  tabela. Se recusar ou não tiver saldo suficiente, o terreno continua sem
+  dono e sem casa. Nesta etapa, terrenos de outros jogadores não cobram aluguel.
 
 **⚠ EM ABERTO:** o **preço do upgrade nunca foi definido** — e a Casa da
 Reconstrução dá 30% de desconto sobre esse valor inexistente. Também falta
@@ -240,25 +241,28 @@ miolo. Bairros de São Paulo. A fonte da verdade das casas é
 
 Os quatro cantos são maiores e têm cenário: **Praça** (onde os dados caem),
 **Prisão**, **Mansão** e **Represa**. A **INICIAL** não fica em canto: fica no
-meio da borda de baixo, e o preço cresce no sentido do peão — barato logo
-depois da saída, extremamente caro no fim da volta.
+meio da borda de baixo. O peão começa na INICIAL e percorre o tabuleiro no
+sentido horário. Os índices e locais físicos das casas permanecem fixos; por
+isso, a compra de um terreno continua ligada ao mesmo espaço após esta mudança.
 
-Na ordem em que o peão anda, a partir da INICIAL:
+Na ordem em que o peão anda no sentido horário, a partir da INICIAL:
 
-**Até a Praça:** INICIAL · Capão Redondo · Itaquera · CASA DO IMPOSTO · PRAÇA
+O ponto inicial é a **Praça**, no canto de baixo, junto aos dados. No sentido
+horário, o percurso é:
 
-**Até a Prisão:** (neutra) · Mooca · Ipiranga · Av. Augusta · Santana · Casa Verde ·
-CASA CORINGA · CASA PORTAL · Perdizes · PRISÃO
+**Até a Represa:** CASA DO IMPOSTO · Itaquera · Capão Redondo · (neutra) ·
+Cidade Tiradentes · Parelheiros · Vila Nova Conceição · CASA DO GANHO ·
+(neutra) · REPRESA
 
-**Até a Mansão:** Vila Conceição · (neutra) · Vila Madalena · Brooklin · Moema ·
-Brasilândia · CASA DO ROUBO · Pinheiros · Alto de Pinheiros · MANSÃO
+**Até a Mansão:** (neutra) · CASA DA RECONSTRUÇÃO · Itaim Bibi · Ibirapuera ·
+Jardim Paulista · CASA DO PREJUÍZO · Cidade Jardim · Vila Olímpia · (neutra) ·
+MANSÃO
 
-**Até a Represa:** (neutra) · Vila Olímpia · Cidade Jardim · CASA DO PREJUÍZO ·
-Jardim Paulista · Ibirapuera · Itaim Bibi · CASA DA RECONSTRUÇÃO · (neutra) ·
-REPRESA
+**Até a Prisão:** Alto de Pinheiros · Pinheiros · CASA DO ROUBO · Brasilândia ·
+Moema · Brooklin · Vila Madalena · (neutra) · Vila Conceição · PRISÃO
 
-**De volta à INICIAL:** (neutra) · CASA DO GANHO · Vila Nova Conceição ·
-Parelheiros · Cidade Tiradentes
+**De volta à Praça:** Perdizes · CASA PORTAL · CASA CORINGA · Casa Verde ·
+Santana · Av. Augusta · Ipiranga · Mooca · (neutra) · PRAÇA
 
 Por grupo: 5 extremamente caras, 5 muito caras, 3 caras, 5 médias e 5
 baratas — 23 propriedades.

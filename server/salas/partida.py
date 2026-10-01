@@ -111,6 +111,16 @@ def rolar(sessao: Session, sala: Sala, jogador) -> dict:
     return _envelope(estado, jogador, sala)
 
 
+def decidir_compra(sessao: Session, sala: Sala, jogador, comprar: bool) -> dict:
+    linha = buscar_partida(sessao, sala)
+    try:
+        estado = motor.decidir_compra(_ler(linha), jogador.id, comprar)
+    except motor.ErroDeRegra as erro:
+        raise _erro(erro)
+    _gravar(sessao, linha, estado)
+    return _envelope(estado, jogador, sala)
+
+
 def abandonar(sessao: Session, sala: Sala, jogador) -> dict:
     """Sair no meio da partida. Os outros ficam sabendo pelo log."""
     linha = buscar_partida(sessao, sala)

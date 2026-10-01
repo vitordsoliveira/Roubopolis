@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="/css/componentes/tabuleiro.css">
   <link rel="stylesheet" href="/css/componentes/dados.css">
   <link rel="stylesheet" href="/css/componentes/sorteio.css">
+  <link rel="stylesheet" href="/css/componentes/compra.css">
   <link rel="stylesheet" href="/css/telas/partida.css">
 </head>
 
@@ -46,6 +47,7 @@
           <div class="dado" id="dado-b"><div class="dado__cubo" id="cubo-b"></div></div>
         </div>
         <div class="peoes" id="peoes"></div>
+        <span class="inicio-marcador" id="inicio-marcador">INÍCIO</span>
       </div>
     </section>
 
@@ -103,6 +105,19 @@
         </button>
       </div>
     </div>
+  </div>
+
+  <div class="cortina compra-cortina" id="modal-compra" hidden>
+    <section class="compra moldura" role="dialog" aria-modal="true" aria-labelledby="compra-titulo">
+      <p class="compra__chamada">Terreno disponível</p>
+      <h2 class="compra__titulo" id="compra-titulo"></h2>
+      <p class="compra__preco" id="compra-preco"></p>
+      <p class="compra__saldo" id="compra-saldo"></p>
+      <div class="compra__acoes">
+        <button class="jogar__botao jogar__botao--pequeno compra__recusar moldura" type="button" id="compra-nao">Deixar passar</button>
+        <button class="jogar__botao jogar__botao--pequeno compra__aceitar moldura" type="button" id="compra-sim">Comprar</button>
+      </div>
+    </section>
   </div>
 
   <script type="module" src="/js/telas/partida.js"></script>

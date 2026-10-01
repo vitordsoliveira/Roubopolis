@@ -1,4 +1,4 @@
-"""Motor da partida: sorteio de ordem, rolagem e movimento.
+"""Motor da partida: sorteio, rolagem, movimento e compra básica.
 
 Regras deste arquivo:
 
@@ -9,10 +9,8 @@ Regras deste arquivo:
 - Toda regra recusa em voz alta: ação fora de hora levanta `ErroDeRegra`
   com uma mensagem que pode ir direto para a tela.
 
-Por enquanto a partida é só isto: sortear quem começa, rolar e andar. O
-dinheiro existe e aparece na tela, mas nada o movimenta — a compra de
-terreno e o aluguel saíram do jogo até o tabuleiro novo estar redondo. As
-casas de evento ainda não fazem nada: parar nelas só registra no log.
+O jogador pode comprar um terreno livre onde parou; aluguel e efeitos das
+casas de evento ainda não fazem parte desta etapa.
 """
 
 from __future__ import annotations
@@ -23,11 +21,12 @@ from engine.board.tabuleiro import carregar_tabuleiro
 from engine.regras.balanceamento import carregar_balanceamento
 from engine.rng.gerador import Gerador
 
-#: v2: saíram a compra e o aluguel, e o tabuleiro passou de 42 para 40 casas.
-VERSAO_DO_ESTADO = 2
+#: v3: compra básica de terrenos; posse guardada pelo índice da casa.
+VERSAO_DO_ESTADO = 3
 
 FASE_SORTEIO = "sorteio_ordem"
 FASE_ROLAR = "aguardando_rolagem"
+FASE_COMPRA = "decidindo_compra"
 FASE_FIM = "encerrada"
 
 
@@ -98,7 +97,7 @@ def _atualizar(estado: dict) -> dict:
 
     estado = copy.deepcopy(estado)
 
-    # v1 -> v2: compra e aluguel saíram, e o tabuleiro encolheu.
+    # v1 -> v2: o tabuleiro encolheu; posse antiga não é compatível por índice.
     estava_comprando = estado.get("fase") == "decidindo_compra"
     for chave in ("propriedades", "compra_pendente", "ultimo_aluguel"):
         estado.pop(chave, None)
@@ -110,6 +109,9 @@ def _atualizar(estado: dict) -> dict:
         # a mesma conta que `Tabuleiro.avancar` faz.
         jogador["posicao"] %= total
 
+    # v2 -> v3: terrenos começam sem dono; dados anteriores não registravam posse.
+    estado["propriedades"] = {}
+    estado["compra_pendente"] = None
     estado["versao"] = VERSAO_DO_ESTADO
     if estava_comprando:
         # Quem decidia a compra já tinha andado: a vez segue adiante.
@@ -137,6 +139,7 @@ def criar_partida(
 
     bal = carregar_balanceamento(perfil)
     caixa = bal["dinheiro"]["caixa_inicial"]
+    indice_inicial = carregar_tabuleiro(tabuleiro).indice_inicial
 
     estado = {
         "versao": VERSAO_DO_ESTADO,
@@ -153,12 +156,14 @@ def criar_partida(
                 "nome": j["nome"],
                 "personagem": j.get("personagem"),
                 "caixa": caixa,
-                "posicao": 0,
+                "posicao": indice_inicial,
                 "falido": False,
             }
             for j in jogadores
         ],
         "sorteio": [],
+        "propriedades": {},
+        "compra_pendente": None,
         #: Contador de rolagens. A tela usa para saber o que já encenou.
         "lances": 0,
         "ultimo_movimento": None,
@@ -300,8 +305,51 @@ def rolar(estado: dict, jogador_id: int) -> dict:
          f"{jogador['nome']} tirou {' + '.join(map(str, dados))} = {passos} e parou em {casa.nome}.",
          jogador_id)
 
-    # Parar numa casa ainda não tem consequência nenhuma: compra, aluguel e
-    # eventos entram depois. A vez passa direto.
+    propriedade = estado["propriedades"].get(str(para))
+    if casa.tipo == "propriedade" and propriedade is None:
+        if jogador["caixa"] >= casa.preco:
+            estado["fase"] = FASE_COMPRA
+            estado["compra_pendente"] = {
+                "casa": para,
+                "preco": casa.preco,
+                "jogador_id": jogador_id,
+            }
+            _log(estado, "compra", f"{jogador['nome']} pode comprar {casa.nome} por {_reais(casa.preco)}.", jogador_id)
+            return estado
+        _log(estado, "compra", f"{jogador['nome']} não tem dinheiro para comprar {casa.nome}.", jogador_id)
+
+    # Aluguel e efeitos das outras casas ainda não fazem parte desta etapa.
+    return passar_turno(estado)
+
+
+def decidir_compra(estado: dict, jogador_id: int, comprar: bool) -> dict:
+    """Compra ou recusa o terreno oferecido e encerra o turno atual."""
+    estado = _atualizar(estado)
+    if estado["fase"] != FASE_COMPRA or not estado.get("compra_pendente"):
+        raise ErroDeRegra("Não há uma compra para decidir agora.", http=409)
+
+    estado = copy.deepcopy(estado)
+    jogador = _exigir_vez(estado, jogador_id)
+    pendente = estado["compra_pendente"]
+    if pendente["jogador_id"] != jogador_id:
+        raise ErroDeRegra("Essa compra pertence a outro jogador.", http=403)
+
+    if comprar:
+        preco = pendente["preco"]
+        if jogador["caixa"] < preco:
+            raise ErroDeRegra("Você não tem dinheiro suficiente para comprar este terreno.", http=409)
+        indice = str(pendente["casa"])
+        if indice in estado["propriedades"]:
+            raise ErroDeRegra("Este terreno já foi comprado.", http=409)
+        jogador["caixa"] -= preco
+        estado["propriedades"][indice] = {"dono": jogador_id, "nivel": 0}
+        tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
+        casa = tabuleiro.casa(pendente["casa"])
+        _log(estado, "compra", f"{jogador['nome']} comprou {casa.nome} por {_reais(preco)}.", jogador_id)
+    else:
+        _log(estado, "compra", f"{jogador['nome']} recusou a compra.", jogador_id)
+
+    estado["compra_pendente"] = None
     return passar_turno(estado)
 
 
@@ -330,6 +378,7 @@ def abandonar(estado: dict, jogador_id: int) -> dict:
 
 
 def passar_turno(estado: dict) -> dict:
+    estado["compra_pendente"] = None
     vivos = [i for i, j in enumerate(estado["jogadores"]) if not j["falido"]]
     if len(vivos) <= 1:
         estado["fase"] = FASE_FIM
@@ -386,6 +435,8 @@ def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
             for j in estado["jogadores"]
         ],
         "sorteio": estado["sorteio"],
+        "propriedades": estado.get("propriedades", {}),
+        "compra_pendente": estado.get("compra_pendente"),
         "ultimo_movimento": estado["ultimo_movimento"],
         "log": estado["log"][-25:],
     }

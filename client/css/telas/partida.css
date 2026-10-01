@@ -1,0 +1,641 @@
+/* Tela da partida, no desenho de img/tabuleiro/TELA TABULEIRO_5: o
+   tabuleiro em losango no meio, um jogador em cada canto da tela, legenda
+   e opções embaixo dos lados, e o JOGAR no pé.
+
+   O losango deixa livres justamente os quatro cantos da tela — é lá que
+   mora o HUD. As medidas são em vh porque é a altura que dimensiona o
+   tabuleiro: assim tudo cresce e encolhe junto, de 960x640 a tela cheia. */
+
+.tela-partida {
+  /* Letra dos nomes, valores e botões: condensada e em negrito, como na
+     arte. A de pixel fica para o JOGAR e os títulos. */
+  --fonte-hud: "Bahnschrift", "Arial Narrow", "Segoe UI", sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  background: #1a0b2e;
+  color: var(--branco);
+}
+
+.fundo-partida {
+  position: fixed;
+  inset: 0;
+  background: #1a0b2e url("/assets/tabuleiro/fundo.webp") center 28% / cover no-repeat;
+}
+
+/* As linhas de varredura que a arte tem por cima de tudo. */
+.fundo-partida::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 4px);
+}
+
+.partida {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+/* --- moldura roxa dos painéis ------------------------------------------
+
+   Borda roxa de cantos em degrau, como pixel art. O recorte (clip-path)
+   faz o degrau por fora; o ::before, recortado igual 3px para dentro, é o
+   fundo escuro. Quem usa troca só as duas cores. */
+
+.moldura {
+  --c: 7px;
+  --p: 3px;
+  position: relative;
+  isolation: isolate;
+  background: var(--moldura-borda, #9b3dff);
+  clip-path: polygon(
+    var(--c) 0, calc(100% - var(--c)) 0,
+    calc(100% - var(--c)) var(--p), calc(100% - var(--p)) var(--p),
+    calc(100% - var(--p)) var(--c), 100% var(--c),
+    100% calc(100% - var(--c)), calc(100% - var(--p)) calc(100% - var(--c)),
+    calc(100% - var(--p)) calc(100% - var(--p)), calc(100% - var(--c)) calc(100% - var(--p)),
+    calc(100% - var(--c)) 100%, var(--c) 100%,
+    var(--c) calc(100% - var(--p)), var(--p) calc(100% - var(--p)),
+    var(--p) calc(100% - var(--c)), 0 calc(100% - var(--c)),
+    0 var(--c), var(--p) var(--c),
+    var(--p) var(--p), var(--c) var(--p)
+  );
+}
+
+.moldura::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
+  background: var(--moldura-fundo, #1c0b3a);
+  clip-path: inherit;
+}
+
+/* --- logo e lema ------------------------------------------------------ */
+
+.partida__logo {
+  position: absolute;
+  left: 1.8vw;
+  top: 2.4vh;
+  height: 6.2vh;
+  width: auto;
+  filter: drop-shadow(0 0.5vh 0 rgba(0, 0, 0, 0.45));
+}
+
+/* Pichado na parede, torto e rosa, como na arte. */
+.lema {
+  position: absolute;
+  left: 2.2vw;
+  top: 29.5vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 2.5vh;
+  line-height: 1.12;
+  text-transform: uppercase;
+  color: #ff4fa8;
+  text-shadow: 0 0.3vh 0 rgba(60, 0, 40, 0.8), 0 0 1.2vh rgba(255, 79, 168, 0.55);
+  transform: rotate(-15deg);
+  transform-origin: left top;
+  pointer-events: none;
+}
+
+.lema span:nth-child(2) { padding-left: 1.6vh; }
+.lema span:nth-child(3) { padding-left: 3vh; }
+.lema span:nth-child(4) { padding-left: 4.6vh; }
+
+.lema__coroa {
+  width: 6vh;
+  margin: 0.6vh 0 0 -1vh;
+  transform: rotate(12deg);
+  filter: drop-shadow(0 0 0.8vh rgba(255, 210, 61, 0.6));
+}
+
+.lema__coroa .icone-pixel { width: 100%; height: auto; display: block; }
+
+/* --- tabuleiro -------------------------------------------------------- */
+
+.mesa {
+  position: absolute;
+  left: 50%;
+  top: 0.4vh;
+  translate: -50% 0;
+  /* Pela altura: o losango é mais largo que alto, e a altura é o que
+     acaba primeiro em tela de computador. A --proporcao é gravada pelo JS
+     aqui na mesa, e o .tabuleiro herda. */
+  width: min(97vw, calc(87vh * var(--proporcao, 1.4)));
+}
+
+/* --- jogadores ---------------------------------------------------------- */
+
+.jogadores {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cartao {
+  --alt: 9.6vh;
+  position: absolute;
+  display: flex;
+  height: var(--alt);
+  font-family: var(--fonte-hud);
+  font-stretch: condensed;
+  font-weight: 700;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+/* Ordem de jogada: 1º em cima à esquerda, 2º em cima à direita, 3º embaixo
+   à esquerda, 4º embaixo à direita. */
+.cartao--0 { left: 1.6vw; top: 14vh; }
+.cartao--1 { right: 1.6vw; top: 14vh; }
+.cartao--2 { left: 1.6vw; bottom: 2.6vh; }
+.cartao--3 { right: 1.6vw; bottom: 2.6vh; }
+
+.cartao__retrato {
+  --moldura-fundo: color-mix(in srgb, var(--cor-jogador, #7b2fbf) 30%, #150828);
+  flex: none;
+  width: var(--alt);
+  height: var(--alt);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* O boneco é alto e magro: cobrindo o quadrado pela largura, sobra a
+   cabeça e os ombros — o mesmo recorte do retrato da arte. */
+.cartao__retrato img {
+  width: 100%;
+  height: 100%;
+  padding: 0.5vh 0.5vh 0;
+  object-fit: cover;
+  object-position: 50% 0;
+  image-rendering: pixelated;
+}
+
+.cartao__inicial {
+  font-family: var(--fonte-pixel);
+  font-size: 4.4vh;
+  color: var(--cor-jogador, #fff);
+}
+
+.cartao__corpo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.6vh;
+  width: 20vh;
+  margin-left: -3px;
+  padding: 0.9vh 1vh;
+}
+
+.cartao__nome {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7vh;
+  min-width: 0;
+  font-size: 2vh;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cartao__ordem {
+  flex: none;
+  color: var(--amarelo);
+}
+
+.cartao__texto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cartao__eu {
+  display: none;
+  flex: none;
+  padding: 0 0.5vh;
+  font-size: 1.3vh;
+  color: #150828;
+  background: var(--cor-jogador, var(--amarelo));
+}
+
+.cartao--eu .cartao__eu { display: inline; }
+
+/* O valor numa faixa clara, com o maço de dinheiro no canto. */
+.cartao__caixa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6vh;
+  padding: 0.5vh 0.9vh;
+  background: #efe8d8;
+  color: #1a1020;
+  font-size: 2.5vh;
+  line-height: 1.1;
+}
+
+.cartao__dinheiro {
+  height: 2.9vh;
+  width: auto;
+  rotate: -28deg;
+  image-rendering: pixelated;
+}
+
+/* De quem é a vez: moldura amarela e brilho pulsando. */
+.cartao--da-vez .moldura {
+  --moldura-borda: var(--amarelo);
+}
+
+.cartao--da-vez {
+  animation: cartao-vez 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes cartao-vez {
+  from { filter: drop-shadow(0 0 0.4vh rgba(255, 217, 61, 0.4)); }
+  to   { filter: drop-shadow(0 0 1.6vh rgba(255, 217, 61, 0.9)); }
+}
+
+/* Quem saiu fica no canto, apagado — o lugar dele não é tomado. */
+.cartao--fora {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+/* --- legenda ------------------------------------------------------------ */
+
+.legenda {
+  --moldura-fundo: #120b18;
+  position: absolute;
+  left: 1.4vw;
+  bottom: 14.6vh;
+  width: 23vh;
+  padding: 1.6vh 1.8vh 1.8vh;
+  font-family: var(--fonte-hud);
+  font-stretch: condensed;
+}
+
+.legenda__titulo {
+  margin-bottom: 1.2vh;
+  font-size: 2.4vh;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--amarelo);
+}
+
+.legenda__itens {
+  display: grid;
+  gap: 0.8vh;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.legenda__item {
+  display: flex;
+  align-items: center;
+  gap: 1.2vh;
+  font-size: 1.6vh;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.legenda__cor {
+  flex: none;
+  width: 2.3vh;
+  height: 2.3vh;
+  background: var(--cor);
+  box-shadow: inset 0 -0.3vh 0 rgba(0, 0, 0, 0.22);
+}
+
+/* --- opções ----------------------------------------------------------------- */
+
+.acoes {
+  position: absolute;
+  right: 1.6vw;
+  bottom: 14.6vh;
+  display: grid;
+  gap: 1.1vh;
+  width: 19vh;
+}
+
+.acao {
+  --moldura-fundo: #2a0d5e;
+  display: flex;
+  align-items: center;
+  gap: 1.6vh;
+  height: 5.6vh;
+  padding: 0 1.8vh;
+  color: var(--branco);
+  font-family: var(--fonte-hud);
+  font-stretch: condensed;
+  font-size: 2.2vh;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.1s steps(2);
+}
+
+.acao .icone-pixel {
+  width: auto;
+  height: 3.1vh;
+  flex: none;
+}
+
+.acao:hover,
+.acao:focus-visible {
+  --moldura-borda: #c98bff;
+  transform: translateX(-0.5vh);
+  outline: none;
+}
+
+/* O botão do chat: contador de mensagens que chegaram com ele fechado, e a
+   moldura piscando em rosa enquanto houver alguma. */
+.acao__contador {
+  margin-left: auto;
+  min-width: 2.6vh;
+  padding: 0 0.6vh;
+  font-size: 1.5vh;
+  line-height: 2.4vh;
+  text-align: center;
+  color: var(--branco);
+  background: var(--rosa);
+}
+
+.acao--ativa { --moldura-borda: var(--amarelo); }
+
+.acao--novidade { animation: acao-novidade 0.8s ease-in-out infinite alternate; }
+
+@keyframes acao-novidade {
+  to { background: var(--rosa); }
+}
+
+/* --- chat -------------------------------------------------------------------- */
+
+/* Abre à direita, entre o cartão de cima e as opções. Em tela larga cabe
+   no espaço livre ao lado do tabuleiro; em tela estreita cobre a ponta
+   dele — por isso fecha, e lembra se ficou aberto ou fechado. */
+.chat-jogo {
+  --moldura-fundo: #140a24;
+  position: absolute;
+  right: 1.6vw;
+  top: 25.4vh;
+  bottom: 48.4vh;
+  z-index: 5;
+  width: 31vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vh;
+  padding: 1.2vh 1.3vh 1.3vh;
+  font-family: var(--fonte-hud);
+  font-stretch: condensed;
+}
+
+.chat-jogo__topo {
+  display: flex;
+  align-items: baseline;
+  gap: 1vh;
+}
+
+.chat-jogo__titulo {
+  font-size: 2.1vh;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--amarelo);
+}
+
+.chat-jogo__status {
+  font-size: 1.35vh;
+  opacity: 0.65;
+}
+
+.chat-jogo__fechar {
+  margin-left: auto;
+  font-size: 2.6vh;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.chat-jogo__fechar:hover,
+.chat-jogo__fechar:focus-visible {
+  color: var(--amarelo);
+  opacity: 1;
+  outline: none;
+}
+
+.chat-jogo__mensagens {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh;
+  padding: 0.6vh 0.8vh;
+  background: rgba(0, 0, 0, 0.32);
+  font-size: 1.65vh;
+  line-height: 1.3;
+}
+
+.chat-jogo .chat__nome {
+  margin-right: 0.6vh;
+  color: var(--amarelo);
+}
+
+.chat-jogo .chat__texto { overflow-wrap: anywhere; }
+
+.chat-jogo .chat__vazio {
+  margin: auto;
+  opacity: 0.6;
+}
+
+.chat-jogo__formulario {
+  display: flex;
+  gap: 0.6vh;
+}
+
+.chat-jogo__formulario input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6vh 0.8vh;
+  font-size: 1.65vh;
+  color: #1a1020;
+  background: #efe8d8;
+}
+
+.chat-jogo__formulario input:focus {
+  outline: 2px solid var(--amarelo);
+  outline-offset: 0;
+}
+
+.chat-jogo__enviar {
+  padding: 0 1.2vh;
+  font-size: 1.6vh;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--amarelo);
+  background: #3a1680;
+}
+
+.chat-jogo__enviar:hover,
+.chat-jogo__enviar:focus-visible {
+  background: #5321b0;
+  outline: none;
+}
+
+/* --- JOGAR -------------------------------------------------------------------- */
+
+.jogar {
+  position: absolute;
+  left: 50%;
+  bottom: 1.8vh;
+  translate: -50% 0;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-items: center;
+  column-gap: 1.4vh;
+  row-gap: 0.6vh;
+}
+
+.jogar__botao {
+  --moldura-borda: #9b3dff;
+  --moldura-fundo: #120726;
+  --c: 9px;
+  --p: 4px;
+  min-width: 30vh;
+  height: 7.8vh;
+  padding: 0 4vh;
+  font-family: var(--fonte-pixel);
+  font-size: 4.3vh;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--amarelo);
+  text-shadow: 0 0.45vh 0 #7a5600;
+  cursor: pointer;
+  transition: transform 0.08s steps(2);
+}
+
+.jogar__botao:disabled {
+  cursor: not-allowed;
+  color: #8b7a4a;
+  text-shadow: none;
+  --moldura-borda: #5b3a8a;
+}
+
+.jogar__botao:not(:disabled):hover,
+.jogar__botao:not(:disabled):focus-visible {
+  --moldura-borda: #c98bff;
+  transform: translateY(-0.4vh);
+  outline: none;
+}
+
+.jogar__botao:not(:disabled):active { transform: translateY(0.3vh); }
+
+.jogar__botao--pequeno {
+  min-width: 0;
+  height: auto;
+  padding: 1.8vh 4vh;
+  font-size: clamp(1.05rem, 3.4vh, 1.8rem);
+}
+
+.jogar__seta {
+  width: 3vh;
+}
+
+.jogar__seta .icone-pixel {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.jogar__seta--esquerda { transform: scaleX(-1); }
+
+/* Na sua vez o botão respira e as setas apontam para ele. */
+.jogar--minha-vez .jogar__botao {
+  animation: jogar-respira 1.2s ease-in-out infinite alternate;
+}
+
+.jogar--minha-vez .jogar__seta {
+  animation: seta-aponta 0.6s ease-in-out infinite alternate;
+}
+
+.jogar--minha-vez .jogar__seta--esquerda {
+  animation-name: seta-aponta-esquerda;
+}
+
+@keyframes jogar-respira {
+  to { filter: drop-shadow(0 0 1.4vh rgba(255, 217, 61, 0.55)); }
+}
+
+@keyframes seta-aponta {
+  to { transform: translateX(-0.8vh); }
+}
+
+@keyframes seta-aponta-esquerda {
+  from { transform: scaleX(-1); }
+  to   { transform: scaleX(-1) translateX(-0.8vh); }
+}
+
+.jogar__aviso {
+  grid-column: 1 / -1;
+  max-width: 64vw;
+  min-height: 1.3em;
+  font-family: var(--fonte-pixel);
+  font-size: 1.85vh;
+  line-height: 1.3;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--amarelo);
+  text-shadow: 0 0.25vh 0 rgba(0, 0, 0, 0.85);
+}
+
+/* --- anúncio da vez ------------------------------------------------------------ */
+
+.anuncio {
+  position: fixed;
+  top: 40%;
+  left: 0;
+  right: 0;
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.anuncio span {
+  padding: 1.4vh 6vh;
+  background: rgba(18, 7, 38, 0.94);
+  border-top: 0.5vh solid #9b3dff;
+  border-bottom: 0.5vh solid #9b3dff;
+  color: var(--amarelo);
+  font-size: 4.4vh;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-shadow: 0 0.4vh 0 #7a5600;
+}
+
+/* Entra da esquerda, segura, sai pela direita. */
+.anuncio--passando { animation: anuncio-passa 1.5s ease-in-out; }
+
+@keyframes anuncio-passa {
+  0%   { opacity: 0; transform: translateX(-70%) skewX(-12deg); }
+  22%  { opacity: 1; transform: translateX(0) skewX(0); }
+  74%  { opacity: 1; transform: translateX(0) skewX(0); }
+  100% { opacity: 0; transform: translateX(70%) skewX(12deg); }
+}
+
+/* O aviso passageiro sobe para o topo: embaixo ele cobria o JOGAR. */
+.tela-partida .toast-pilha {
+  top: 2vh;
+  bottom: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cartao--da-vez,
+  .jogar--minha-vez .jogar__botao,
+  .jogar--minha-vez .jogar__seta,
+  .anuncio--passando { animation: none; }
+  .anuncio--passando { opacity: 1; }
+}

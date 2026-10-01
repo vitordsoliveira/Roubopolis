@@ -11,6 +11,7 @@ const CHAVE_FOTO = "roubopolis.foto";
 const CHAVE_SOM = "roubopolis.som";
 const CHAVE_VOLUME_SOM = "roubopolis.volume-som";
 const CHAVE_ABA = "roubopolis.aba-propria";
+const CHAVE_CHAT = "roubopolis.chat-aberto";
 
 /* Abas do mesmo navegador dividem o localStorage — duas abas seriam sempre o
    MESMO jogador, o que impede testar uma sala sozinho. Abrir /?novo=1 marca a
@@ -60,6 +61,10 @@ export const guardado = {
   salvarFoto: (valor) => gravar(CHAVE_FOTO, valor || ""),
   salvarSom: (ligado) => gravar(CHAVE_SOM, ligado ? "1" : "0"),
   salvarVolumeSom: (valor) => gravar(CHAVE_VOLUME_SOM, String(valor)),
+  /** Se o chat da partida fica aberto: quem gosta de conversar não precisa
+      abrir de novo a cada partida. */
+  chatAberto: () => ler(CHAVE_CHAT, "0") === "1",
+  salvarChatAberto: (aberto) => gravar(CHAVE_CHAT, aberto ? "1" : "0"),
 
   /** Guarda tudo que o menu precisa para se desenhar sem consultar a rede. */
   salvarSessao(jogador) {
@@ -156,7 +161,17 @@ export const api = {
   marcarPronto: (codigo, pronto) =>
     pedir(`/api/salas/${codigo}/pronto`, { metodo: "POST", corpo: { pronto } }),
   sairDaSala: (codigo) => pedir(`/api/salas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
+
+  // --- chat do lobby ---------------------------------------------------
   listarChat: (codigo) => pedir(`/api/salas/${codigo}/chat`),
   enviarChat: (codigo, texto) =>
     pedir(`/api/salas/${codigo}/chat`, { metodo: "POST", corpo: { texto } }),
+
+  // --- partida ---------------------------------------------------------
+  /** Só o dono da sala, e só com todo mundo pronto. */
+  iniciarPartida: (codigo) => pedir(`/api/salas/${codigo}/iniciar`, { metodo: "POST", corpo: {} }),
+  verPartida: (codigo) => pedir(`/api/partidas/${codigo}`),
+  rolarDados: (codigo) => pedir(`/api/partidas/${codigo}/rolar`, { metodo: "POST", corpo: {} }),
+  /** Abandona a partida: o jogador sai da roda e a vez passa. */
+  sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 };

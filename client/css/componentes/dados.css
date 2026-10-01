@@ -1,0 +1,186 @@
+/* Dados como cubos de verdade, vermelhos de pontos brancos como na arte.
+
+   Cada dado é um cubo de 6 faces montado com translateZ. Para mostrar um
+   valor, o cubo gira até a face correspondente ficar de frente — e o JS
+   soma voltas inteiras para ele tombar antes de assentar, em vez de trocar
+   o número no susto. */
+
+/* Os dois dados ficam em cima do canto de baixo do tabuleiro. O JS grava
+   --dx/--dy (em % do tabuleiro) a partir do desenho. */
+.dados {
+  position: absolute;
+  left: var(--dx, 50%);
+  top: var(--dy, 90%);
+  translate: -50% -82%;
+  display: flex;
+  gap: 1.3cqw;
+  perspective: 700px;
+  pointer-events: none;
+}
+
+/* A aresta é variável para o mesmo cubo servir no tabuleiro e, menor, na
+   cena do sorteio — as faces se posicionam a partir dela. */
+.dado {
+  --aresta: 3.7cqw;
+  width: var(--aresta);
+  height: var(--aresta);
+  transform-style: preserve-3d;
+}
+
+.dado--mini { --aresta: clamp(28px, 5.2vh, 50px); }
+.dado--mini .dado__face { padding: 3px; border-width: 1.5px; border-radius: 5px; }
+.dado--mini .dado__ponto { width: 80%; height: 80%; }
+
+/* --- o arremesso ---------------------------------------------------
+
+   O dado cai de cima, bate na mesa, quica duas vezes e assenta. O salto
+   fica no invólucro (.dado) e o tombo no cubo (.dado__cubo): duas
+   animações independentes, que é o que faz parecer objeto jogado em vez de
+   figura trocando de imagem. */
+
+.dado--arremesso { animation: dado-arremesso 0.85s cubic-bezier(0.3, 0.7, 0.4, 1) backwards; }
+
+/* O segundo dado sai um pouco depois e de outro lado: cair em sincronia
+   entrega que é animação. */
+#dado-b.dado--arremesso { animation-delay: 0.09s; --vindo-de: 3cqw; }
+
+@keyframes dado-arremesso {
+  0%   { transform: translate(var(--vindo-de, -3cqw), -14cqw) scale(0.45); opacity: 0; }
+  30%  { opacity: 1; }
+  52%  { transform: translate(0, 1cqw) scale(1.1); }
+  66%  { transform: translate(0, -1.2cqw) scale(0.96); }
+  80%  { transform: translate(0, 0.5cqw) scale(1.03); }
+  91%  { transform: translate(0, -0.3cqw) scale(0.99); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+.dado__cubo {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  /* Curva com leve "passar do ponto": o dado assenta como peça pesada. */
+  transition: transform 0.9s cubic-bezier(0.25, 1.2, 0.4, 1);
+  transform: rotateX(-20deg) rotateY(-24deg);
+}
+
+.dado__face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: 14%;
+  background: linear-gradient(150deg, #ff4f4f, #c8141d);
+  border: 2px solid #4a060b;
+  border-radius: 16%;
+  box-shadow: inset 0 0 8px rgba(80, 0, 6, 0.35);
+}
+
+/* Cada face é empurrada meia aresta para fora do centro. */
+.dado__face--1 { transform: translateZ(calc(var(--aresta) / 2)); }
+.dado__face--6 { transform: rotateY(180deg) translateZ(calc(var(--aresta) / 2)); }
+.dado__face--2 { transform: rotateY(90deg)  translateZ(calc(var(--aresta) / 2)); }
+.dado__face--5 { transform: rotateY(-90deg) translateZ(calc(var(--aresta) / 2)); }
+.dado__face--3 { transform: rotateX(90deg)  translateZ(calc(var(--aresta) / 2)); }
+.dado__face--4 { transform: rotateX(-90deg) translateZ(calc(var(--aresta) / 2)); }
+
+.dado__ponto {
+  width: 70%;
+  height: 70%;
+  align-self: center;
+  justify-self: center;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #e4dede);
+  border-radius: 50%;
+  box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.25);
+}
+
+/* Posição dos pontos na grade 3x3 de cada face. */
+.dado__face[data-valor="1"] .dado__ponto:nth-child(1) { grid-area: 2 / 2; }
+
+.dado__face[data-valor="2"] .dado__ponto:nth-child(1) { grid-area: 1 / 1; }
+.dado__face[data-valor="2"] .dado__ponto:nth-child(2) { grid-area: 3 / 3; }
+
+.dado__face[data-valor="3"] .dado__ponto:nth-child(1) { grid-area: 1 / 1; }
+.dado__face[data-valor="3"] .dado__ponto:nth-child(2) { grid-area: 2 / 2; }
+.dado__face[data-valor="3"] .dado__ponto:nth-child(3) { grid-area: 3 / 3; }
+
+.dado__face[data-valor="4"] .dado__ponto:nth-child(1) { grid-area: 1 / 1; }
+.dado__face[data-valor="4"] .dado__ponto:nth-child(2) { grid-area: 1 / 3; }
+.dado__face[data-valor="4"] .dado__ponto:nth-child(3) { grid-area: 3 / 1; }
+.dado__face[data-valor="4"] .dado__ponto:nth-child(4) { grid-area: 3 / 3; }
+
+.dado__face[data-valor="5"] .dado__ponto:nth-child(1) { grid-area: 1 / 1; }
+.dado__face[data-valor="5"] .dado__ponto:nth-child(2) { grid-area: 1 / 3; }
+.dado__face[data-valor="5"] .dado__ponto:nth-child(3) { grid-area: 2 / 2; }
+.dado__face[data-valor="5"] .dado__ponto:nth-child(4) { grid-area: 3 / 1; }
+.dado__face[data-valor="5"] .dado__ponto:nth-child(5) { grid-area: 3 / 3; }
+
+.dado__face[data-valor="6"] .dado__ponto:nth-child(1) { grid-area: 1 / 1; }
+.dado__face[data-valor="6"] .dado__ponto:nth-child(2) { grid-area: 1 / 3; }
+.dado__face[data-valor="6"] .dado__ponto:nth-child(3) { grid-area: 2 / 1; }
+.dado__face[data-valor="6"] .dado__ponto:nth-child(4) { grid-area: 2 / 3; }
+.dado__face[data-valor="6"] .dado__ponto:nth-child(5) { grid-area: 3 / 1; }
+.dado__face[data-valor="6"] .dado__ponto:nth-child(6) { grid-area: 3 / 3; }
+
+/* Enquanto o servidor não respondeu, o cubo roda solto. */
+.dados--rolando .dado__cubo {
+  transition: none;
+  animation: dado-gira 0.5s linear infinite;
+}
+
+@keyframes dado-gira {
+  to { transform: rotateX(380deg) rotateY(400deg) rotateZ(180deg); }
+}
+
+/* --- a soma, acima dos dados ---------------------------------------- */
+
+.dados__soma {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  translate: -50% -0.6cqw;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  text-align: center;
+  white-space: pre;
+  font-family: var(--fonte-pixel);
+}
+
+/* "3 + 4" pequeno em cima, o total grande embaixo. */
+.dados__soma-parcelas {
+  font-size: 1.8cqw;
+  letter-spacing: 0.1em;
+  color: var(--branco);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.8);
+}
+
+.dados__soma-total {
+  font-size: 5.4cqw;
+  line-height: 1.05;
+  color: var(--verde-neon);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.75), 0 0 18px rgba(57, 255, 20, 0.55);
+}
+
+/* O total só entra depois que o dado assentou — e entra com baque. */
+.dados__soma--novo .dados__soma-parcelas { animation: soma-parcelas 0.3s ease-out backwards; }
+.dados__soma--novo .dados__soma-total { animation: soma-total 0.45s cubic-bezier(0.2, 1.7, 0.4, 1) backwards; }
+
+@keyframes soma-parcelas {
+  from { transform: translateY(6px); opacity: 0; }
+}
+
+@keyframes soma-total {
+  0%   { transform: scale(0.2) rotate(-14deg); opacity: 0; }
+  55%  { transform: scale(1.35) rotate(4deg); opacity: 1; }
+  75%  { transform: scale(0.94) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dado__cubo { transition: none; }
+  .dados--rolando .dado__cubo,
+  .dado--arremesso,
+  .dados__soma--novo .dados__soma-parcelas,
+  .dados__soma--novo .dados__soma-total { animation: none; }
+}

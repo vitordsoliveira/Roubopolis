@@ -88,7 +88,11 @@ def sair(codigo: str):
     return jsonify({"ok": True}), 200
 
 
+# --- chat do lobby ---------------------------------------------------------
+
+
 def _jogador_da_sala(sessao, codigo: str):
+    """Só quem está sentado na sala lê e escreve no chat dela."""
     token = token_da_requisicao()
     jogador = g.exigir_jogador(sessao, token)
     sala = g.buscar_sala(sessao, codigo)

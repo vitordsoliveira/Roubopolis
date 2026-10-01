@@ -1,8 +1,11 @@
 # Roubopolis — regras do jogo
 
-Especificação de design. O `engine/` ainda não implementa nada disto — este é
-o alvo. Onde um wireframe discordar deste documento, **este documento manda**:
-os wireframes foram desenhados antes das regras.
+Especificação de design — o alvo, não o estado atual. Hoje o `engine/` faz só
+o sorteio de quem começa, a rolagem e o movimento: a compra de terreno e o
+aluguel foram desligados enquanto o tabuleiro novo se assenta (a última
+versão com eles é o commit `cad81ac`). Onde um wireframe discordar deste
+documento, **este documento manda**: os wireframes foram desenhados antes das
+regras.
 
 Pontos ainda em aberto estão marcados com **⚠ EM ABERTO**.
 
@@ -230,23 +233,45 @@ Sem isso o jogador aposta no escuro e não sente nada.
 
 ## 11. Tabuleiro
 
-Grade **11×12**, 42 casas na borda. Bairros reais de São Paulo e Rio; becos e
-vielas são o grupo barato. **INICIAL** no canto inferior esquerdo, **PRISÃO**
-no inferior direito.
+Grade **11×11**, 40 casas na borda, vistas em isométrico. O desenho é o de
+`img/tabuleiro/TELA TABULEIRO_5.jpg.jpeg`, com a cidade (`CIDADE.png`) no
+miolo. Bairros de São Paulo. A fonte da verdade das casas é
+`data/tabuleiros/vila_original.json`.
 
-**Linha de cima:** Av. Faria Lima · Jardins · CASA DO PREJUÍZO · Itaim Bibi ·
-Av. Augusta · (vazia) · Tatuapé · CASA DO ROUBO · Beco da Ladeira · Viela do
-Zé · Rua da Laje
+Os quatro cantos são maiores e têm cenário: **Praça** (onde os dados caem),
+**Prisão**, **Mansão** e **Represa**. A **INICIAL** não fica em canto: fica no
+meio da borda de baixo, e o preço cresce no sentido do peão — barato logo
+depois da saída, extremamente caro no fim da volta.
 
-**Coluna esquerda:** Beira Mar Leblon · CASA DO GANHO · Barra da Tijuca ·
-(vazia) · Vila Olímpia · CASA DA RECONSTRUÇÃO · Ipanema · (vazia) · Pinheiros ·
-Santana
+Na ordem em que o peão anda, a partir da INICIAL:
 
-**Coluna direita:** Escadão · (vazia) · (vazia) · CASA CORINGA · Rua do Bailão ·
-Beco da Quadra · Viela do Bar · CASA PORTAL · Copacabana · Botafogo
+**Até a Praça:** INICIAL · Capão Redondo · Itaquera · CASA DO IMPOSTO · PRAÇA
 
-**Linha de baixo:** INICIAL · Madureira · Moema · CASA DO IMPOSTO · Méier ·
-(vazia) · Vila Madalena · Beco do Mandelão · (vazia) · Tijuca · PRISÃO
+**Até a Prisão:** (neutra) · Mooca · Ipiranga · Av. Augusta · Santana · Casa Verde ·
+CASA CORINGA · CASA PORTAL · Perdizes · PRISÃO
+
+**Até a Mansão:** Vila Conceição · (neutra) · Vila Madalena · Brooklin · Moema ·
+Brasilândia · CASA DO ROUBO · Pinheiros · Alto de Pinheiros · MANSÃO
+
+**Até a Represa:** (neutra) · Vila Olímpia · Cidade Jardim · CASA DO PREJUÍZO ·
+Jardim Paulista · Ibirapuera · Itaim Bibi · CASA DA RECONSTRUÇÃO · (neutra) ·
+REPRESA
+
+**De volta à INICIAL:** (neutra) · CASA DO GANHO · Vila Nova Conceição ·
+Parelheiros · Cidade Tiradentes
+
+Por grupo: 5 extremamente caras, 5 muito caras, 3 caras, 5 médias e 5
+baratas — 23 propriedades.
+
+A arte tinha erros que o arquivo corrige: Itaim Bibi fora da linha de casas,
+Ipiranga e Alto de Pinheiros repetidos, Santana pintada como casa neutra e
+"Brasília dia" no lugar de Brasilândia. No lugar da Ipiranga repetida
+entrou a Av. Augusta; as outras vagas viraram Vila Olímpia e uma casa
+neutra.
+
+**⚠ EM ABERTO:** o Bônus do Morro vale para o grupo barato (`morro.grupo` no
+balanceamento). No tabuleiro antigo esse grupo eram becos e vielas; neste são
+bairros. Confirmar se o Morro continua sendo o grupo barato.
 
 ### Easter eggs
 
@@ -257,8 +282,7 @@ Paulo e o texto é intencional — não "melhorar", a graça está na referênci
   R$450"*
 - Perto do **Beco do Mandelão**: *"você fica bêbado e te furtam, perde R$450"*
 
-**⚠ A conferir:** a contagem por grupo bate com o README (2 extremamente
-caras, 5 muito caras, 6 caras, 5 médias, 8 becos = 26 propriedades)? O
-wireframe parece ter mais casas brancas do que isso sugeria. E confirmar que o
-grupo barato (becos, vielas, escadão, rua da laje) é o mesmo do **Bônus do
-Morro** — o multiplicador de até 2,0× depende disso.
+A Av. Augusta voltou ao tabuleiro novo, com o easter egg dela.
+
+**⚠ EM ABERTO:** o Beco do Mandelão não está no tabuleiro novo. Falta decidir
+em que casa o easter egg dele passa a morar.

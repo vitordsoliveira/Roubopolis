@@ -5,17 +5,17 @@
    soma voltas inteiras para ele tombar antes de assentar, em vez de trocar
    o número no susto. */
 
-/* Os dois dados ficam em cima do canto de baixo do tabuleiro. O JS grava
-   --dx/--dy (em % do tabuleiro) a partir do desenho. */
+/* Os dados ficam na faixa livre abaixo do mapa para não cobrir casas,
+   cenário, rótulos nem peões. */
 .dados {
   position: absolute;
-  /* Os dados e o resultado ficam acima dos peões, que usam z-index de até 1000. */
-  z-index: 1100;
-  left: var(--dx, 50%);
-  top: var(--dy, 90%);
-  translate: -50% -82%;
+  z-index: 2;
+  left: 50%;
+  top: calc(100% + 0.4vh);
+  translate: -50% 0;
   display: flex;
-  gap: 1.3cqw;
+  align-items: center;
+  gap: clamp(8px, 1cqw, 16px);
   perspective: 700px;
   pointer-events: none;
 }
@@ -23,7 +23,7 @@
 /* A aresta é variável para o mesmo cubo servir no tabuleiro e, menor, na
    cena do sorteio — as faces se posicionam a partir dela. */
 .dado {
-  --aresta: 3.7cqw;
+  --aresta: clamp(26px, 3.6cqw, 44px);
   width: var(--aresta);
   height: var(--aresta);
   transform-style: preserve-3d;
@@ -134,32 +134,29 @@
   to { transform: rotateX(380deg) rotateY(400deg) rotateZ(180deg); }
 }
 
-/* --- a soma, acima dos dados ---------------------------------------- */
+/* --- a soma, ao lado dos dados --------------------------------------- */
 
 .dados__soma {
-  position: absolute;
-  z-index: 1;
-  left: 50%;
-  bottom: 100%;
-  translate: -50% -0.6cqw;
-  display: grid;
-  place-items: center;
-  gap: 0.25cqw;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5cqw;
   text-align: center;
   white-space: pre;
   font-family: var(--fonte-pixel);
 }
 
-/* "3 + 4" pequeno em cima, o total grande embaixo. */
+.dados__soma:empty { display: none; }
+
+/* A conta e o total ficam em linha, compactos junto aos cubos. */
 .dados__soma-parcelas {
-  font-size: clamp(12px, 2cqw, 24px);
+  font-size: clamp(11px, 1.6cqw, 18px);
   letter-spacing: 0.1em;
   color: var(--branco);
   text-shadow: 0 2px 0 #000;
 }
 
 .dados__soma-total {
-  font-size: clamp(24px, 5.8cqw, 68px);
+  font-size: clamp(22px, 3.6cqw, 40px);
   line-height: 1.05;
   color: var(--verde-neon);
   -webkit-text-stroke: 1.5px #120c1a;

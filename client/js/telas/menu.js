@@ -24,6 +24,7 @@ const atalhoNome = document.querySelector("#atalho-nome");
 const atalhoCoins = document.querySelector("#atalho-coins");
 const rodapeMensagem = document.querySelector("#rodape-mensagem");
 const botaoSom = document.querySelector("#som");
+const botaoAnimacoes = document.querySelector("#animacoes");
 const modoExibicao = document.querySelector("#modo-exibicao");
 const botaoAplicarModoExibicao = document.querySelector("#aplicar-modo-exibicao");
 const controleVolumeSom = document.querySelector("#volume-som");
@@ -371,6 +372,20 @@ function pintarSom() {
 }
 pintarSom();
 
+function aplicarAnimacoes(ligadas) {
+  document.documentElement.classList.toggle("sem-animacao", !ligadas);
+  window.dispatchEvent(new Event("roubopolis:animacoes"));
+}
+
+function pintarAnimacoes() {
+  const ligadas = guardado.animacoes();
+  botaoAnimacoes.setAttribute("aria-pressed", String(ligadas));
+  botaoAnimacoes.textContent = ligadas ? "LIGADAS" : "DESLIGADAS";
+  aplicarAnimacoes(ligadas);
+}
+
+pintarAnimacoes();
+
 function pintarVolumeSom() {
   const volume = guardado.volumeSom();
   controleVolumeSom.value = String(volume);
@@ -383,6 +398,13 @@ botaoSom.addEventListener("click", () => {
   guardado.salvarSom(ligado);
   pintarSom();
   if (ligado) som.tocar("confirmar");
+});
+
+botaoAnimacoes.addEventListener("click", () => {
+  const ligadas = !guardado.animacoes();
+  guardado.salvarAnimacoes(ligadas);
+  pintarAnimacoes();
+  som.tocar("clique");
 });
 
 controleVolumeSom.addEventListener("input", () => {

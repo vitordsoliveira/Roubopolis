@@ -10,6 +10,7 @@ const CHAVE_NOME = "roubopolis.nome";
 const CHAVE_FOTO = "roubopolis.foto";
 const CHAVE_SOM = "roubopolis.som";
 const CHAVE_VOLUME_SOM = "roubopolis.volume-som";
+const CHAVE_ANIMACOES = "roubopolis.animacoes";
 const CHAVE_ABA = "roubopolis.aba-propria";
 const CHAVE_CHAT = "roubopolis.chat-aberto";
 
@@ -56,11 +57,13 @@ export const guardado = {
   foto: () => ler(CHAVE_FOTO) || null,
   som: () => ler(CHAVE_SOM, "1") === "1",
   volumeSom: () => Number(ler(CHAVE_VOLUME_SOM, "100")),
+  animacoes: () => ler(CHAVE_ANIMACOES, "1") === "1",
   salvarToken: (valor) => gravar(CHAVE_TOKEN, valor),
   salvarNome: (valor) => gravar(CHAVE_NOME, valor),
   salvarFoto: (valor) => gravar(CHAVE_FOTO, valor || ""),
   salvarSom: (ligado) => gravar(CHAVE_SOM, ligado ? "1" : "0"),
   salvarVolumeSom: (valor) => gravar(CHAVE_VOLUME_SOM, String(valor)),
+  salvarAnimacoes: (ligado) => gravar(CHAVE_ANIMACOES, ligado ? "1" : "0"),
   /** Se o chat da partida fica aberto: quem gosta de conversar não precisa
       abrir de novo a cada partida. */
   chatAberto: () => ler(CHAVE_CHAT, "0") === "1",
@@ -171,6 +174,8 @@ export const api = {
   iniciarPartida: (codigo) => pedir(`/api/salas/${codigo}/iniciar`, { metodo: "POST", corpo: {} }),
   verPartida: (codigo) => pedir(`/api/partidas/${codigo}`),
   rolarDados: (codigo) => pedir(`/api/partidas/${codigo}/rolar`, { metodo: "POST", corpo: {} }),
+  decidirCompra: (codigo, comprar) =>
+    pedir(`/api/partidas/${codigo}/comprar`, { metodo: "POST", corpo: { comprar } }),
   /** Abandona a partida: o jogador sai da roda e a vez passa. */
   sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 };

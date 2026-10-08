@@ -1,9 +1,8 @@
 /* Partida: o tabuleiro isométrico, com o servidor mandando e a tela só
    contando a história.
 
-   Por enquanto a partida é sortear quem começa, rolar e andar — a compra e
-   o aluguel saíram do jogo (ver engine/partida.py). O dinheiro continua no
-   cartão de cada jogador, parado.
+  A tela encena o sorteio, a rolagem, o movimento e a compra de terrenos;
+  aluguel e efeitos das casas ainda não estão ativos.
 
    A ordem importa. Quando alguém rola, o servidor JÁ resolveu tudo; o que
    a tela faz depois é encenar na sequência certa: o dado tomba, assenta, o
@@ -20,6 +19,7 @@ import { iconePixel } from "../tabuleiro/pixel.js";
 const elTabuleiro = document.querySelector("#tabuleiro");
 const elSvg = document.querySelector("#tabuleiro-svg");
 const elPeoes = document.querySelector("#peoes");
+const elInicio = document.querySelector("#inicio-marcador");
 const elJogadores = document.querySelector("#jogadores");
 const elLegenda = document.querySelector("#legenda");
 const elAviso = document.querySelector("#aviso");
@@ -31,6 +31,14 @@ const botaoJogar = document.querySelector("#jogar");
 const cubos = [document.querySelector("#cubo-a"), document.querySelector("#cubo-b")];
 const dadosEl = [document.querySelector("#dado-a"), document.querySelector("#dado-b")];
 const modalOrdem = document.querySelector("#modal-ordem");
+const modalCompra = document.querySelector("#modal-compra");
+const tituloCompra = document.querySelector("#compra-titulo");
+const precoCompra = document.querySelector("#compra-preco");
+const saldoCompra = document.querySelector("#compra-saldo");
+const tempoCompra = document.querySelector("#compra-tempo");
+const botoesCompra = [document.querySelector("#compra-nao"), document.querySelector("#compra-sim")];
+const painelConfigPartida = document.querySelector("#painel-config-partida");
+const botaoAnimacoesPartida = document.querySelector("#animacoes-partida");
 const painelChat = document.querySelector("#chat");
 const botaoChat = document.querySelector("#chat-abrir");
 const contadorChat = document.querySelector("#chat-contador");
@@ -38,6 +46,20 @@ const campoChat = document.querySelector("#chat-texto");
 const listaChat = document.querySelector("#chat-mensagens");
 
 const CORES_RESERVA = ["#e94f37", "#7cb342", "#a855f7", "#ffd83d", "#2563c9", "#c9a227"];
+
+function aplicarPreferenciaAnimacoes() {
+  document.documentElement.classList.toggle("sem-animacao", !guardado.animacoes());
+  window.dispatchEvent(new Event("roubopolis:animacoes"));
+}
+
+function pintarPreferenciaAnimacoes() {
+  const ligadas = guardado.animacoes();
+  botaoAnimacoesPartida.setAttribute("aria-pressed", String(ligadas));
+  botaoAnimacoesPartida.textContent = ligadas ? "LIGADAS" : "DESLIGADAS";
+  aplicarPreferenciaAnimacoes();
+}
+
+pintarPreferenciaAnimacoes();
 
 /* --- ritmo da partida -------------------------------------------------
 
@@ -74,6 +96,7 @@ let tabuleiro = null;
 /** O que `montarTabuleiro` devolveu: onde fica cada casa na tela. */
 let desenho = null;
 let estado = null;
+let prazoLocalMs = null;
 let consulta = null;
 let ocupado = false;
 let ordemMostrada = false;
@@ -85,6 +108,7 @@ let ultimoLanceVisto = 0;
 let assinaturaDosPeoes = "";
 /** Quem está nos cartões — idem, para os cartões. */
 let assinaturaDosCartoes = "";
+let assinaturaDasPropriedades = "";
 /** Impede duas consultas em voo ao mesmo tempo, que voltariam fora de ordem. */
 let consultando = false;
 /** A última jogada, contada embaixo do JOGAR por alguns segundos. */
@@ -130,7 +154,7 @@ async function abrir() {
 
 // --- utilidades -------------------------------------------------------
 
-const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const espera = (duracao) => new Promise((resolver) => setTimeout(resolver, guardado.animacoes() ? duracao : 0));
 const reais = (v) => "R$ " + Number(v || 0).toLocaleString("pt-BR");
 const inicial = (n) => (n || "?").trim().charAt(0).toUpperCase();
 
@@ -209,16 +233,23 @@ function limparSoma() {
 
 // --- tabuleiro (desenhado uma vez) ------------------------------------
 
-function desenharTabuleiro(dados) {
-  desenho = montarTabuleiro(elSvg, dados);
+function assinaturaPropriedades(propriedades = {}) {
+  return Object.entries(propriedades)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([indice, propriedade]) => `${indice}:${propriedade.dono}`)
+    .join("|");
+}
+
+function desenharTabuleiro(dados, propriedades = {}) {
+  desenho = montarTabuleiro(elSvg, dados, propriedades);
+  assinaturaDasPropriedades = assinaturaPropriedades(propriedades);
+  const inicio = desenho.pontoInicio();
+  elInicio.style.setProperty("--inicio-x", `${inicio.x}%`);
+  elInicio.style.setProperty("--inicio-y", `${inicio.y}%`);
   // O quadro do tabuleiro tem a proporção do desenho: é isso que faz a
   // porcentagem de um peão cair exatamente em cima da casa certa. Vai na
   // mesa, que usa o número para o próprio tamanho, e o tabuleiro herda.
   elTabuleiro.parentElement.style.setProperty("--proporcao", desenho.proporcao.toFixed(4));
-
-  const { x, y } = desenho.pontoDosDados();
-  elDados.style.setProperty("--dx", `${x}%`);
-  elDados.style.setProperty("--dy", `${y}%`);
 
   aplicarRitmo();
   montarLegenda(dados);
@@ -319,8 +350,15 @@ async function andarPeao({ jogador_id, de, passos }) {
   if (!peao || !tabuleiro) return;
 
   const total = tabuleiro.casas.length;
+  if (!guardado.animacoes()) {
+    colocarPeao(peao, (de - (passos % total) + total) % total);
+    peao.classList.remove("peao--andando");
+    desenho.destacar((de - (passos % total) + total) % total);
+    return;
+  }
+
   for (let passo = 1; passo <= passos; passo += 1) {
-    colocarPeao(peao, (de + passo) % total);
+    colocarPeao(peao, (de - (passo % total) + total) % total);
     peao.classList.remove("peao--andando");
     void peao.offsetWidth; // reinicia a animação do salto
     peao.classList.add("peao--andando");
@@ -328,7 +366,7 @@ async function andarPeao({ jogador_id, de, passos }) {
     await espera(MS_POR_CASA);
   }
   peao.classList.remove("peao--andando");
-  desenho.destacar((de + passos) % total);
+  desenho.destacar((de - (passos % total) + total) % total);
 }
 
 // --- cartões dos jogadores ----------------------------------------------
@@ -399,18 +437,37 @@ function pintarJogar() {
   botaoJogar.disabled = !podeRolar || ocupado;
   document.querySelector(".jogar").classList.toggle("jogar--minha-vez", podeRolar && !ocupado);
 
+  let mensagem;
   if (resumo && Date.now() < resumo.ate) {
-    elAviso.textContent = resumo.texto;
-    return;
-  }
-  resumo = null;
-
-  if (estado.fase === "encerrada") {
+    mensagem = resumo.texto;
+  } else if (estado.fase === "encerrada") {
+    resumo = null;
     const vencedor = ativos()[0];
-    elAviso.textContent = vencedor ? `A partida acabou — ${vencedor.nome} ficou sozinho.` : "A partida acabou.";
+    mensagem = vencedor ? `A partida acabou — ${vencedor.nome} ficou sozinho.` : "A partida acabou.";
+  } else if (estado.fase === "decidindo_compra") {
+    resumo = null;
+    mensagem = minha ? "Escolha se deseja comprar o terreno" : `${estado.vez.nome} está decidindo uma compra`;
   } else {
-    elAviso.textContent = podeRolar ? "Role os dados e faça sua jogada" : `Esperando ${estado.vez.nome} jogar`;
+    resumo = null;
+    mensagem = podeRolar ? "Role os dados e faça sua jogada" : `Esperando ${estado.vez.nome} jogar`;
   }
+
+  const restante = segundosRestantes();
+  if (restante !== null && estado.fase !== "encerrada" && estado.fase !== "sorteio_ordem") {
+    mensagem += ` · ${formatarTempo(restante)}`;
+  }
+  elAviso.textContent = mensagem;
+}
+
+function segundosRestantes() {
+  if (prazoLocalMs == null) return null;
+  return Math.max(0, Math.ceil((prazoLocalMs - performance.now()) / 1000));
+}
+
+function formatarTempo(segundos) {
+  const minutos = Math.floor(segundos / 60);
+  const resto = segundos % 60;
+  return `${String(minutos).padStart(2, "0")}:${String(resto).padStart(2, "0")}`;
 }
 
 /** O que o servidor contou da última rolagem vira o aviso por uns segundos. */
@@ -450,12 +507,18 @@ function anunciarVez() {
 
 function aplicar(resposta) {
   const primeiraVez = !tabuleiro;
-  if (primeiraVez) {
-    tabuleiro = resposta.tabuleiro;
-    desenharTabuleiro(tabuleiro);
-  }
   const antes = estado;
   estado = resposta.partida;
+  prazoLocalMs = estado.segundos_restantes == null
+    ? null
+    : performance.now() + estado.segundos_restantes * 1000;
+  if (primeiraVez) {
+    tabuleiro = resposta.tabuleiro;
+    desenharTabuleiro(tabuleiro, estado.propriedades);
+  } else if (assinaturaPropriedades(estado.propriedades) !== assinaturaDasPropriedades) {
+    desenho.atualizarPropriedades(estado.propriedades);
+    assinaturaDasPropriedades = assinaturaPropriedades(estado.propriedades);
+  }
 
   // Na primeira pintura, o lance que já estava no estado não é encenado:
   // seria repetir uma jogada que aconteceu antes de eu abrir a tela.
@@ -469,10 +532,32 @@ function aplicar(resposta) {
   posicionarPeoes();
   pintarCartoes();
   pintarJogar();
+  atualizarModalCompra();
 
   if (!ordemMostrada && estado.sorteio?.length) mostrarOrdem();
   anunciarVez();
 }
+
+function atualizarModalCompra() {
+  const pendente = estado?.fase === "decidindo_compra" ? estado.compra_pendente : null;
+  const minhaDecisao = Boolean(pendente && estado.vez.sou_eu);
+  modalCompra.hidden = !minhaDecisao;
+  if (!minhaDecisao) return;
+
+  const casa = tabuleiro.casas[pendente.casa];
+  const eu = estado.jogadores.find((jogador) => jogador.sou_eu);
+  tituloCompra.textContent = casa?.nome || "Terreno";
+  precoCompra.textContent = `Preço: ${reais(pendente.preco)}`;
+  saldoCompra.textContent = `Seu caixa: ${reais(eu?.caixa)} · após comprar: ${reais((eu?.caixa || 0) - pendente.preco)}`;
+  const restante = segundosRestantes();
+  tempoCompra.textContent = restante === null ? "Sem limite de tempo" : `Tempo para decidir: ${formatarTempo(restante)}`;
+}
+
+setInterval(() => {
+  if (!estado) return;
+  pintarJogar();
+  if (!modalCompra.hidden) atualizarModalCompra();
+}, 1000);
 
 /* Encena o lance de OUTRO jogador.
 
@@ -489,6 +574,7 @@ async function encenarLanceDeOutro(resposta) {
   // Se fui eu que rolei, já vi acontecer.
   const eu = resposta.partida.jogadores.find((j) => j.sou_eu);
   if (eu && movimento.jogador_id === eu.jogador_id) return false;
+  if (!guardado.animacoes()) return false;
 
   const peao = peaoDe(movimento.jogador_id);
   if (!peao) return false;
@@ -560,6 +646,27 @@ botaoJogar.addEventListener("click", async () => {
     if (estado) pintarJogar();
   }
 });
+
+async function responderCompra(comprar) {
+  if (ocupado || modalCompra.hidden) return;
+  ocupado = true;
+  botoesCompra.forEach((botao) => (botao.disabled = true));
+  pintarJogar();
+  som.tocar(comprar ? "confirmar" : "voltar");
+  try {
+    aplicar(await api.decidirCompra(codigo, comprar));
+  } catch (erro) {
+    som.tocar("erro");
+    toast(erro.message, "erro");
+  } finally {
+    ocupado = false;
+    botoesCompra.forEach((botao) => (botao.disabled = false));
+    if (estado) pintarJogar();
+  }
+}
+
+document.querySelector("#compra-nao").addEventListener("click", () => responderCompra(false));
+document.querySelector("#compra-sim").addEventListener("click", () => responderCompra(true));
 
 // --- abertura ------------------------------------------------------------
 
@@ -698,15 +805,40 @@ document.querySelector("#chat-fechar").addEventListener("click", () => {
 
 // --- opções do canto ------------------------------------------------------
 
-/* REGRAS, RANKING e CONFIG. estão no desenho, mas ainda não foram
+/* REGRAS e RANKING estão no desenho, mas ainda não foram
    construídas nesta tela. O clique responde em voz alta, como AMIGOS e
    LOJA no menu, em vez de não fazer nada. */
-for (const [id, nome] of [["regras", "REGRAS"], ["ranking", "RANKING"], ["config", "CONFIG."]]) {
+for (const [id, nome] of [["regras", "REGRAS"], ["ranking", "RANKING"]]) {
   document.querySelector(`#${id}`).addEventListener("click", () => {
     som.tocar("aviso");
     toast(`${nome} ainda não foi construído aqui. Em breve.`);
   });
 }
+
+function abrirConfiguracaoPartida() {
+  pintarPreferenciaAnimacoes();
+  painelConfigPartida.hidden = false;
+  botaoAnimacoesPartida.focus();
+}
+
+function fecharConfiguracaoPartida() {
+  painelConfigPartida.hidden = true;
+  document.querySelector("#config").focus();
+}
+
+document.querySelector("#config").addEventListener("click", abrirConfiguracaoPartida);
+document.querySelector("#config-partida-fechar").addEventListener("click", fecharConfiguracaoPartida);
+botaoAnimacoesPartida.addEventListener("click", () => {
+  guardado.salvarAnimacoes(!guardado.animacoes());
+  pintarPreferenciaAnimacoes();
+  som.tocar("clique");
+});
+painelConfigPartida.addEventListener("click", (evento) => {
+  if (evento.target === painelConfigPartida) fecharConfiguracaoPartida();
+});
+document.addEventListener("keydown", (evento) => {
+  if (evento.key === "Escape" && !painelConfigPartida.hidden) fecharConfiguracaoPartida();
+});
 
 document.querySelector("#sair").addEventListener("click", async () => {
   if (!confirm("Sair da partida? Você não volta para esta mesa.")) return;

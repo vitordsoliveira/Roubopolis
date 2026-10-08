@@ -1,5 +1,5 @@
 {
-  "_leia_isto": "As 40 casas, na ordem em que o peão anda. 'x' e 'y' são a posição na grade 11x11: x cresce do canto de cima (Mansão) para o da direita (Prisão), y cresce do canto de cima para o da esquerda (Represa). A tela desenha a grade em isométrico, então o canto x=10,y=10 (Praça) é o que fica embaixo, mais perto de quem joga.",
+  "_leia_isto": "As casas mantêm índices fixos por espaço físico; a Praça (índice 4) é a casa inicial e o peão percorre os índices em ordem decrescente para andar no sentido horário. 'x' e 'y' são a posição na grade 11x11: x cresce do canto de cima (Mansão) para o da direita (Prisão), y cresce do canto de cima para a esquerda (Represa). A Praça fica no canto de baixo, mais perto de quem joga.",
 
   "_de_onde_veio": "Desenho de img/tabuleiro/TELA TABULEIRO_5.jpg.jpeg, com os erros da arte corrigidos: Itaim Bibi fora da linha de casas, Ipiranga e Alto de Pinheiros repetidos, Santana pintada como casa neutra, 'Brasília dia' no lugar de Brasilândia e 'Alto Pinheiros' sem o 'de'. No lugar da Ipiranga repetida entrou a Av. Augusta; as outras vagas viraram Vila Olímpia e uma casa neutra.",
 
@@ -7,18 +7,18 @@
   "largura": 11,
   "altura": 11,
 
-  "_sentido": "Começa na INICIAL (no meio da borda de baixo à esquerda) e anda em direção à Praça, sobe até a Prisão, volta pela borda de cima até a Mansão e desce até a Represa. O preço cresce no caminho: barato perto da saída, extremamente caro no fim da volta.",
+  "_sentido": "Começa na Praça, no canto de baixo, e anda no sentido horário: Casa do Imposto, Itaquera, Capão Redondo, Casa neutra, Cidade Tiradentes, Represa, Mansão e Prisão, retornando à Praça. Os índices e as posições físicas das casas não mudam.",
 
-  "_preco": "Nenhuma casa é comprada por enquanto — a compra saiu do jogo. O preço fica aqui para quando ela voltar.",
+  "_preco": "Ao parar em uma propriedade sem dono, o jogador pode comprá-la pelo preço indicado.",
 
   "_cenario": "Só nos cantos: diz qual desenho a tela põe em cima da casa.",
 
   "casas": [
-    { "i": 0,  "x": 6,  "y": 10, "tipo": "inicial",      "nome": "Inicial" },
+    { "i": 0,  "x": 6,  "y": 10, "tipo": "neutra",      "nome": "Casa neutra" },
     { "i": 1,  "x": 7,  "y": 10, "tipo": "propriedade", "nome": "Capão Redondo",       "grupo": "barata",            "preco": 650 },
     { "i": 2,  "x": 8,  "y": 10, "tipo": "propriedade", "nome": "Itaquera",            "grupo": "barata",            "preco": 700 },
     { "i": 3,  "x": 9,  "y": 10, "tipo": "coletor",     "nome": "Casa do Imposto" },
-    { "i": 4,  "x": 10, "y": 10, "tipo": "neutra",      "nome": "Praça",               "cenario": "praca" },
+    { "i": 4,  "x": 10, "y": 10, "tipo": "neutra",      "nome": "Praça",               "cenario": "praca", "inicio": true },
 
     { "i": 5,  "x": 10, "y": 9,  "tipo": "neutra",      "nome": "Casa neutra" },
     { "i": 6,  "x": 10, "y": 8,  "tipo": "propriedade", "nome": "Mooca",               "grupo": "media",             "preco": 1400 },

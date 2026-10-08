@@ -7,7 +7,7 @@ muda — só o transporte.
 
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from server.db.session import Sessao
 from server.rotas.auth import token_da_requisicao
@@ -41,6 +41,16 @@ def estado(codigo: str):
 def rolar(codigo: str):
     sessao, sala, jogador = _sala_e_jogador(codigo)
     return jsonify(p.rolar(sessao, sala, jogador)), 200
+
+
+@bp.post("/partidas/<codigo>/comprar")
+def comprar(codigo: str):
+    sessao, sala, jogador = _sala_e_jogador(codigo)
+    dados = request.get_json(silent=True) or {}
+    comprar = dados.get("comprar")
+    if not isinstance(comprar, bool):
+        return jsonify({"erro": "Informe se deseja comprar o terreno."}), 400
+    return jsonify(p.decidir_compra(sessao, sala, jogador, comprar)), 200
 
 
 @bp.post("/partidas/<codigo>/sair")

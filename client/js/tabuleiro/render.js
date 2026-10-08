@@ -300,8 +300,8 @@ function cenario(pai, casa, geo, z) {
   const { u0, v0, u1, v1, uc, vc } = geo;
   switch (casa.cenario) {
     case "praca": {
-      // Quiosque no fundo, árvores nos lados: o meio e a frente ficam
-      // livres para os dados, que caem aqui.
+      // Quiosque no fundo. A Praça é o início, então os lados ficam livres
+      // para a seta, o rótulo e os peões que começam aqui.
       const k = 0.17;
       const ku = u0 + 0.24;
       const kv = v0 + 0.24;
@@ -309,8 +309,6 @@ function cenario(pai, casa, geo, z) {
       face(pai, [[ku - 0.07, kv + k, z + 0.18], [ku + 0.07, kv + k, z + 0.18], [ku + 0.07, kv + k, z], [ku - 0.07, kv + k, z]],
         "#2f6bd6");
       telhado(pai, ku - k - 0.05, kv - k - 0.05, ku + k + 0.05, kv + k + 0.05, z + 0.28, 0.22, "#d23a3a");
-      iconeEmPe(pai, "arvore", u0 + 0.2, v1 - 0.3, z, 0.58 * C);
-      iconeEmPe(pai, "pinheiro", u1 - 0.3, v0 + 0.2, z, 0.6 * C);
       break;
     }
     case "represa": {
@@ -375,10 +373,18 @@ const ICONE_DO_TIPO = {
 
 function enfeitar(pai, casa, geo, ctx) {
   const z = ALTURA_CASA;
-  if (casa.cenario) return cenario(pai, casa, geo, z);
+  if (casa.cenario) {
+    if (!casa.inicio) cenario(pai, casa, geo, z);
+    if (casa.inicio) setaNoChao(pai, geo, ctx.direcaoDaSaida, z);
+    return;
+  }
 
   const [u, v] = pontoDoEnfeite(geo);
-  if (casa.tipo === "propriedade") return predio(pai, casa, u, v, z);
+  if (casa.tipo === "propriedade") {
+    const adquirido = Boolean(ctx.propriedades?.[casa.i]);
+    const camada = no("g", { class: "casa__predio", ...(adquirido ? {} : { display: "none" }) }, pai);
+    return predio(camada, casa, u, v, z);
+  }
   // Casa neutra não tem nome escrito: a árvore fica no meio dela.
   if (casa.tipo === "neutra") return iconeEmPe(pai, "arvore", geo.uc, geo.vc, z, 0.62 * C);
   if (casa.tipo === "inicial") return setaNoChao(pai, geo, ctx.direcaoDaSaida, z);
@@ -405,17 +411,16 @@ function quebrarNome(nome) {
 }
 
 function rotular(pai, casa, geo, cor) {
-  // Os cantos são cenário, e a casa neutra é só a árvore — como na arte.
+  if (casa.inicio || casa.tipo === "inicial") return;
+  // Cantos com cenário e casas neutras não recebem rótulos comuns.
   if (casa.cenario || casa.tipo === "neutra") return;
 
-  const inicial = casa.tipo === "inicial";
-  const linhas = inicial ? [casa.nome.toUpperCase()] : quebrarNome(casa.nome);
+  const linhas = quebrarNome(casa.nome);
   const [u, v] = pontoDoRotulo(geo);
   const [x, y] = tela(u, v, ALTURA_CASA);
 
   const classes = ["tabuleiro__nome"];
   if (eClara(cor)) classes.push("tabuleiro__nome--escuro");
-  if (inicial) classes.push("tabuleiro__nome--inicial");
 
   const texto = no("text", { x: x.toFixed(1), y: y.toFixed(1), class: classes.join(" "), "data-i": casa.i }, pai);
   // Centraliza o bloco na altura: sobe meia linha por linha extra.
@@ -481,7 +486,7 @@ function desenharCasa(pai, item, dados, ctx) {
  * Desenha o tabuleiro dentro do `svg` e devolve como conversar com ele.
  * @returns {{proporcao: number, ponto: Function, pontoDosDados: Function, destacar: Function}}
  */
-export function montarTabuleiro(svg, dados) {
+export function montarTabuleiro(svg, dados, propriedades = {}) {
   const largura = dados.largura;
   const altura = dados.altura;
   const lu = ladoDoTabuleiro(largura);
@@ -508,13 +513,18 @@ export function montarTabuleiro(svg, dados) {
   no("stop", { offset: "0.55", "stop-color": "#ffffff", "stop-opacity": 0 }, brilho);
   no("stop", { offset: "1", "stop-color": "#000000", "stop-opacity": 0.12 }, brilho);
 
-  // A seta da INICIAL aponta para a casa 1, seja qual for a borda.
-  const saida = itens[0].geo;
-  const seguinte = itens[1 % total].geo;
+  // A seta da casa inicial aponta para a casa anterior no índice, no sentido horário.
+  const indiceInicial = dados.casas.findIndex((casa) => casa.inicio || casa.tipo === "inicial");
+  const inicio = indiceInicial >= 0 ? indiceInicial : 0;
+  const saida = itens[inicio].geo;
+  const seguinte = itens[(inicio + total - 1) % total].geo;
   const du = seguinte.uc - saida.uc;
   const dv = seguinte.vc - saida.vc;
   const comprimento = Math.hypot(du, dv) || 1;
-  const ctx = { direcaoDaSaida: [du / comprimento, dv / comprimento] };
+  const ctx = {
+    direcaoDaSaida: [du / comprimento, dv / comprimento],
+    propriedades,
+  };
 
   const porProfundidade = (a, b) => a.geo.uc + a.geo.vc - (b.geo.uc + b.geo.vc);
 
@@ -543,6 +553,15 @@ export function montarTabuleiro(svg, dados) {
   return {
     proporcao: caixaVista.w / caixaVista.h,
 
+    /** Só mostra os prédios dos terrenos efetivamente comprados. */
+    atualizarPropriedades(propriedades = {}) {
+      for (const predio of svg.querySelectorAll(".casa__predio")) {
+        const indice = predio.parentElement.dataset.i;
+        if (propriedades[indice]) predio.removeAttribute("display");
+        else predio.setAttribute("display", "none");
+      }
+    },
+
     /** Onde ficam os pés do peão, em % do quadro. */
     ponto(indice, assento = 0) {
       const { geo } = itens[((indice % total) + total) % total];
@@ -561,10 +580,10 @@ export function montarTabuleiro(svg, dados) {
       return emPorcento(tela(u, v, ALTURA_CASA));
     },
 
-    /** Os dados ficam na frente do canto mais próximo de quem joga, como na arte. */
-    pontoDosDados() {
-      const perto = itens.reduce((a, b) => (b.geo.uc + b.geo.vc > a.geo.uc + a.geo.vc ? b : a));
-      return emPorcento(tela(perto.geo.uc + 0.4, perto.geo.vc + 0.4, ALTURA_CASA));
+    /** Posição do marcador dentro da casa inicial. */
+    pontoInicio() {
+      const geo = itens[inicio].geo;
+      return emPorcento(tela(geo.uc + 0.43, geo.vc + 0.48, ALTURA_CASA + 0.35));
     },
 
     /** Faz a casa pular algumas vezes, para marcar onde o peão parou. */

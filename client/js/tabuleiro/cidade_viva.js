@@ -696,7 +696,11 @@ export function animarCidade(camada) {
   muro.pintar();
 
   let antes = null;
+  let quadroPendente = null;
+  let animando = false;
   function quadro(agora) {
+    quadroPendente = null;
+    if (!animando) return;
     // Aba escondida pausa o requestAnimationFrame; na volta, o salto de
     // tempo é cortado para ninguém atravessar a cidade num quadro.
     const dt = antes === null ? 0 : Math.min(0.05, (agora - antes) / 1000);
@@ -704,7 +708,18 @@ export function animarCidade(camada) {
     pelada.atualizar(dt);
     muro.atualizar(dt);
     transito.atualizar(dt);
-    requestAnimationFrame(quadro);
+    quadroPendente = requestAnimationFrame(quadro);
   }
-  requestAnimationFrame(quadro);
+
+  function atualizarAnimacao() {
+    const deveAnimar = !quieto && !document.documentElement.classList.contains("sem-animacao");
+    if (deveAnimar === animando) return;
+    animando = deveAnimar;
+    antes = null;
+    if (animando) quadroPendente = requestAnimationFrame(quadro);
+    else if (quadroPendente !== null) cancelAnimationFrame(quadroPendente);
+  }
+
+  window.addEventListener("roubopolis:animacoes", atualizarAnimacao);
+  atualizarAnimacao();
 }

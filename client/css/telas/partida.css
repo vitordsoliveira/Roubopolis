@@ -121,8 +121,9 @@
   translate: -50% 0;
   /* Pela altura: o losango é mais largo que alto, e a altura é o que
      acaba primeiro em tela de computador. A --proporcao é gravada pelo JS
-     aqui na mesa, e o .tabuleiro herda. */
-  width: min(97vw, calc(80vh * var(--proporcao, 1.4)));
+     aqui na mesa, e o .tabuleiro herda. 86vh vai até pouco acima do
+     JOGAR — por isso os dados moram dentro do quadro, não embaixo dele. */
+  width: min(97vw, calc(86vh * var(--proporcao, 1.4)));
 }
 
 /* --- jogadores ---------------------------------------------------------- */
@@ -626,6 +627,90 @@
   74%  { opacity: 1; transform: translateX(0) skewX(0); }
   100% { opacity: 0; transform: translateX(70%) skewX(12deg); }
 }
+
+/* --- resultado do dado ------------------------------------------------------------
+
+   O mesmo movimento do anúncio da vez — entra torto da esquerda, endireita,
+   sai torto pela direita —, mas em três tempos comandados pelo JS: a faixa
+   precisa ficar parada o quanto o dado leva para assentar, e esse tempo sai
+   do ritmo da partida (--ms-deslize e --ms-giro são gravados lá). Por isso
+   é transição entre estados, não uma animação de duração fixa. */
+
+.anuncio-dados {
+  position: fixed;
+  top: 46%;
+  left: 0;
+  right: 0;
+  z-index: 56;
+  display: grid;
+  place-items: center;
+  translate: 0 -50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-70%) skewX(-12deg);
+}
+
+.anuncio-dados--dentro {
+  opacity: 1;
+  transform: translateX(0) skewX(0);
+  transition: opacity var(--ms-deslize, 320ms) ease-out, transform var(--ms-deslize, 320ms) cubic-bezier(0.2, 1.3, 0.4, 1);
+}
+
+.anuncio-dados--saindo {
+  opacity: 0;
+  transform: translateX(70%) skewX(12deg);
+  transition: opacity var(--ms-deslize, 320ms) ease-in, transform var(--ms-deslize, 320ms) ease-in;
+}
+
+.anuncio-dados__faixa {
+  display: flex;
+  align-items: center;
+  gap: 4vh;
+  padding: 2vh 7vh;
+  background: rgba(18, 7, 38, 0.94);
+  border-top: 0.5vh solid #9b3dff;
+  border-bottom: 0.5vh solid #9b3dff;
+}
+
+.anuncio-dados__quem {
+  color: var(--amarelo);
+  font-size: 4.4vh;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-shadow: 0 0.4vh 0 #7a5600;
+}
+
+.anuncio-dados__cubos {
+  display: flex;
+  gap: 2.4vh;
+  perspective: 900px;
+}
+
+/* A soma já ocupa o lugar dela enquanto o dado gira — só fica invisível.
+   Assim a faixa não muda de largura no meio e os dados não pulam. */
+.anuncio-dados__soma {
+  display: flex;
+  align-items: baseline;
+  gap: 1.6vh;
+  min-width: 12vh;
+  white-space: pre;
+  font-family: var(--fonte-pixel);
+  opacity: 0;
+}
+
+.anuncio-dados__soma .dados__soma-parcelas { font-size: 3vh; }
+
+.anuncio-dados__soma .dados__soma-total {
+  font-size: 9vh;
+  -webkit-text-stroke: 3px #120c1a;
+  text-shadow: 0 0.5vh 0 #000, 0 0 2.6vh rgba(57, 255, 20, 0.8);
+}
+
+/* Com o dado parado, o total bate com o mesmo baque da soma pequena. */
+.anuncio-dados--revelado .anuncio-dados__soma { opacity: 1; }
+.anuncio-dados--revelado .dados__soma-parcelas { animation: soma-parcelas 0.3s ease-out backwards; }
+.anuncio-dados--revelado .dados__soma-total { animation: soma-total 0.45s cubic-bezier(0.2, 1.7, 0.4, 1) backwards; }
 
 /* O aviso passageiro sobe para o topo: embaixo ele cobria o JOGAR. */
 .tela-partida .toast-pilha {

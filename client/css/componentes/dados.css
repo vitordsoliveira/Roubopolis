@@ -5,13 +5,14 @@
    soma voltas inteiras para ele tombar antes de assentar, em vez de trocar
    o número no susto. */
 
-/* Os dados ficam na faixa livre abaixo do mapa para não cobrir casas,
-   cenário, rótulos nem peões. */
+/* Os dados ficam no triângulo vazio que o losango deixa embaixo à direita
+   do quadro: não cobrem casas, cenário, rótulos nem peões, e não ocupam a
+   faixa entre o tabuleiro e o JOGAR — que é o que deixa a mesa crescer. */
 .dados {
   position: absolute;
   z-index: 2;
-  left: 50%;
-  top: calc(100% + 0.4vh);
+  left: 76%;
+  top: 86%;
   translate: -50% 0;
   display: flex;
   align-items: center;
@@ -32,6 +33,12 @@
 .dado--mini { --aresta: clamp(28px, 5.2vh, 50px); }
 .dado--mini .dado__face { padding: 3px; border-width: 1.5px; border-radius: 5px; }
 .dado--mini .dado__ponto { width: 80%; height: 80%; }
+
+/* O da faixa do resultado: grande para ler de longe, e girando mais tempo
+   que o pequeno (o JS grava --ms-giro a partir do ritmo da partida). */
+.dado--grande { --aresta: clamp(48px, 9vh, 96px); }
+.dado--grande .dado__face { border-width: 3px; }
+.dado--grande .dado__cubo { transition-duration: var(--ms-giro, 1050ms); }
 
 /* --- o arremesso ---------------------------------------------------
 

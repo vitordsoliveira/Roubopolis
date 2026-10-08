@@ -41,7 +41,7 @@
     <section class="mesa" aria-label="Tabuleiro">
       <div class="tabuleiro" id="tabuleiro">
         <svg class="tabuleiro__svg" id="tabuleiro-svg" role="img" aria-label="Tabuleiro de Roubopolis"></svg>
-        <!-- Os dados ficam no canto de baixo do tabuleiro, como na arte. -->
+        <!-- Os dados ficam no canto vazio embaixo à direita do losango. -->
         <div class="dados" id="dados">
           <div class="dados__soma" id="dados-soma" aria-live="polite"></div>
           <div class="dado" id="dado-a"><div class="dado__cubo" id="cubo-a"></div></div>
@@ -93,6 +93,19 @@
 
   <!-- Anúncio da vez, atravessa a tela na troca de turno -->
   <div class="anuncio" id="anuncio" aria-hidden="true"><span id="anuncio-texto"></span></div>
+
+  <!-- Resultado do dado, no mesmo jeito do anúncio da vez: a faixa entra,
+       os dados grandes giram e assentam, o total bate e a faixa sai. -->
+  <div class="anuncio-dados" id="anuncio-dados" aria-hidden="true">
+    <div class="anuncio-dados__faixa">
+      <span class="anuncio-dados__quem" id="anuncio-dados-quem"></span>
+      <div class="anuncio-dados__cubos">
+        <div class="dado dado--grande"><div class="dado__cubo" id="cubo-grande-a"></div></div>
+        <div class="dado dado--grande"><div class="dado__cubo" id="cubo-grande-b"></div></div>
+      </div>
+      <span class="anuncio-dados__soma" id="anuncio-dados-soma"></span>
+    </div>
+  </div>
 
   <!-- Abertura: todo mundo junto jogando os dados para ver quem começa -->
   <div class="cortina" id="modal-ordem" hidden>

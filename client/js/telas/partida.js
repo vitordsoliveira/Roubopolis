@@ -27,6 +27,10 @@ const elSoma = document.querySelector("#dados-soma");
 const elDados = document.querySelector("#dados");
 const elAnuncio = document.querySelector("#anuncio");
 const elAnuncioTexto = document.querySelector("#anuncio-texto");
+const elAnuncioDados = document.querySelector("#anuncio-dados");
+const elAnuncioDadosQuem = document.querySelector("#anuncio-dados-quem");
+const elAnuncioDadosSoma = document.querySelector("#anuncio-dados-soma");
+const cubosGrandes = [document.querySelector("#cubo-grande-a"), document.querySelector("#cubo-grande-b")];
 const botaoJogar = document.querySelector("#jogar");
 const cubos = [document.querySelector("#cubo-a"), document.querySelector("#cubo-b")];
 const dadosEl = [document.querySelector("#dado-a"), document.querySelector("#dado-b")];
@@ -80,6 +84,11 @@ const ms = (base) => Math.round(base * RITMO);
 const MS_POR_CASA = ms(330);
 /** Do arremesso até o dado assentar. */
 const MS_ARREMESSO = ms(1150);
+/** Os dados grandes da faixa girando até assentar. Um pouco menos que o
+    arremesso: o total só bate com eles já parados. */
+const MS_GIRO_GRANDE = ms(1050);
+/** A faixa do resultado entrando ou saindo da tela. */
+const MS_DESLIZE_FAIXA = ms(320);
 /** Respiro depois da soma aparecer, para dar tempo de LER antes de andar. */
 const MS_LER_RESULTADO = ms(1200);
 /** Pausa depois que o peão pousa, antes do estado novo entrar. */
@@ -196,7 +205,7 @@ function girarCubo(cubo, valor, voltas = 2) {
 }
 
 function montarDados() {
-  for (const cubo of cubos) cubo.replaceChildren(...criarFaces());
+  for (const cubo of [...cubos, ...cubosGrandes]) cubo.replaceChildren(...criarFaces());
   mostrarDados([5, 6], { girar: false });
 }
 
@@ -229,6 +238,56 @@ function mostrarSoma(valores) {
 function limparSoma() {
   elSoma.classList.remove("dados__soma--novo");
   elSoma.replaceChildren();
+}
+
+/* A rolagem inteira, igual para quem rolou e para quem assiste.
+
+   Os dados pequenos no canto do tabuleiro ficam com o último valor, como
+   lembrete. O que a mesa LÊ é a faixa: atravessa a tela como o anúncio da
+   vez, com os dados grandes girando no meio; eles assentam, o total bate,
+   e a faixa sai antes do peão andar — senão cobriria o caminho dele. */
+async function encenarDados(quem, valores, { meu = false } = {}) {
+  arremessar(valores);
+  som.tocar("selecionar");
+
+  // Sem animação a faixa não tem o que mostrar: os dados pequenos e a
+  // soma já contam o resultado.
+  const comFaixa = guardado.animacoes();
+  if (comFaixa) entrarFaixaDosDados(quem, valores);
+
+  await espera(MS_ARREMESSO);
+  mostrarSoma(valores);
+  if (comFaixa) elAnuncioDados.classList.add("anuncio-dados--revelado");
+  if (meu) som.tocar("confirmar");
+  await espera(MS_LER_RESULTADO);
+
+  if (!comFaixa) return;
+  elAnuncioDados.classList.replace("anuncio-dados--dentro", "anuncio-dados--saindo");
+  await espera(MS_DESLIZE_FAIXA);
+  // O estado de repouso não tem transição: volta para a esquerda sem
+  // atravessar a tela de novo.
+  elAnuncioDados.classList.remove("anuncio-dados--saindo", "anuncio-dados--revelado");
+}
+
+function entrarFaixaDosDados(quem, valores) {
+  elAnuncioDadosQuem.textContent = quem;
+  elAnuncioDadosSoma.replaceChildren(
+    elemento("span", "dados__soma-parcelas", valores.join("  +  ")),
+    elemento("span", "dados__soma-total", String(valores.reduce((a, b) => a + b, 0))),
+  );
+  elAnuncioDados.classList.remove("anuncio-dados--dentro", "anuncio-dados--saindo", "anuncio-dados--revelado");
+
+  // Os cubos voltam à pose de repouso sem transição, para tombarem as
+  // mesmas três voltas toda vez em vez de só o que falta da rolagem anterior.
+  for (const cubo of cubosGrandes) {
+    cubo.style.transition = "none";
+    cubo.style.transform = "";
+  }
+  void elAnuncioDados.offsetWidth;
+  for (const cubo of cubosGrandes) cubo.style.transition = "";
+
+  elAnuncioDados.classList.add("anuncio-dados--dentro");
+  valores.forEach((valor, i) => girarCubo(cubosGrandes[i], valor, 3));
 }
 
 // --- tabuleiro (desenhado uma vez) ------------------------------------
@@ -273,6 +332,8 @@ function montarLegenda(dados) {
    valor. */
 function aplicarRitmo() {
   elTabuleiro.style.setProperty("--ms-passo", `${MS_POR_CASA}ms`);
+  elAnuncioDados.style.setProperty("--ms-giro", `${MS_GIRO_GRANDE}ms`);
+  elAnuncioDados.style.setProperty("--ms-deslize", `${MS_DESLIZE_FAIXA}ms`);
 }
 
 // --- peões -------------------------------------------------------------
@@ -584,12 +645,8 @@ async function encenarLanceDeOutro(resposta) {
     // Garante que o peão parte da origem, mesmo se uma consulta se perdeu.
     teleportarPeao(peao, movimento.de);
 
-    arremessar(movimento.dados);
-    som.tocar("selecionar");
-    await espera(MS_ARREMESSO);
-
-    mostrarSoma(movimento.dados);
-    await espera(MS_LER_RESULTADO);
+    const quem = resposta.partida.jogadores.find((j) => j.jogador_id === movimento.jogador_id);
+    await encenarDados(`${quem?.nome || "Alguém"} tirou`, movimento.dados);
 
     await andarPeao(movimento);
     await espera(MS_APOS_CHEGAR);
@@ -616,16 +673,10 @@ botaoJogar.addEventListener("click", async () => {
     // Marca como já visto: a consulta seguinte não repete a minha jogada.
     ultimoLanceVisto = movimento.lance;
 
-    // 1. o arremesso: caem de cima, quicam e assentam no valor
-    elDados.classList.remove("dados--rolando");
-    arremessar(movimento.dados);
-    som.tocar("selecionar");
-    await espera(MS_ARREMESSO);
-
+    // 1. o arremesso: a faixa entra com os dados grandes girando
     // 2. só com o dado parado a soma aparece — antes disso não há o que ler
-    mostrarSoma(movimento.dados);
-    som.tocar("confirmar");
-    await espera(MS_LER_RESULTADO);
+    elDados.classList.remove("dados--rolando");
+    await encenarDados("Você tirou", movimento.dados, { meu: true });
 
     // 3. o peão anda casa por casa
     await andarPeao(movimento);

@@ -1,0 +1,55 @@
+/* O dinheiro entrando e saindo (js/ui/dinheiro_flutuante.js).
+
+   O valor sobe do cartão do jogador, cresce um instante e some no alto. Em
+   pixel, com o mesmo contorno escuro do total do dado, para ler por cima
+   de qualquer fundo. */
+
+.dinheiro-flutuante {
+  position: fixed;
+  z-index: 60;
+  translate: -50% -100%;
+  font-family: var(--fonte-pixel);
+  font-size: 3.4vh;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  -webkit-text-stroke: 2px #120c1a;
+  paint-order: stroke fill;
+  animation: dinheiro-sobe 1.7s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+
+.dinheiro-flutuante--ganho {
+  color: var(--verde-neon);
+  text-shadow: 0 0.35vh 0 #000, 0 0 1.6vh rgba(57, 255, 20, 0.7);
+}
+
+.dinheiro-flutuante--perda {
+  color: #ff4a4a;
+  text-shadow: 0 0.35vh 0 #000, 0 0 1.6vh rgba(255, 60, 60, 0.7);
+}
+
+@keyframes dinheiro-sobe {
+  0%   { transform: translateY(1vh) scale(0.4); opacity: 0; }
+  14%  { transform: translateY(-1vh) scale(1.25); opacity: 1; }
+  26%  { transform: translateY(-1.6vh) scale(1); }
+  75%  { opacity: 1; }
+  100% { transform: translateY(-8vh) scale(0.95); opacity: 0; }
+}
+
+/* O cartão reage: a faixa do caixa pisca na cor e treme (perda) ou pula
+   (ganho). */
+.dinheiro--perdeu { animation: dinheiro-treme 0.5s steps(2, end); }
+.dinheiro--ganhou { animation: dinheiro-pula 0.55s cubic-bezier(0.2, 1.6, 0.4, 1); }
+
+@keyframes dinheiro-treme {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-0.6vh); background: #ffb3b3; }
+  40% { transform: translateX(0.6vh); background: #ffb3b3; }
+  60% { transform: translateX(-0.4vh); }
+  80% { transform: translateX(0.4vh); }
+}
+
+@keyframes dinheiro-pula {
+  0%, 100% { transform: translateY(0); }
+  35% { transform: translateY(-0.8vh) scale(1.05); background: #c9ffb8; }
+}

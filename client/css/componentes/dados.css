@@ -3,28 +3,16 @@
    Cada dado é um cubo de 6 faces montado com translateZ. Para mostrar um
    valor, o cubo gira até a face correspondente ficar de frente — e o JS
    soma voltas inteiras para ele tombar antes de assentar, em vez de trocar
-   o número no susto. */
+   o número no susto.
 
-/* Os dados ficam no triângulo vazio que o losango deixa embaixo à direita
-   do quadro: não cobrem casas, cenário, rótulos nem peões, e não ocupam a
-   faixa entre o tabuleiro e o JOGAR — que é o que deixa a mesa crescer. */
-.dados {
-  position: absolute;
-  z-index: 2;
-  left: 76%;
-  top: 86%;
-  translate: -50% 0;
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1cqw, 16px);
-  perspective: 700px;
-  pointer-events: none;
-}
+   Moram em dois lugares: grandes na faixa do resultado, que atravessa a
+   tela a cada rolagem (css/telas/partida.css), e pequenos na cena do
+   sorteio. No tabuleiro não há dado — a faixa é o que a mesa lê. */
 
-/* A aresta é variável para o mesmo cubo servir no tabuleiro e, menor, na
-   cena do sorteio — as faces se posicionam a partir dela. */
+/* A aresta é variável para o mesmo cubo servir nos dois tamanhos — as faces
+   se posicionam a partir dela. */
 .dado {
-  --aresta: clamp(26px, 3.6cqw, 44px);
+  --aresta: 44px;
   width: var(--aresta);
   height: var(--aresta);
   transform-style: preserve-3d;
@@ -35,33 +23,10 @@
 .dado--mini .dado__ponto { width: 80%; height: 80%; }
 
 /* O da faixa do resultado: grande para ler de longe, e girando mais tempo
-   que o pequeno (o JS grava --ms-giro a partir do ritmo da partida). */
+   que o do sorteio (o JS grava --ms-giro a partir do ritmo da partida). */
 .dado--grande { --aresta: clamp(48px, 9vh, 96px); }
 .dado--grande .dado__face { border-width: 3px; }
 .dado--grande .dado__cubo { transition-duration: var(--ms-giro, 1050ms); }
-
-/* --- o arremesso ---------------------------------------------------
-
-   O dado cai de cima, bate na mesa, quica duas vezes e assenta. O salto
-   fica no invólucro (.dado) e o tombo no cubo (.dado__cubo): duas
-   animações independentes, que é o que faz parecer objeto jogado em vez de
-   figura trocando de imagem. */
-
-.dado--arremesso { animation: dado-arremesso 0.85s cubic-bezier(0.3, 0.7, 0.4, 1) backwards; }
-
-/* O segundo dado sai um pouco depois e de outro lado: cair em sincronia
-   entrega que é animação. */
-#dado-b.dado--arremesso { animation-delay: 0.09s; --vindo-de: 3cqw; }
-
-@keyframes dado-arremesso {
-  0%   { transform: translate(var(--vindo-de, -3cqw), -14cqw) scale(0.45); opacity: 0; }
-  30%  { opacity: 1; }
-  52%  { transform: translate(0, 1cqw) scale(1.1); }
-  66%  { transform: translate(0, -1.2cqw) scale(0.96); }
-  80%  { transform: translate(0, 0.5cqw) scale(1.03); }
-  91%  { transform: translate(0, -0.3cqw) scale(0.99); }
-  100% { transform: translate(0, 0) scale(1); }
-}
 
 .dado__cubo {
   position: relative;
@@ -131,57 +96,8 @@
 .dado__face[data-valor="6"] .dado__ponto:nth-child(5) { grid-area: 3 / 1; }
 .dado__face[data-valor="6"] .dado__ponto:nth-child(6) { grid-area: 3 / 3; }
 
-/* Enquanto o servidor não respondeu, o cubo roda solto. */
-.dados--rolando .dado__cubo {
-  transition: none;
-  animation: dado-gira 0.5s linear infinite;
-}
-
+/* Rodando solto, sem valor ainda: a faixa enquanto o servidor não
+   respondeu, e o sorteio na entrada dos bonecos. */
 @keyframes dado-gira {
   to { transform: rotateX(380deg) rotateY(400deg) rotateZ(180deg); }
-}
-
-/* --- a soma, ao lado dos dados --------------------------------------- */
-
-.dados__soma {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5cqw;
-  text-align: center;
-  white-space: pre;
-  font-family: var(--fonte-pixel);
-}
-
-.dados__soma:empty { display: none; }
-
-/* A conta e o total ficam em linha, compactos junto aos cubos. */
-.dados__soma-parcelas {
-  font-size: clamp(11px, 1.6cqw, 18px);
-  letter-spacing: 0.1em;
-  color: var(--branco);
-  text-shadow: 0 2px 0 #000;
-}
-
-.dados__soma-total {
-  font-size: clamp(22px, 3.6cqw, 40px);
-  line-height: 1.05;
-  color: var(--verde-neon);
-  -webkit-text-stroke: 1.5px #120c1a;
-  paint-order: stroke fill;
-  text-shadow: 0 2px 0 #000, 0 0 14px rgba(57, 255, 20, 0.75);
-}
-
-/* O total só entra depois que o dado assentou — e entra com baque. */
-.dados__soma--novo .dados__soma-parcelas { animation: soma-parcelas 0.3s ease-out backwards; }
-.dados__soma--novo .dados__soma-total { animation: soma-total 0.45s cubic-bezier(0.2, 1.7, 0.4, 1) backwards; }
-
-@keyframes soma-parcelas {
-  from { transform: translateY(6px); opacity: 0; }
-}
-
-@keyframes soma-total {
-  0%   { transform: scale(0.2) rotate(-14deg); opacity: 0; }
-  55%  { transform: scale(1.35) rotate(4deg); opacity: 1; }
-  75%  { transform: scale(0.94) rotate(-2deg); }
-  100% { transform: scale(1) rotate(0); opacity: 1; }
 }

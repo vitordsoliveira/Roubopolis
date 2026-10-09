@@ -122,7 +122,7 @@
   /* Pela altura: o losango é mais largo que alto, e a altura é o que
      acaba primeiro em tela de computador. A --proporcao é gravada pelo JS
      aqui na mesa, e o .tabuleiro herda. 86vh vai até pouco acima do
-     JOGAR — por isso os dados moram dentro do quadro, não embaixo dele. */
+     JOGAR — não sobra faixa embaixo do tabuleiro, e nada deve morar lá. */
   width: min(97vw, calc(86vh * var(--proporcao, 1.4)));
 }
 
@@ -220,6 +220,28 @@
 }
 
 .cartao--eu .cartao__eu { display: inline; }
+
+/* Quantos terrenos o jogador tem, ao lado da bandeira na cor dele — a
+   mesma que aparece fincada no telhado de cada terreno dele no tabuleiro. */
+.cartao__terrenos {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4vh;
+  margin-left: auto;
+  font-size: 1.8vh;
+  color: var(--branco);
+}
+
+.cartao__bandeira {
+  width: 1.6vh;
+  height: 2.2vh;
+  background:
+    linear-gradient(#2a2440, #2a2440) left / 0.3vh 100% no-repeat,
+    var(--cor-jogador, #fff);
+  /* A haste é a faixa escura da esquerda; o pano, o triângulo de cima. */
+  clip-path: polygon(0 0, 100% 30%, 0.3vh 60%, 0.3vh 100%, 0 100%);
+}
 
 /* O valor numa faixa clara, com o maço de dinheiro no canto. */
 .cartao__caixa {
@@ -631,10 +653,10 @@
 /* --- resultado do dado ------------------------------------------------------------
 
    O mesmo movimento do anúncio da vez — entra torto da esquerda, endireita,
-   sai torto pela direita —, mas em três tempos comandados pelo JS: a faixa
-   precisa ficar parada o quanto o dado leva para assentar, e esse tempo sai
-   do ritmo da partida (--ms-deslize e --ms-giro são gravados lá). Por isso
-   é transição entre estados, não uma animação de duração fixa. */
+   sai torto pela direita —, mas em tempos comandados pelo JS: a faixa fica
+   parada enquanto o servidor não responde e enquanto o dado assenta, e esse
+   tempo sai do ritmo da partida (--ms-deslize e --ms-giro são gravados lá).
+   Por isso é transição entre estados, não uma animação de duração fixa. */
 
 .anuncio-dados {
   position: fixed;
@@ -687,30 +709,60 @@
   perspective: 900px;
 }
 
+/* Na minha jogada a faixa entra antes do servidor responder: os cubos
+   rodam soltos até o valor chegar. */
+.anuncio-dados--rolando .dado__cubo {
+  transition: none;
+  animation: dado-gira 0.5s linear infinite;
+}
+
 /* A soma já ocupa o lugar dela enquanto o dado gira — só fica invisível.
-   Assim a faixa não muda de largura no meio e os dados não pulam. */
+   As larguras mínimas cabem "6 + 6" e "12": a faixa não muda de largura
+   quando o valor chega, e os dados não pulam. */
 .anuncio-dados__soma {
   display: flex;
   align-items: baseline;
   gap: 1.6vh;
-  min-width: 12vh;
   white-space: pre;
   font-family: var(--fonte-pixel);
   opacity: 0;
 }
 
-.anuncio-dados__soma .dados__soma-parcelas { font-size: 3vh; }
+.anuncio-dados__parcelas {
+  min-width: calc(7ch + 0.7em);
+  font-size: 3vh;
+  letter-spacing: 0.1em;
+  text-align: center;
+  color: var(--branco);
+  text-shadow: 0 2px 0 #000;
+}
 
-.anuncio-dados__soma .dados__soma-total {
+.anuncio-dados__total {
+  min-width: 2ch;
   font-size: 9vh;
+  line-height: 1.05;
+  text-align: center;
+  color: var(--verde-neon);
   -webkit-text-stroke: 3px #120c1a;
+  paint-order: stroke fill;
   text-shadow: 0 0.5vh 0 #000, 0 0 2.6vh rgba(57, 255, 20, 0.8);
 }
 
-/* Com o dado parado, o total bate com o mesmo baque da soma pequena. */
+/* Com o dado parado, o total entra com baque. */
 .anuncio-dados--revelado .anuncio-dados__soma { opacity: 1; }
-.anuncio-dados--revelado .dados__soma-parcelas { animation: soma-parcelas 0.3s ease-out backwards; }
-.anuncio-dados--revelado .dados__soma-total { animation: soma-total 0.45s cubic-bezier(0.2, 1.7, 0.4, 1) backwards; }
+.anuncio-dados--revelado .anuncio-dados__parcelas { animation: soma-parcelas 0.3s ease-out backwards; }
+.anuncio-dados--revelado .anuncio-dados__total { animation: soma-total 0.45s cubic-bezier(0.2, 1.7, 0.4, 1) backwards; }
+
+@keyframes soma-parcelas {
+  from { transform: translateY(6px); opacity: 0; }
+}
+
+@keyframes soma-total {
+  0%   { transform: scale(0.2) rotate(-14deg); opacity: 0; }
+  55%  { transform: scale(1.35) rotate(4deg); opacity: 1; }
+  75%  { transform: scale(0.94) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
 
 /* O aviso passageiro sobe para o topo: embaixo ele cobria o JOGAR. */
 .tela-partida .toast-pilha {

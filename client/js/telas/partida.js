@@ -12,6 +12,7 @@
 import { api, guardado } from "../core/api.js";
 import { som } from "../core/som.js";
 import { montarChat } from "../ui/chat.js";
+import { contando, contarDinheiro, flutuarDinheiro } from "../ui/dinheiro_flutuante.js";
 import { toast } from "../ui/toast.js";
 import { itensDaLegenda, montarTabuleiro } from "../tabuleiro/render.js";
 import { iconePixel } from "../tabuleiro/pixel.js";
@@ -23,8 +24,6 @@ const elInicio = document.querySelector("#inicio-marcador");
 const elJogadores = document.querySelector("#jogadores");
 const elLegenda = document.querySelector("#legenda");
 const elAviso = document.querySelector("#aviso");
-const elSoma = document.querySelector("#dados-soma");
-const elDados = document.querySelector("#dados");
 const elAnuncio = document.querySelector("#anuncio");
 const elAnuncioTexto = document.querySelector("#anuncio-texto");
 const elAnuncioDados = document.querySelector("#anuncio-dados");
@@ -32,8 +31,6 @@ const elAnuncioDadosQuem = document.querySelector("#anuncio-dados-quem");
 const elAnuncioDadosSoma = document.querySelector("#anuncio-dados-soma");
 const cubosGrandes = [document.querySelector("#cubo-grande-a"), document.querySelector("#cubo-grande-b")];
 const botaoJogar = document.querySelector("#jogar");
-const cubos = [document.querySelector("#cubo-a"), document.querySelector("#cubo-b")];
-const dadosEl = [document.querySelector("#dado-a"), document.querySelector("#dado-b")];
 const modalOrdem = document.querySelector("#modal-ordem");
 const modalCompra = document.querySelector("#modal-compra");
 const tituloCompra = document.querySelector("#compra-titulo");
@@ -110,7 +107,6 @@ let consulta = null;
 let ocupado = false;
 let ordemMostrada = false;
 let ultimaVez = null;
-let voltasDoDado = 0;
 /** Último lance já encenado nesta tela. Evita repetir a jogada de alguém. */
 let ultimoLanceVisto = 0;
 /** Quem está no tabuleiro agora — usado para saber quando remontar os peões. */
@@ -132,10 +128,7 @@ const chat = montarChat({
   formulario: document.querySelector("#chat-formulario"),
   campo: campoChat,
   status: document.querySelector("#chat-status"),
-  corDe: (jogadorId) => {
-    const i = estado?.jogadores.findIndex((j) => j.jogador_id === jogadorId) ?? -1;
-    return i >= 0 ? corDoJogador(estado.jogadores[i], i) : null;
-  },
+  corDe: corPeloId,
   aoChegar: avisarMensagens,
 });
 
@@ -178,6 +171,12 @@ function corDoJogador(jogador, i) {
   return jogador.personagem?.cor || CORES_RESERVA[i % CORES_RESERVA.length];
 }
 
+/** A mesma cor do peão, para o nome no chat e o dono no tabuleiro. */
+function corPeloId(jogadorId) {
+  const i = estado?.jogadores.findIndex((j) => j.jogador_id === jogadorId) ?? -1;
+  return i >= 0 ? corDoJogador(estado.jogadores[i], i) : null;
+}
+
 /** Os ícones de pixel art do HUD entram onde o HTML marcou `data-icone`. */
 function preencherIcones() {
   for (const lugar of document.querySelectorAll("[data-icone]")) {
@@ -205,89 +204,70 @@ function girarCubo(cubo, valor, voltas = 2) {
 }
 
 function montarDados() {
-  for (const cubo of [...cubos, ...cubosGrandes]) cubo.replaceChildren(...criarFaces());
-  mostrarDados([5, 6], { girar: false });
+  for (const cubo of cubosGrandes) cubo.replaceChildren(...criarFaces());
 }
 
-function mostrarDados(valores, { girar = true } = {}) {
-  if (girar) voltasDoDado += 2;
-  valores.forEach((valor, i) => girarCubo(cubos[i], valor, voltasDoDado));
-}
+/* A rolagem, igual para quem rolou e para quem assiste: uma faixa que
+   atravessa a tela como o anúncio da vez, com os dados grandes no meio.
+   No tabuleiro não há dado — é a faixa que a mesa lê.
 
-/** Joga os dois dados: eles caem de cima, quicam e assentam no valor. */
-function arremessar(valores) {
-  mostrarDados(valores);
-  for (const dado of dadosEl) {
-    dado.classList.remove("dado--arremesso");
-    void dado.offsetWidth; // reinicia a animação
-    dado.classList.add("dado--arremesso");
-  }
-}
+   Três tempos: `abrirFaixaDosDados` entra com os cubos rodando soltos (na
+   minha jogada, isso cobre a espera pelo servidor); `encenarDados` assenta
+   os cubos no valor e bate o total; `fecharFaixaDosDados` sai antes do peão
+   andar — senão a faixa cobriria o caminho dele. */
 
-/** A soma, acima dos dados: "3 + 4" pequeno e o total grande embaixo. */
-function mostrarSoma(valores) {
-  elSoma.replaceChildren(
-    elemento("span", "dados__soma-parcelas", valores.join("  +  ")),
-    elemento("span", "dados__soma-total", String(valores.reduce((a, b) => a + b, 0))),
-  );
-  elSoma.classList.remove("dados__soma--novo");
-  void elSoma.offsetWidth;
-  elSoma.classList.add("dados__soma--novo");
-}
-
-function limparSoma() {
-  elSoma.classList.remove("dados__soma--novo");
-  elSoma.replaceChildren();
-}
-
-/* A rolagem inteira, igual para quem rolou e para quem assiste.
-
-   Os dados pequenos no canto do tabuleiro ficam com o último valor, como
-   lembrete. O que a mesa LÊ é a faixa: atravessa a tela como o anúncio da
-   vez, com os dados grandes girando no meio; eles assentam, o total bate,
-   e a faixa sai antes do peão andar — senão cobriria o caminho dele. */
-async function encenarDados(quem, valores, { meu = false } = {}) {
-  arremessar(valores);
-  som.tocar("selecionar");
-
-  // Sem animação a faixa não tem o que mostrar: os dados pequenos e a
-  // soma já contam o resultado.
-  const comFaixa = guardado.animacoes();
-  if (comFaixa) entrarFaixaDosDados(quem, valores);
-
-  await espera(MS_ARREMESSO);
-  mostrarSoma(valores);
-  if (comFaixa) elAnuncioDados.classList.add("anuncio-dados--revelado");
-  if (meu) som.tocar("confirmar");
-  await espera(MS_LER_RESULTADO);
-
-  if (!comFaixa) return;
-  elAnuncioDados.classList.replace("anuncio-dados--dentro", "anuncio-dados--saindo");
-  await espera(MS_DESLIZE_FAIXA);
-  // O estado de repouso não tem transição: volta para a esquerda sem
-  // atravessar a tela de novo.
-  elAnuncioDados.classList.remove("anuncio-dados--saindo", "anuncio-dados--revelado");
-}
-
-function entrarFaixaDosDados(quem, valores) {
+function abrirFaixaDosDados(quem) {
   elAnuncioDadosQuem.textContent = quem;
-  elAnuncioDadosSoma.replaceChildren(
-    elemento("span", "dados__soma-parcelas", valores.join("  +  ")),
-    elemento("span", "dados__soma-total", String(valores.reduce((a, b) => a + b, 0))),
-  );
-  elAnuncioDados.classList.remove("anuncio-dados--dentro", "anuncio-dados--saindo", "anuncio-dados--revelado");
+  elAnuncioDadosSoma.replaceChildren();
+  elAnuncioDados.classList.remove("anuncio-dados--saindo", "anuncio-dados--revelado");
+  elAnuncioDados.classList.add("anuncio-dados--dentro", "anuncio-dados--rolando");
+  som.tocar("vento");
+}
 
-  // Os cubos voltam à pose de repouso sem transição, para tombarem as
-  // mesmas três voltas toda vez em vez de só o que falta da rolagem anterior.
+async function encenarDados(quem, valores) {
+  // Sem animação não há faixa: o aviso embaixo do JOGAR conta o resultado.
+  if (!guardado.animacoes()) {
+    som.tocar("resultado");
+    await fecharFaixaDosDados();
+    return;
+  }
+
+  if (!elAnuncioDados.classList.contains("anuncio-dados--dentro")) abrirFaixaDosDados(quem);
+  elAnuncioDadosSoma.replaceChildren(
+    elemento("span", "anuncio-dados__parcelas", valores.join("  +  ")),
+    elemento("span", "anuncio-dados__total", String(valores.reduce((a, b) => a + b, 0))),
+  );
+
+  // Param de rodar soltos e tombam até o valor. Antes, voltam à pose de
+  // repouso sem transição: assim tombam as mesmas três voltas toda vez, em
+  // vez de só o que falta da rolagem anterior.
+  elAnuncioDados.classList.remove("anuncio-dados--rolando");
   for (const cubo of cubosGrandes) {
     cubo.style.transition = "none";
     cubo.style.transform = "";
   }
   void elAnuncioDados.offsetWidth;
   for (const cubo of cubosGrandes) cubo.style.transition = "";
-
-  elAnuncioDados.classList.add("anuncio-dados--dentro");
   valores.forEach((valor, i) => girarCubo(cubosGrandes[i], valor, 3));
+  som.tocar("dado");
+
+  // Só com o dado parado o total aparece — antes disso não há o que ler.
+  await espera(MS_ARREMESSO);
+  elAnuncioDados.classList.add("anuncio-dados--revelado");
+  som.tocar("resultado");
+  await espera(MS_LER_RESULTADO);
+
+  await fecharFaixaDosDados();
+}
+
+async function fecharFaixaDosDados() {
+  if (!elAnuncioDados.classList.contains("anuncio-dados--dentro")) return;
+  elAnuncioDados.classList.remove("anuncio-dados--rolando");
+  elAnuncioDados.classList.replace("anuncio-dados--dentro", "anuncio-dados--saindo");
+  await espera(MS_DESLIZE_FAIXA);
+  // O estado de repouso não tem transição: volta para a esquerda sem
+  // atravessar a tela de novo.
+  elAnuncioDados.classList.remove("anuncio-dados--saindo", "anuncio-dados--revelado");
 }
 
 // --- tabuleiro (desenhado uma vez) ------------------------------------
@@ -300,7 +280,7 @@ function assinaturaPropriedades(propriedades = {}) {
 }
 
 function desenharTabuleiro(dados, propriedades = {}) {
-  desenho = montarTabuleiro(elSvg, dados, propriedades);
+  desenho = montarTabuleiro(elSvg, dados, propriedades, { corDoDono: corPeloId });
   assinaturaDasPropriedades = assinaturaPropriedades(propriedades);
   const inicio = desenho.pontoInicio();
   elInicio.style.setProperty("--inicio-x", `${inicio.x}%`);
@@ -423,7 +403,7 @@ async function andarPeao({ jogador_id, de, passos }) {
     peao.classList.remove("peao--andando");
     void peao.offsetWidth; // reinicia a animação do salto
     peao.classList.add("peao--andando");
-    som.tocar("clique");
+    som.tocar("passo");
     await espera(MS_POR_CASA);
   }
   peao.classList.remove("peao--andando");
@@ -453,11 +433,18 @@ function montarCartoes() {
       retrato.appendChild(elemento("span", "cartao__inicial", inicial(jogador.nome)));
     }
 
+    // A bandeira na cor do jogador é a mesma que ele finca nos terrenos
+    // dele: é o que liga a cor do tabuleiro a esta pessoa.
+    const terrenos = elemento("span", "cartao__terrenos");
+    terrenos.title = "Terrenos";
+    terrenos.append(elemento("span", "cartao__bandeira"), elemento("span", "cartao__terrenos-total"));
+
     const nome = elemento("div", "cartao__nome");
     nome.append(
       elemento("span", "cartao__ordem", `${i + 1}º`),
       elemento("span", "cartao__texto", jogador.nome),
       elemento("span", "cartao__eu", "você"),
+      terrenos,
     );
 
     const caixa = elemento("div", "cartao__caixa");
@@ -480,13 +467,21 @@ function pintarCartoes() {
   const agora = estado.jogadores.map((j) => j.jogador_id).join(",");
   if (agora !== assinaturaDosCartoes) montarCartoes();
 
+  const terrenosDe = new Map();
+  for (const { dono } of Object.values(estado.propriedades || {})) {
+    terrenosDe.set(dono, (terrenosDe.get(dono) || 0) + 1);
+  }
+
   for (const jogador of estado.jogadores) {
     const cartao = elJogadores.querySelector(`.cartao[data-jogador="${jogador.jogador_id}"]`);
     if (!cartao) continue;
     cartao.classList.toggle("cartao--da-vez", jogador.jogador_id === estado.vez.jogador_id && estado.fase !== "encerrada");
     cartao.classList.toggle("cartao--eu", jogador.sou_eu);
     cartao.classList.toggle("cartao--fora", jogador.falido);
-    cartao.querySelector(".cartao__valor").textContent = jogador.falido ? "SAIU" : reais(jogador.caixa);
+    // Com o número correndo (`reagirAoDinheiro`), quem escreve é a contagem.
+    const valor = cartao.querySelector(".cartao__valor");
+    if (!contando(valor)) valor.textContent = jogador.falido ? "SAIU" : reais(jogador.caixa);
+    cartao.querySelector(".cartao__terrenos-total").textContent = String(terrenosDe.get(jogador.jogador_id) || 0);
   }
 }
 
@@ -562,6 +557,49 @@ function anunciarVez() {
   elAnuncio.classList.remove("anuncio--passando");
   void elAnuncio.offsetWidth;
   elAnuncio.classList.add("anuncio--passando");
+  som.tocar(estado.vez.sou_eu ? "vez" : "vento");
+}
+
+/* O dinheiro de cada um, comparado com o estado anterior.
+
+   Não importa o motivo — compra, aluguel, casa do ganho: a tela só vê o
+   caixa mudar, e conta a diferença. Assim cada regra nova de dinheiro que
+   o motor ganhar já chega encenada, sem mexer aqui. O som diz o motivo
+   quando dá para saber: terreno novo é caixa registradora. */
+function reagirAoDinheiro(antes) {
+  const comprados = Object.keys(estado.propriedades || {}).filter((i) => !antes.propriedades?.[i]);
+  const animar = guardado.animacoes();
+  let ganhou = false;
+  let perdeu = false;
+  let euMudei = 0;
+
+  for (const jogador of estado.jogadores) {
+    const estava = antes.jogadores.find((j) => j.jogador_id === jogador.jogador_id);
+    const diferenca = estava ? jogador.caixa - estava.caixa : 0;
+    if (!diferenca || jogador.falido) continue;
+
+    if (diferenca > 0) ganhou = true;
+    else perdeu = true;
+    if (jogador.sou_eu) euMudei = diferenca;
+
+    const cartao = elJogadores.querySelector(`.cartao[data-jogador="${jogador.jogador_id}"]`);
+    if (!cartao || !animar) continue;
+    flutuarDinheiro(cartao.querySelector(".cartao__caixa"), diferenca, reais);
+    contarDinheiro(cartao.querySelector(".cartao__valor"), estava.caixa, jogador.caixa, reais);
+  }
+
+  // O prédio brota no terreno comprado: a casa pula e o som de obra vem
+  // logo depois da gaveta.
+  for (const indice of comprados) desenho.destacar(Number(indice));
+
+  if (comprados.length) {
+    som.tocar("caixa");
+    setTimeout(() => som.tocar("construir"), 450);
+  } else if (euMudei) {
+    som.tocar(euMudei > 0 ? "moedas" : "perda");
+  } else if (ganhou || perdeu) {
+    som.tocar(ganhou ? "moedas" : "perda");
+  }
 }
 
 // --- aplicar estado -----------------------------------------------------
@@ -592,9 +630,11 @@ function aplicar(resposta) {
 
   posicionarPeoes();
   pintarCartoes();
+  if (antes) reagirAoDinheiro(antes);
   pintarJogar();
   atualizarModalCompra();
 
+  if (antes && antes.fase !== "encerrada" && estado.fase === "encerrada") som.tocar("fim");
   if (!ordemMostrada && estado.sorteio?.length) mostrarOrdem();
   anunciarVez();
 }
@@ -602,6 +642,7 @@ function aplicar(resposta) {
 function atualizarModalCompra() {
   const pendente = estado?.fase === "decidindo_compra" ? estado.compra_pendente : null;
   const minhaDecisao = Boolean(pendente && estado.vez.sou_eu);
+  if (minhaDecisao && modalCompra.hidden) som.tocar("oferta");
   modalCompra.hidden = !minhaDecisao;
   if (!minhaDecisao) return;
 
@@ -614,10 +655,23 @@ function atualizarModalCompra() {
   tempoCompra.textContent = restante === null ? "Sem limite de tempo" : `Tempo para decidir: ${formatarTempo(restante)}`;
 }
 
+/** O último segundo em que o relógio tiquetaqueou — o intervalo pode cair
+    duas vezes no mesmo segundo. */
+let ultimoTique = null;
+
 setInterval(() => {
   if (!estado) return;
   pintarJogar();
   if (!modalCompra.hidden) atualizarModalCompra();
+
+  // Os últimos 5 segundos da MINHA vez tiquetaqueiam: o prazo acabando sem
+  // ninguém olhar para o relógio era jogada perdida em silêncio.
+  const restante = segundosRestantes();
+  const decidindo = estado.fase === "aguardando_rolagem" || estado.fase === "decidindo_compra";
+  if (estado.vez.sou_eu && decidindo && !ocupado && restante > 0 && restante <= 5 && restante !== ultimoTique) {
+    som.tocar("tique");
+  }
+  ultimoTique = restante;
 }, 1000);
 
 /* Encena o lance de OUTRO jogador.
@@ -662,9 +716,9 @@ botaoJogar.addEventListener("click", async () => {
   if (ocupado || botaoJogar.disabled) return;
   ocupado = true;
   pintarJogar();
-  // Enquanto o servidor não responde, os dados chacoalham na mão.
-  elDados.classList.add("dados--rolando");
-  limparSoma();
+  // Enquanto o servidor não responde, a faixa já entra com os dados
+  // rodando soltos na mão.
+  if (guardado.animacoes()) abrirFaixaDosDados("Você tirou");
   som.tocar("clique");
 
   try {
@@ -673,10 +727,8 @@ botaoJogar.addEventListener("click", async () => {
     // Marca como já visto: a consulta seguinte não repete a minha jogada.
     ultimoLanceVisto = movimento.lance;
 
-    // 1. o arremesso: a faixa entra com os dados grandes girando
-    // 2. só com o dado parado a soma aparece — antes disso não há o que ler
-    elDados.classList.remove("dados--rolando");
-    await encenarDados("Você tirou", movimento.dados, { meu: true });
+    // 1-2. os dados assentam no valor, o total bate e a faixa sai
+    await encenarDados("Você tirou", movimento.dados);
 
     // 3. o peão anda casa por casa
     await andarPeao(movimento);
@@ -690,9 +742,9 @@ botaoJogar.addEventListener("click", async () => {
   } catch (erro) {
     som.tocar("erro");
     toast(erro.message, "erro");
+    fecharFaixaDosDados();
     atualizar();
   } finally {
-    elDados.classList.remove("dados--rolando");
     ocupado = false;
     if (estado) pintarJogar();
   }
@@ -703,7 +755,9 @@ async function responderCompra(comprar) {
   ocupado = true;
   botoesCompra.forEach((botao) => (botao.disabled = true));
   pintarJogar();
-  som.tocar(comprar ? "confirmar" : "voltar");
+  // Comprando, o som de verdade é a caixa registradora, quando o estado
+  // novo chega (`reagirAoDinheiro`); aqui é só o clique do botão.
+  som.tocar(comprar ? "clique" : "voltar");
   try {
     aplicar(await api.decidirCompra(codigo, comprar));
   } catch (erro) {
@@ -788,7 +842,7 @@ async function mostrarOrdem() {
   for (const { posto, cubinhos, valores } of postos) {
     valores.forEach((valor, i) => girarCubo(cubinhos[i], valor));
     posto.classList.add("posto--revelado");
-    som.tocar("selecionar");
+    som.tocar("dado");
     await espera(440);
   }
 
@@ -801,7 +855,7 @@ async function mostrarOrdem() {
   }
 
   postos[0].posto.classList.add("posto--vencedor");
-  som.tocar("confirmar");
+  som.tocar("sucesso");
   botao.disabled = false;
 }
 

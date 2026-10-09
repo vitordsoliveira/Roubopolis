@@ -27,7 +27,8 @@ const notas = {
   aviso: [293.66, 349.23],
 };
 
-function obterContexto() {
+/** O mesmo contexto para os efeitos e a música (core/musica.js). */
+export function obterContexto() {
   if (!contexto) {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return null;

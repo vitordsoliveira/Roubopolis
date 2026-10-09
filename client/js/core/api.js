@@ -10,6 +10,7 @@ const CHAVE_NOME = "roubopolis.nome";
 const CHAVE_FOTO = "roubopolis.foto";
 const CHAVE_SOM = "roubopolis.som";
 const CHAVE_VOLUME_SOM = "roubopolis.volume-som";
+const CHAVE_VOLUME_MUSICA = "roubopolis.volume-musica";
 const CHAVE_ANIMACOES = "roubopolis.animacoes";
 const CHAVE_ABA = "roubopolis.aba-propria";
 const CHAVE_CHAT = "roubopolis.chat-aberto";
@@ -57,12 +58,15 @@ export const guardado = {
   foto: () => ler(CHAVE_FOTO) || null,
   som: () => ler(CHAVE_SOM, "1") === "1",
   volumeSom: () => Number(ler(CHAVE_VOLUME_SOM, "100")),
+  /** Começa baixa: a música é fundo, não pode brigar com os efeitos. */
+  volumeMusica: () => Number(ler(CHAVE_VOLUME_MUSICA, "40")),
   animacoes: () => ler(CHAVE_ANIMACOES, "1") === "1",
   salvarToken: (valor) => gravar(CHAVE_TOKEN, valor),
   salvarNome: (valor) => gravar(CHAVE_NOME, valor),
   salvarFoto: (valor) => gravar(CHAVE_FOTO, valor || ""),
   salvarSom: (ligado) => gravar(CHAVE_SOM, ligado ? "1" : "0"),
   salvarVolumeSom: (valor) => gravar(CHAVE_VOLUME_SOM, String(valor)),
+  salvarVolumeMusica: (valor) => gravar(CHAVE_VOLUME_MUSICA, String(valor)),
   salvarAnimacoes: (ligado) => gravar(CHAVE_ANIMACOES, ligado ? "1" : "0"),
   /** Se o chat da partida fica aberto: quem gosta de conversar não precisa
       abrir de novo a cada partida. */

@@ -10,6 +10,7 @@
    antes disso é o que fazia a partida parecer uma planilha se atualizando. */
 
 import { api, guardado } from "../core/api.js";
+import { musica } from "../core/musica.js";
 import { som } from "../core/som.js";
 import { montarChat } from "../ui/chat.js";
 import { contando, contarDinheiro, flutuarDinheiro } from "../ui/dinheiro_flutuante.js";
@@ -133,6 +134,8 @@ const chat = montarChat({
 });
 
 preencherIcones();
+// A música continua de onde o lobby parou.
+musica.iniciar();
 
 if (!codigo || !guardado.token()) {
   toast("Volte ao menu e entre numa sala.", "erro");
@@ -920,8 +923,45 @@ for (const [id, nome] of [["regras", "REGRAS"], ["ranking", "RANKING"]]) {
   });
 }
 
+/* Os dois volumes do menu, aqui também: quem quer baixar a música no meio
+   da partida não precisa abandonar a mesa. Cada controle grava a mesma
+   preferência que o do menu. */
+const volumesPartida = [
+  {
+    controle: document.querySelector("#volume-musica-partida"),
+    valor: document.querySelector("#valor-volume-musica-partida"),
+    ler: guardado.volumeMusica,
+    salvar: guardado.salvarVolumeMusica,
+    aoMudar: () => musica.atualizarVolume(),
+  },
+  {
+    controle: document.querySelector("#volume-som-partida"),
+    valor: document.querySelector("#valor-volume-som-partida"),
+    ler: guardado.volumeSom,
+    salvar: guardado.salvarVolumeSom,
+    aoMudar: () => {},
+  },
+];
+
+function pintarVolumesPartida() {
+  for (const { controle, valor, ler } of volumesPartida) {
+    controle.value = String(ler());
+    valor.textContent = `${ler()}%`;
+  }
+}
+
+for (const { controle, valor, salvar, aoMudar } of volumesPartida) {
+  controle.addEventListener("input", () => {
+    salvar(Number(controle.value));
+    valor.textContent = `${controle.value}%`;
+    aoMudar();
+  });
+  controle.addEventListener("change", () => som.tocar("clique"));
+}
+
 function abrirConfiguracaoPartida() {
   pintarPreferenciaAnimacoes();
+  pintarVolumesPartida();
   painelConfigPartida.hidden = false;
   botaoAnimacoesPartida.focus();
 }

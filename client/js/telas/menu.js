@@ -1,6 +1,7 @@
 /* Tela inicial: guarda o nome e cria (ou entra em) uma sala. */
 
 import { api, guardado } from "../core/api.js";
+import { musica } from "../core/musica.js";
 import { som } from "../core/som.js";
 import { toast } from "../ui/toast.js";
 
@@ -29,6 +30,8 @@ const modoExibicao = document.querySelector("#modo-exibicao");
 const botaoAplicarModoExibicao = document.querySelector("#aplicar-modo-exibicao");
 const controleVolumeSom = document.querySelector("#volume-som");
 const valorVolumeSom = document.querySelector("#valor-volume-som");
+const controleVolumeMusica = document.querySelector("#volume-musica");
+const valorVolumeMusica = document.querySelector("#valor-volume-musica");
 const perfilPartidas = document.querySelector("#perfil-partidas");
 const perfilVitorias = document.querySelector("#perfil-vitorias");
 const perfilTaxa = document.querySelector("#perfil-taxa");
@@ -363,7 +366,12 @@ document.addEventListener("keydown", (evento) => {
   });
 });
 
-// --- som (só a preferência; o áudio entra junto com os assets) ------
+// --- som e música ------------------------------------------------------
+
+/* "Som" é o interruptor geral: desligado, cala efeitos E música. Os dois
+   volumes ajustam cada um separado. */
+
+musica.iniciar();
 
 function pintarSom() {
   const ligado = guardado.som();
@@ -393,11 +401,26 @@ function pintarVolumeSom() {
 }
 pintarVolumeSom();
 
+function pintarVolumeMusica() {
+  const volume = guardado.volumeMusica();
+  controleVolumeMusica.value = String(volume);
+  valorVolumeMusica.textContent = `${volume}%`;
+}
+pintarVolumeMusica();
+
 botaoSom.addEventListener("click", () => {
   const ligado = !guardado.som();
   guardado.salvarSom(ligado);
   pintarSom();
+  musica.atualizarVolume();
   if (ligado) som.tocar("confirmar");
+});
+
+controleVolumeMusica.addEventListener("input", () => {
+  const volume = Number(controleVolumeMusica.value);
+  guardado.salvarVolumeMusica(volume);
+  valorVolumeMusica.textContent = `${volume}%`;
+  musica.atualizarVolume();
 });
 
 botaoAnimacoes.addEventListener("click", () => {

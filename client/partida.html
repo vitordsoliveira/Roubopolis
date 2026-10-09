@@ -137,6 +137,17 @@
         <span>Animações</span>
         <button class="interruptor" type="button" id="animacoes-partida" aria-pressed="true">LIGADAS</button>
       </div>
+      <!-- Os mesmos volumes do menu: dá para baixar a música sem sair da mesa. -->
+      <label class="painel__linha controle-volume" for="volume-musica-partida">
+        <span>Volume da música</span>
+        <span class="controle-volume__valor" id="valor-volume-musica-partida">40%</span>
+        <input id="volume-musica-partida" type="range" min="0" max="100" step="5" value="40">
+      </label>
+      <label class="painel__linha controle-volume" for="volume-som-partida">
+        <span>Volume dos efeitos</span>
+        <span class="controle-volume__valor" id="valor-volume-som-partida">100%</span>
+        <input id="volume-som-partida" type="range" min="0" max="100" step="5" value="100">
+      </label>
       <div class="painel__acoes">
         <button class="botao botao--pequeno botao--roxo" type="button" id="config-partida-fechar">Voltar</button>
       </div>

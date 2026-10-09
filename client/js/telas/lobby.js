@@ -5,9 +5,13 @@
    o formato do estado é o mesmo. */
 
 import { api, guardado } from "../core/api.js";
+import { musica } from "../core/musica.js";
 import { som } from "../core/som.js";
 import { montarChat } from "../ui/chat.js";
 import { toast } from "../ui/toast.js";
+
+// A música continua de onde o menu parou.
+musica.iniciar();
 
 const fila = document.querySelector("#slots");
 const rotuloCodigo = document.querySelector("#codigo-sala");

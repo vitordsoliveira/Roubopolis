@@ -99,6 +99,49 @@
   pointer-events: none;
 }
 
+/* --- de quem é o terreno (render.js, `marcarDonos`) ------------------ */
+
+/* A cor do dono chega como --cor-dono no grupo da casa. O contorno escuro
+   por baixo do anel é o que o separa do tampo quando as cores se parecem
+   — jogador amarelo num terreno amarelo. */
+.casa__dono-contorno,
+.casa__dono-anel {
+  fill: none;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.casa__dono-contorno {
+  stroke: rgba(22, 8, 34, 0.85);
+  stroke-width: 7px;
+}
+
+.casa__dono-anel {
+  stroke: var(--cor-dono, #ffffff);
+  stroke-width: 3.6px;
+}
+
+.casa__bandeira-mastro {
+  stroke: #2a2440;
+  stroke-width: 1.8px;
+  stroke-linecap: round;
+}
+
+.casa__bandeira-pano {
+  fill: var(--cor-dono, #ffffff);
+  stroke: #160b25;
+  stroke-width: 1.4px;
+  stroke-linejoin: round;
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: bandeira-tremula 1.3s ease-in-out infinite alternate;
+}
+
+@keyframes bandeira-tremula {
+  from { transform: skewY(-7deg) scaleX(0.9); }
+  to   { transform: skewY(5deg) scaleX(1); }
+}
+
 /* --- casa em que o peão parou --------------------------------------- */
 
 .casa--destacada {

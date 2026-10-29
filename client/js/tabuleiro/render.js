@@ -280,8 +280,42 @@ function predio(pai, casa, u, v, z) {
     no("circle", { cx: x, cy: (y - 0.3 * C).toFixed(1), r: 1.8, fill: "#ff3b3b" }, pai);
   }
 
+  // A bandeira do dono no canto de trás do telhado: longe da antena e da
+  // caixa d'água, que ficam no meio, e é o ponto mais alto na tela.
+  bandeira(pai, u0 + 0.05, v0 + 0.05, topo);
+
   // Uma arvorezinha do lado em metade das casas, como na arte.
   if (casa.i % 2 === 0) iconeEmPe(pai, "arvore", u + 0.3, v - 0.26, z, 0.42 * C);
+}
+
+/* --- de quem é o terreno ----------------------------------------------------
+
+   Duas marcas na cor do peão do dono: um anel em volta do tampo, que se lê
+   de longe mesmo com o prédio na frente, e uma bandeirinha no telhado. A
+   cor não está no desenho: entra como --cor-dono no grupo da casa (ver
+   `marcarDonos`), para a casa trocar de dono sem redesenhar o tabuleiro. */
+
+function anelDoDono(pai, geo) {
+  const m = 0.07;
+  const z = ALTURA_CASA + 0.002;
+  const lista = [[geo.u0 + m, geo.v0 + m, z], [geo.u1 - m, geo.v0 + m, z], [geo.u1 - m, geo.v1 - m, z], [geo.u0 + m, geo.v1 - m, z]];
+  const g = no("g", { class: "casa__dono" }, pai);
+  // Contorno escuro por baixo: o anel aparece até em casa da mesma cor.
+  face(g, lista, "none", { class: "casa__dono-contorno" });
+  face(g, lista, "none", { class: "casa__dono-anel" });
+  return g;
+}
+
+/** Mastro em pé a partir de (u, v, z) e o pano virado para a direita. */
+function bandeira(pai, u, v, z) {
+  const [x, y] = tela(u, v, z);
+  const topo = y - 0.52 * C;
+  const g = no("g", { class: "casa__bandeira" }, pai);
+  no("line", { x1: x.toFixed(1), y1: y.toFixed(1), x2: x.toFixed(1), y2: topo.toFixed(1), class: "casa__bandeira-mastro" }, g);
+  no("polygon", {
+    points: `${x.toFixed(1)},${topo.toFixed(1)} ${(x + 16).toFixed(1)},${(topo + 5.5).toFixed(1)} ${x.toFixed(1)},${(topo + 11).toFixed(1)}`,
+    class: "casa__bandeira-pano",
+  }, g);
 }
 
 /** Seta pintada no chão da INICIAL, apontando para a casa seguinte. */
@@ -381,8 +415,8 @@ function enfeitar(pai, casa, geo, ctx) {
 
   const [u, v] = pontoDoEnfeite(geo);
   if (casa.tipo === "propriedade") {
-    const adquirido = Boolean(ctx.propriedades?.[casa.i]);
-    const camada = no("g", { class: "casa__predio", ...(adquirido ? {} : { display: "none" }) }, pai);
+    // Nasce escondido: só aparece quando alguém compra (`marcarDonos`).
+    const camada = no("g", { class: "casa__predio", display: "none" }, pai);
     return predio(camada, casa, u, v, z);
   }
   // Casa neutra não tem nome escrito: a árvore fica no meio dela.
@@ -472,21 +506,26 @@ function desenharCidade(pai, lu, lv) {
 function desenharCasa(pai, item, dados, ctx) {
   const { casa, geo } = item;
   const cor = corDaCasa(casa, dados.grupos);
-  const g = no("g", { class: "casa", "data-i": casa.i }, pai);
+  const terreno = casa.tipo === "propriedade" && !casa.cenario;
+  const g = no("g", { class: terreno ? "casa casa--terreno" : "casa", "data-i": casa.i }, pai);
 
   const f = FRESTA / 2;
   const tampo = caixa(g, geo.u0 + f, geo.v0 + f, geo.u1 - f, geo.v1 - f, 0, ALTURA_CASA, cor);
   // Brilho de cima para baixo no tampo: é o que dá o ar "envernizado" da arte.
   no("polygon", { points: tampo.getAttribute("points"), fill: "url(#brilho-casa)" }, g);
 
+  // O anel fica no tampo, por baixo do prédio. Nasce escondido, como ele.
+  if (terreno) anelDoDono(g, geo).setAttribute("display", "none");
+
   enfeitar(g, casa, geo, ctx);
 }
 
 /**
  * Desenha o tabuleiro dentro do `svg` e devolve como conversar com ele.
- * @returns {{proporcao: number, ponto: Function, pontoDosDados: Function, destacar: Function}}
+ * `corDoDono(jogadorId)` diz a cor do peão de quem comprou cada terreno.
+ * @returns {{proporcao: number, ponto: Function, destacar: Function, atualizarPropriedades: Function}}
  */
-export function montarTabuleiro(svg, dados, propriedades = {}) {
+export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () => null } = {}) {
   const largura = dados.largura;
   const altura = dados.altura;
   const lu = ladoDoTabuleiro(largura);
@@ -523,7 +562,6 @@ export function montarTabuleiro(svg, dados, propriedades = {}) {
   const comprimento = Math.hypot(du, dv) || 1;
   const ctx = {
     direcaoDaSaida: [du / comprimento, dv / comprimento],
-    propriedades,
   };
 
   const porProfundidade = (a, b) => a.geo.uc + a.geo.vc - (b.geo.uc + b.geo.vc);
@@ -539,6 +577,21 @@ export function montarTabuleiro(svg, dados, propriedades = {}) {
   const rotulos = no("g", { class: "tabuleiro__rotulos" }, svg);
   itens.forEach((i) => rotular(rotulos, i.casa, i.geo, corDaCasa(i.casa, dados.grupos)));
 
+  /** Terreno com dono: prédio, anel e bandeira aparecem, na cor dele. */
+  function marcarDonos(lista = {}) {
+    for (const g of svg.querySelectorAll(".casa--terreno")) {
+      const dono = lista[g.dataset.i]?.dono;
+      for (const marca of g.querySelectorAll(".casa__predio, .casa__dono")) {
+        if (dono == null) marca.setAttribute("display", "none");
+        else marca.removeAttribute("display");
+      }
+      const cor = dono == null ? null : corDoDono(dono);
+      if (cor) g.style.setProperty("--cor-dono", cor);
+      else g.style.removeProperty("--cor-dono");
+    }
+  }
+  marcarDonos(propriedades);
+
   const emPorcento = ([x, y]) => ({
     x: ((x - caixaVista.x) / caixaVista.w) * 100,
     y: ((y - caixaVista.y) / caixaVista.h) * 100,
@@ -553,14 +606,8 @@ export function montarTabuleiro(svg, dados, propriedades = {}) {
   return {
     proporcao: caixaVista.w / caixaVista.h,
 
-    /** Só mostra os prédios dos terrenos efetivamente comprados. */
-    atualizarPropriedades(propriedades = {}) {
-      for (const predio of svg.querySelectorAll(".casa__predio")) {
-        const indice = predio.parentElement.dataset.i;
-        if (propriedades[indice]) predio.removeAttribute("display");
-        else predio.setAttribute("display", "none");
-      }
-    },
+    /** Só mostra os prédios dos terrenos comprados, com a cor do dono. */
+    atualizarPropriedades: marcarDonos,
 
     /** Onde ficam os pés do peão, em % do quadro. */
     ponto(indice, assento = 0) {

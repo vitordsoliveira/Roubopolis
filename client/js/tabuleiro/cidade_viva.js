@@ -712,7 +712,9 @@ export function animarCidade(camada) {
   }
 
   function atualizarAnimacao() {
-    const deveAnimar = !quieto && !document.documentElement.classList.contains("sem-animacao");
+    // Quem manda é só a opção do jogo — o reduced-motion do sistema é
+    // ignorado de propósito (ver css/base/reset.css).
+    const deveAnimar = !document.documentElement.classList.contains("sem-animacao");
     if (deveAnimar === animando) return;
     animando = deveAnimar;
     antes = null;

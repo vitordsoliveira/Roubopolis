@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="/css/componentes/dados.css">
   <link rel="stylesheet" href="/css/componentes/sorteio.css">
   <link rel="stylesheet" href="/css/componentes/compra.css">
+  <link rel="stylesheet" href="/css/componentes/dinheiro.css">
   <link rel="stylesheet" href="/css/telas/partida.css">
 </head>
 
@@ -41,12 +42,6 @@
     <section class="mesa" aria-label="Tabuleiro">
       <div class="tabuleiro" id="tabuleiro">
         <svg class="tabuleiro__svg" id="tabuleiro-svg" role="img" aria-label="Tabuleiro de Roubopolis"></svg>
-        <!-- Os dados ficam no canto de baixo do tabuleiro, como na arte. -->
-        <div class="dados" id="dados">
-          <div class="dados__soma" id="dados-soma" aria-live="polite"></div>
-          <div class="dado" id="dado-a"><div class="dado__cubo" id="cubo-a"></div></div>
-          <div class="dado" id="dado-b"><div class="dado__cubo" id="cubo-b"></div></div>
-        </div>
         <div class="peoes" id="peoes"></div>
         <span class="inicio-marcador" id="inicio-marcador">INÍCIO</span>
       </div>
@@ -94,6 +89,19 @@
   <!-- Anúncio da vez, atravessa a tela na troca de turno -->
   <div class="anuncio" id="anuncio" aria-hidden="true"><span id="anuncio-texto"></span></div>
 
+  <!-- Resultado do dado, no mesmo jeito do anúncio da vez: a faixa entra,
+       os dados grandes giram e assentam, o total bate e a faixa sai. -->
+  <div class="anuncio-dados" id="anuncio-dados" aria-hidden="true">
+    <div class="anuncio-dados__faixa">
+      <span class="anuncio-dados__quem" id="anuncio-dados-quem"></span>
+      <div class="anuncio-dados__cubos">
+        <div class="dado dado--grande"><div class="dado__cubo" id="cubo-grande-a"></div></div>
+        <div class="dado dado--grande"><div class="dado__cubo" id="cubo-grande-b"></div></div>
+      </div>
+      <span class="anuncio-dados__soma" id="anuncio-dados-soma"></span>
+    </div>
+  </div>
+
   <!-- Abertura: todo mundo junto jogando os dados para ver quem começa -->
   <div class="cortina" id="modal-ordem" hidden>
     <div class="sorteio moldura" role="dialog" aria-modal="true" aria-labelledby="ordem-titulo">
@@ -129,6 +137,17 @@
         <span>Animações</span>
         <button class="interruptor" type="button" id="animacoes-partida" aria-pressed="true">LIGADAS</button>
       </div>
+      <!-- Os mesmos volumes do menu: dá para baixar a música sem sair da mesa. -->
+      <label class="painel__linha controle-volume" for="volume-musica-partida">
+        <span>Volume da música</span>
+        <span class="controle-volume__valor" id="valor-volume-musica-partida">40%</span>
+        <input id="volume-musica-partida" type="range" min="0" max="100" step="5" value="40">
+      </label>
+      <label class="painel__linha controle-volume" for="volume-som-partida">
+        <span>Volume dos efeitos</span>
+        <span class="controle-volume__valor" id="valor-volume-som-partida">100%</span>
+        <input id="volume-som-partida" type="range" min="0" max="100" step="5" value="100">
+      </label>
       <div class="painel__acoes">
         <button class="botao botao--pequeno botao--roxo" type="button" id="config-partida-fechar">Voltar</button>
       </div>

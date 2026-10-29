@@ -2,11 +2,12 @@
   "_leia_isto": "TODOS os números do jogo ficam aqui. Mexer neste arquivo muda o jogo sem tocar em uma linha de código — é só reiniciar o servidor. Os preços das propriedades ficam no tabuleiro (data/tabuleiros/vila_original.json), junto de cada casa.",
 
   "nome": "padrao",
-  "descricao": "Perfil principal — partida de 15 minutos, com 30 segundos por turno.",
+  "descricao": "Perfil principal — partida de 15 minutos, com 30 segundos por turno. Economia com capital inicial de R$ 2 milhões.",
 
   "dinheiro": {
     "_sobre": "Quanto cada jogador tem ao começar.",
-    "caixa_inicial": 10000
+    "caixa_inicial": 2000000,
+    "salario_ao_passar_inicio": 300000
   },
 
   "dados": {
@@ -24,17 +25,23 @@
 
   "casas": {
     "_sobre": "Valores em reais que cada casa de evento movimenta.",
-    "ganho": 1000,
-    "roubo": 500,
-    "easter_egg": 450,
+    "ganho": 200000,
+    "roubo": 100000,
+    "easter_egg": 90000,
     "chance_easter_egg": 0.05
   },
 
   "aluguel": {
-    "_sobre": "Fração do valor de tabela da propriedade.",
+    "_sobre": "Fração do valor de tabela da propriedade. Cada nível soma 'por_nivel_de_upgrade' vezes o aluguel-base: com 0.50, o nível 3 cobra 2,5x o base (50% da tabela).",
+    "_por_que": "Com +15% por nível ninguém ganhava melhorando casa: cada propriedade recebe menos de uma visita por partida e o acréscimo nunca pagava a melhoria. Simulação de 400 partidas com 4 jogadores, outubro/2026.",
     "base": 0.20,
-    "por_nivel_de_upgrade": 0.15,
+    "por_nivel_de_upgrade": 0.50,
     "niveis_maximos": 3
+  },
+
+  "upgrade": {
+    "_sobre": "Cada nível custa esta fração do preço de tabela da propriedade. O custo é fixo por nível; no máximo 3 níveis. O valor pago entra no patrimônio, no preço de compra entre jogadores e na venda ao banco.",
+    "custo_por_nivel": 0.25
   },
 
   "morro": {
@@ -68,7 +75,8 @@
   },
 
   "banco": {
-    "_sobre": "Evento Bônus do banco: venda ao banco acima da tabela.",
+    "_sobre": "'venda_ao_banco': fração do valor investido (tabela + melhorias) que o banco paga quando o jogador vende para cobrir dívida. 'bonus_de_venda': evento Bônus do banco, venda acima da tabela.",
+    "venda_ao_banco": 0.35,
     "bonus_de_venda": 0.35
   },
 

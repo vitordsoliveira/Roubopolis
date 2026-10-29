@@ -185,6 +185,11 @@ export const api = {
       metodo: "POST",
       corpo: { comprar },
     }),
+  decidirMelhoria: (codigo, melhorar) =>
+    pedir(`/api/partidas/${codigo}/melhoria`, {
+      metodo: "POST",
+      corpo: { melhorar },
+    }),
   venderPropriedadeParaAluguel: (codigo, casa) =>
     pedir(`/api/partidas/${codigo}/vender-para-aluguel`, {
       metodo: "POST",

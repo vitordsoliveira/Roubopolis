@@ -66,25 +66,17 @@
   margin-top: 28px;
 }
 
+/* As cores são as do botão Jogar (amarelo sobre roxo). Só a sombra e o
+   tamanho mudam: a sombra de 0,45vh do botão grande, num botão pequeno,
+   dobrava a letra pixelada e ela parecia tremida; e o tamanho em vh caía em
+   meio pixel, o que borra fonte pixelada. Aqui os dois ficam em pixel
+   inteiro. */
 .compra__acoes .jogar__botao {
   flex: 1 1 190px;
   min-width: 0;
   min-height: 54px;
-  font-size: clamp(0.9rem, 2.2vh, 1.35rem);
-}
-
-.compra__aceitar {
-  --moldura-borda: #39ff14;
-  --moldura-fundo: #10240a;
-  color: #c5ffb9;
-  text-shadow: 0 2px 0 #174d0b;
-}
-
-.compra__recusar {
-  --moldura-borda: #a855f7;
-  --moldura-fundo: #211034;
-  color: #e1c2ff;
-  text-shadow: 0 2px 0 #351452;
+  font-size: round(clamp(0.9rem, 2.2vh, 1.35rem), 1px);
+  text-shadow: 0 2px 0 #5c4100;
 }
 
 .compra__acoes .jogar__botao:disabled {

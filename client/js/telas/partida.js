@@ -1,8 +1,8 @@
 /* Partida: o tabuleiro isométrico, com o servidor mandando e a tela só
    contando a história.
 
-  A tela encena o sorteio, a rolagem, o movimento e a compra de terrenos;
-  aluguel e efeitos das casas ainda não estão ativos.
+  A tela encena o sorteio, a rolagem, o movimento, a compra de terrenos, o
+  aluguel e as melhorias; os efeitos das casas de evento ainda não estão ativos.
 
    A ordem importa. Quando alguém rola, o servidor JÁ resolveu tudo; o que
    a tela faz depois é encenar na sequência certa: o dado tomba, assenta, o
@@ -292,7 +292,7 @@ async function fecharFaixaDosDados() {
 function assinaturaPropriedades(propriedades = {}) {
   return Object.entries(propriedades)
     .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([indice, propriedade]) => `${indice}:${propriedade.dono}`)
+    .map(([indice, propriedade]) => `${indice}:${propriedade.dono}:${propriedade.nivel || 0}`)
     .join("|");
 }
 
@@ -534,6 +534,9 @@ function pintarJogar() {
   } else if (estado.fase === "decidindo_compra_jogador") {
     resumo = null;
     mensagem = minha ? "Você caiu numa propriedade. Decida se deseja comprar" : `${estado.vez.nome} caiu numa propriedade e está decidindo se compra`;
+  } else if (estado.fase === "decidindo_melhoria") {
+    resumo = null;
+    mensagem = minha ? "Decida se quer construir mais um andar" : `${estado.vez.nome} está decidindo se constrói mais um andar`;
   } else if (estado.fase === "liquidando_para_aluguel") {
     resumo = null;
     mensagem = minha ? "Venda uma propriedade para pagar o aluguel" : `${estado.vez.nome} está vendendo uma propriedade para pagar o aluguel`;
@@ -617,6 +620,9 @@ function anunciarVez() {
    quando dá para saber: terreno novo é caixa registradora. */
 function reagirAoDinheiro(antes) {
   const comprados = Object.keys(estado.propriedades || {}).filter((i) => !antes.propriedades?.[i]);
+  const melhorados = Object.entries(estado.propriedades || {})
+    .filter(([i, posse]) => antes.propriedades?.[i] && (posse.nivel || 0) > (antes.propriedades[i].nivel || 0))
+    .map(([i]) => i);
   const animar = guardado.animacoes();
   let ganhou = false;
   let perdeu = false;
@@ -637,11 +643,11 @@ function reagirAoDinheiro(antes) {
     contarDinheiro(cartao.querySelector(".cartao__valor"), estava.caixa, jogador.caixa, reais);
   }
 
-  // O prédio brota no terreno comprado: a casa pula e o som de obra vem
-  // logo depois da gaveta.
-  for (const indice of comprados) desenho.destacar(Number(indice));
+  // O prédio brota no terreno comprado — ou ganha um andar na melhoria: a
+  // casa pula e o som de obra vem logo depois da gaveta.
+  for (const indice of [...comprados, ...melhorados]) desenho.destacar(Number(indice));
 
-  if (comprados.length) {
+  if (comprados.length || melhorados.length) {
     som.tocar("caixa");
     setTimeout(() => som.tocar("construir"), 450);
   } else if (euMudei) {
@@ -692,10 +698,14 @@ function aplicar(resposta) {
   anunciarVez();
 }
 
+/* A mesma janela serve para as três decisões de "pagar ou não" ao parar
+   numa propriedade: terreno livre, casa de outro jogador e melhoria na
+   própria casa. Só os textos e a rota mudam. */
 function atualizarModalCompra() {
+  const melhoria = estado?.fase === "decidindo_melhoria" ? estado.melhoria_pendente : null;
   const pendente = ["decidindo_compra", "decidindo_compra_jogador"].includes(estado?.fase)
     ? estado.compra_pendente
-    : null;
+    : melhoria;
   const minhaDecisao = Boolean(pendente && estado.vez.sou_eu);
   if (minhaDecisao && modalCompra.hidden) som.tocar("oferta");
   modalCompra.hidden = !minhaDecisao;
@@ -707,6 +717,23 @@ function atualizarModalCompra() {
 
   const casa = tabuleiro.casas[pendente.casa];
   const eu = estado.jogadores.find((jogador) => jogador.sou_eu);
+  const restante = segundosRestantes();
+  tempoCompra.textContent = restante === null ? "Sem limite de tempo" : `Tempo para decidir: ${formatarTempo(restante)}`;
+
+  if (melhoria) {
+    chamadaCompra.textContent = melhoria.origem === "compra" ? "Construir agora?" : "Você caiu na sua propriedade";
+    tituloCompra.textContent = casa?.nome || "Propriedade";
+    vendedorCompra.hidden = false;
+    vendedorCompra.textContent = `Nível ${melhoria.nivel} → ${melhoria.nivel + 1}`;
+    precoCompra.textContent = `Melhoria: ${reais(melhoria.custo)}`;
+    aluguelCompra.hidden = false;
+    aluguelCompra.textContent = `Aluguel passa de ${reais(melhoria.aluguel_atual)} para ${reais(melhoria.aluguel_novo)}`;
+    saldoCompra.textContent = `Seu caixa: ${reais(eu?.caixa)} · após melhorar: ${reais((eu?.caixa || 0) - melhoria.custo)}`;
+    botoesCompra[0].textContent = "Deixar como está";
+    botoesCompra[1].textContent = "Melhorar";
+    return;
+  }
+
   const compraDeJogador = pendente.tipo === "jogador";
   const vendedor = compraDeJogador
     ? estado.jogadores.find((jogador) => jogador.jogador_id === pendente.vendedor_id)
@@ -723,8 +750,6 @@ function atualizarModalCompra() {
   saldoCompra.textContent = `Seu caixa: ${reais(eu?.caixa)} · após comprar: ${reais((eu?.caixa || 0) - pendente.preco)}`;
   botoesCompra[0].textContent = compraDeJogador ? "Recusar e pagar aluguel" : "Deixar passar";
   botoesCompra[1].textContent = "Comprar";
-  const restante = segundosRestantes();
-  tempoCompra.textContent = restante === null ? "Sem limite de tempo" : `Tempo para decidir: ${formatarTempo(restante)}`;
 }
 
 const NOMES_TIPOS_CASA = {
@@ -780,16 +805,28 @@ function mostrarInfoCasa(indice) {
     if (!propriedade) {
       detalhes.push(linhaInfoCasa("Situação", "Sem dono — disponível para compra quando alguém cair aqui."));
     } else {
+      // Valores calculados pelo servidor: refazer a conta aqui deixaria a
+      // tela discordando do motor a cada ajuste no balanceamento.
       const dono = estado.jogadores.find((j) => j.jogador_id === propriedade.dono);
       const nivel = Number(propriedade.nivel || 0);
-      const aluguel = Math.round(casa.preco * 0.2 * (1 + 0.15 * nivel));
       detalhes.push(linhaInfoCasa("Dono", dono?.nome || "Jogador"));
-      detalhes.push(linhaInfoCasa("Melhorias", `${nivel} de 3 níveis`));
-      detalhes.push(linhaInfoCasa("Aluguel atual", reais(aluguel)));
-      if (dono?.jogador_id === estado.jogadores.find((j) => j.sou_eu)?.jogador_id) {
-        detalhes.push(linhaInfoCasa("Ao cair aqui", "É sua propriedade; não há cobrança de aluguel."));
+      detalhes.push(linhaInfoCasa("Melhorias", `${nivel} de ${propriedade.nivel_maximo} níveis`));
+      detalhes.push(linhaInfoCasa("Aluguel atual", reais(propriedade.aluguel)));
+      if (propriedade.custo_melhoria !== null) {
+        detalhes.push(linhaInfoCasa(
+          "Próxima melhoria",
+          `${reais(propriedade.custo_melhoria)} · aluguel passa para ${reais(propriedade.aluguel_proximo_nivel)}`,
+        ));
+      }
+      if (dono?.sou_eu) {
+        detalhes.push(linhaInfoCasa(
+          "Ao cair aqui",
+          propriedade.custo_melhoria !== null
+            ? "É sua: não paga aluguel e pode construir mais um andar."
+            : "É sua: não paga aluguel. Já está no nível máximo.",
+        ));
       } else {
-        detalhes.push(linhaInfoCasa("Ao cair aqui", `Pode comprar por ${reais(casa.preco)} ou pagar o aluguel se recusar.`));
+        detalhes.push(linhaInfoCasa("Ao cair aqui", `Pode comprar por ${reais(propriedade.preco_compra)} ou pagar o aluguel se recusar.`));
       }
     }
   } else {
@@ -847,12 +884,11 @@ function atualizarModalLiquidacao() {
 
   const propriedades = Object.entries(estado.propriedades || {})
     .filter(([, propriedade]) => propriedade.dono === jogador.jogador_id)
-    .map(([indice]) => tabuleiro.casas[Number(indice)])
-    .filter((casaPropria) => casaPropria?.tipo === "propriedade" && Number.isInteger(casaPropria.preco))
-    .sort((a, b) => a.i - b.i);
+    .map(([indice, posse]) => ({ casa: tabuleiro.casas[Number(indice)], valor: posse.valor_banco }))
+    .filter(({ casa: casaPropria }) => casaPropria?.tipo === "propriedade")
+    .sort((a, b) => a.casa.i - b.casa.i);
 
-  listaLiquidacao.replaceChildren(...propriedades.map((propriedade) => {
-    const valor = Math.round(propriedade.preco * 0.35);
+  listaLiquidacao.replaceChildren(...propriedades.map(({ casa: propriedade, valor }) => {
     const botao = elemento(
       "button",
       "liquidacao__vender",
@@ -884,6 +920,7 @@ setInterval(() => {
     "aguardando_rolagem",
     "decidindo_compra",
     "decidindo_compra_jogador",
+    "decidindo_melhoria",
     "liquidando_para_aluguel",
   ].includes(estado.fase);
   if (estado.vez.sou_eu && decidindo && !ocupado && restante > 0 && restante <= 5 && restante !== ultimoTique) {
@@ -978,9 +1015,10 @@ async function responderCompra(comprar) {
   som.tocar(comprar ? "clique" : "voltar");
   try {
     const compraDeJogador = estado.fase === "decidindo_compra_jogador";
-    const resposta = compraDeJogador
-      ? await api.decidirCompraPropriedade(codigo, comprar)
-      : await api.decidirCompra(codigo, comprar);
+    let resposta;
+    if (estado.fase === "decidindo_melhoria") resposta = await api.decidirMelhoria(codigo, comprar);
+    else if (compraDeJogador) resposta = await api.decidirCompraPropriedade(codigo, comprar);
+    else resposta = await api.decidirCompra(codigo, comprar);
     aplicar(resposta);
     if (compraDeJogador && comprar) {
       toast("Propriedade comprada. O pagamento foi para o dono anterior.", "sucesso");

@@ -12,7 +12,7 @@ class DadosFixos:
 
 
 class CompraPropriedadeTestes(unittest.TestCase):
-    def criar_estado(self, caixa=10_000):
+    def criar_estado(self, caixa=2_000_000):
         estado = partida.criar_partida(
             [
                 {"jogador_id": 1, "nome": "Ana"},
@@ -36,13 +36,34 @@ class CompraPropriedadeTestes(unittest.TestCase):
 
         self.assertEqual(estado["fase"], partida.FASE_COMPRA)
         self.assertEqual(estado["compra_pendente"]["casa"], 2)
-        self.assertEqual(estado["jogadores"][0]["caixa"], 10_000)
+        self.assertEqual(estado["jogadores"][0]["caixa"], 2_000_000)
 
         estado = partida.decidir_compra(estado, 1, True)
 
         self.assertEqual(estado["propriedades"]["2"]["dono"], 1)
-        self.assertEqual(estado["jogadores"][0]["caixa"], 9_300)
+        self.assertEqual(estado["jogadores"][0]["caixa"], 1_860_000)
         self.assertIsNone(estado["compra_pendente"])
+        # Logo depois da compra vem a oferta de construir.
+        self.assertEqual(estado["fase"], partida.FASE_MELHORIA)
+        self.assertEqual(estado["melhoria_pendente"]["origem"], "compra")
+
+        estado = partida.decidir_melhoria(estado, 1, False)
+
+        self.assertEqual(estado["fase"], partida.FASE_ROLAR)
+        self.assertEqual(estado["jogadores"][estado["vez"]]["jogador_id"], 2)
+
+    def test_comprar_e_construir_na_mesma_jogada(self):
+        estado = partida.decidir_compra(self.rolar_dois(self.criar_estado()), 1, True)
+        estado = partida.decidir_melhoria(estado, 1, True)
+
+        self.assertEqual(estado["propriedades"]["2"], {"dono": 1, "nivel": 1})
+        self.assertEqual(estado["jogadores"][0]["caixa"], 1_825_000)
+        self.assertEqual(estado["jogadores"][estado["vez"]]["jogador_id"], 2)
+
+    def test_compra_sem_caixa_para_construir_passa_a_vez(self):
+        estado = partida.decidir_compra(self.rolar_dois(self.criar_estado(caixa=150_000)), 1, True)
+
+        self.assertIsNone(estado["melhoria_pendente"])
         self.assertEqual(estado["fase"], partida.FASE_ROLAR)
         self.assertEqual(estado["jogadores"][estado["vez"]]["jogador_id"], 2)
 
@@ -50,7 +71,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
         estado = self.rolar_dois(self.criar_estado())
         estado = partida.decidir_compra(estado, 1, False)
 
-        self.assertEqual(estado["jogadores"][0]["caixa"], 10_000)
+        self.assertEqual(estado["jogadores"][0]["caixa"], 2_000_000)
         self.assertEqual(estado["propriedades"], {})
         self.assertIsNone(estado["compra_pendente"])
         self.assertEqual(estado["jogadores"][estado["vez"]]["jogador_id"], 2)
@@ -65,23 +86,26 @@ class CompraPropriedadeTestes(unittest.TestCase):
     def test_cair_em_propriedade_alheia_oferece_compra_e_transfere_pagamento(self):
         estado = self.criar_estado()
         estado["propriedades"]["2"] = {"dono": 2, "nivel": 1}
-        estado["jogadores"][0]["caixa"] = 2_000
-        estado["jogadores"][1]["caixa"] = 3_000
+        estado["jogadores"][0]["caixa"] = 200_000
+        estado["jogadores"][1]["caixa"] = 300_000
 
         estado = self.rolar_dois(estado)
 
         self.assertEqual(estado["fase"], partida.FASE_COMPRA_JOGADOR)
         self.assertEqual(estado["compra_pendente"]["casa"], 2)
         self.assertEqual(estado["compra_pendente"]["vendedor_id"], 2)
-        self.assertEqual(estado["jogadores"][0]["caixa"], 2_000)
-        self.assertEqual(estado["jogadores"][1]["caixa"], 3_000)
+        self.assertEqual(estado["jogadores"][0]["caixa"], 200_000)
+        self.assertEqual(estado["jogadores"][1]["caixa"], 300_000)
+
+        # Tabela 140.000 + uma melhoria de 35.000: o vendedor recebe pelas duas.
+        self.assertEqual(estado["compra_pendente"]["preco"], 175_000)
 
         atualizado = partida.decidir_compra_jogador(estado, 1, True)
 
         self.assertEqual(atualizado["propriedades"]["2"], {"dono": 1, "nivel": 1})
-        self.assertEqual(atualizado["jogadores"][0]["caixa"], 1_300)
-        self.assertEqual(atualizado["jogadores"][1]["caixa"], 3_700)
-        self.assertEqual(estado["jogadores"][0]["caixa"], 2_000)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 25_000)
+        self.assertEqual(atualizado["jogadores"][1]["caixa"], 475_000)
+        self.assertEqual(estado["jogadores"][0]["caixa"], 200_000)
         self.assertIsNone(atualizado["compra_pendente"])
         self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
         self.assertTrue(any(log["tipo"] == "compra_jogador" for log in atualizado["log"]))
@@ -94,8 +118,9 @@ class CompraPropriedadeTestes(unittest.TestCase):
         estado = partida.decidir_compra_jogador(estado, 1, False)
 
         self.assertEqual(estado["propriedades"]["2"]["dono"], 2)
-        self.assertEqual(estado["jogadores"][0]["caixa"], 9_839)
-        self.assertEqual(estado["jogadores"][1]["caixa"], 10_161)
+        # Nível 1: 20% de 140.000 = 28.000, mais 50% disso.
+        self.assertEqual(estado["jogadores"][0]["caixa"], 1_958_000)
+        self.assertEqual(estado["jogadores"][1]["caixa"], 2_042_000)
         self.assertIsNone(estado["compra_pendente"])
         self.assertTrue(any(log["tipo"] == "aluguel" for log in estado["log"]))
 
@@ -108,8 +133,8 @@ class CompraPropriedadeTestes(unittest.TestCase):
         atualizado = partida.atualizar_tempo(estado, agora=100)
 
         self.assertEqual(atualizado["propriedades"]["2"]["dono"], 2)
-        self.assertEqual(atualizado["jogadores"][0]["caixa"], 9_860)
-        self.assertEqual(atualizado["jogadores"][1]["caixa"], 10_140)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 1_972_000)
+        self.assertEqual(atualizado["jogadores"][1]["caixa"], 2_028_000)
         self.assertIsNone(atualizado["compra_pendente"])
         self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
         self.assertTrue(any("não comprou a propriedade" in log["texto"] for log in atualizado["log"]))
@@ -125,7 +150,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
         self.assertIsNone(atualizado["compra_pendente"])
         self.assertEqual(atualizado["propriedades"]["2"]["dono"], 2)
         self.assertEqual(atualizado["jogadores"][0]["caixa"], 0)
-        self.assertEqual(atualizado["jogadores"][1]["caixa"], 10_100)
+        self.assertEqual(atualizado["jogadores"][1]["caixa"], 2_000_100)
         self.assertTrue(atualizado["jogadores"][0]["falido"])
         self.assertTrue(any(log["tipo"] == "falencia" for log in atualizado["log"]))
 
@@ -137,15 +162,15 @@ class CompraPropriedadeTestes(unittest.TestCase):
         estado = self.rolar_dois(estado)
 
         self.assertEqual(estado["fase"], partida.FASE_LIQUIDACAO_ALUGUEL)
-        self.assertEqual(estado["aluguel_pendente"]["divida"], 140)
+        self.assertEqual(estado["aluguel_pendente"]["divida"], 28_000)
         self.assertEqual(estado["jogadores"][0]["caixa"], 100)
-        self.assertEqual(estado["jogadores"][1]["caixa"], 10_000)
+        self.assertEqual(estado["jogadores"][1]["caixa"], 2_000_000)
 
         atualizado = partida.vender_propriedade_para_aluguel(estado, 1, 1)
 
         self.assertNotIn("1", atualizado["propriedades"])
-        self.assertEqual(atualizado["jogadores"][0]["caixa"], 188)
-        self.assertEqual(atualizado["jogadores"][1]["caixa"], 10_140)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 17_600)
+        self.assertEqual(atualizado["jogadores"][1]["caixa"], 2_028_000)
         self.assertIsNone(atualizado["aluguel_pendente"])
         self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
 
@@ -159,13 +184,13 @@ class CompraPropriedadeTestes(unittest.TestCase):
         primeira_venda = partida.vender_propriedade_para_aluguel(estado, 1, 1)
 
         self.assertEqual(primeira_venda["fase"], partida.FASE_LIQUIDACAO_ALUGUEL)
-        self.assertEqual(primeira_venda["jogadores"][0]["caixa"], 228)
-        self.assertEqual(primeira_venda["jogadores"][1]["caixa"], 10_000)
+        self.assertEqual(primeira_venda["jogadores"][0]["caixa"], 45_500)
+        self.assertEqual(primeira_venda["jogadores"][1]["caixa"], 2_000_000)
 
         atualizado = partida.vender_propriedade_para_aluguel(primeira_venda, 1, 26)
 
-        self.assertEqual(atualizado["jogadores"][0]["caixa"], 858)
-        self.assertEqual(atualizado["jogadores"][1]["caixa"], 10_350)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 73_500)
+        self.assertEqual(atualizado["jogadores"][1]["caixa"], 2_168_000)
         self.assertNotIn("1", atualizado["propriedades"])
         self.assertNotIn("26", atualizado["propriedades"])
         self.assertIsNone(atualizado["aluguel_pendente"])
@@ -184,7 +209,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
         estado["vez"] = 0
         estado["jogadores"][0]["posicao"] = 4
         estado["jogadores"][0]["caixa"] = 0
-        estado["jogadores"][1]["caixa"] = 5_000
+        estado["jogadores"][1]["caixa"] = 5_000_000
         estado["propriedades"]["2"] = {"dono": 2, "nivel": 10}
         estado["propriedades"]["1"] = {"dono": 1, "nivel": 0}
         estado["prazo_vez"] = 4_000_000_000
@@ -196,7 +221,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
         self.assertEqual(atualizado["fase"], partida.FASE_ROLAR)
         self.assertTrue(atualizado["jogadores"][0]["falido"])
         self.assertEqual(atualizado["jogadores"][0]["caixa"], 0)
-        self.assertEqual(atualizado["jogadores"][1]["caixa"], 5_228)
+        self.assertEqual(atualizado["jogadores"][1]["caixa"], 5_045_500)
         self.assertNotIn("1", atualizado["propriedades"])
         self.assertEqual(atualizado["propriedades"]["2"]["dono"], 2)
         self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
@@ -222,19 +247,87 @@ class CompraPropriedadeTestes(unittest.TestCase):
 
         self.assertTrue(atualizado["jogadores"][0]["falido"])
         self.assertNotIn("1", atualizado["propriedades"])
-        self.assertEqual(atualizado["jogadores"][1]["caixa"], 10_100)
+        self.assertEqual(atualizado["jogadores"][1]["caixa"], 2_000_100)
         self.assertEqual(atualizado["fase"], partida.FASE_FIM)
         self.assertFalse(atualizado["jogadores"][1]["falido"])
 
-    def test_cair_na_propria_propriedade_nao_abre_oferta_de_compra(self):
+    def test_cair_na_propria_propriedade_oferece_melhoria_e_nao_compra(self):
         estado = self.criar_estado()
         estado["propriedades"]["2"] = {"dono": 1, "nivel": 0}
 
         atualizado = self.rolar_dois(estado)
 
-        self.assertEqual(atualizado["fase"], partida.FASE_ROLAR)
+        self.assertEqual(atualizado["fase"], partida.FASE_MELHORIA)
         self.assertIsNone(atualizado["compra_pendente"])
-        self.assertEqual(atualizado["propriedades"]["2"]["dono"], 1)
+        self.assertEqual(
+            atualizado["melhoria_pendente"],
+            {
+                "casa": 2, "jogador_id": 1, "origem": "visita", "nivel": 0,
+                "custo": 35_000, "aluguel_atual": 28_000, "aluguel_novo": 42_000,
+            },
+        )
+        self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 1)
+
+    def test_aceitar_melhoria_cobra_sobe_nivel_e_passa_a_vez(self):
+        estado = self.criar_estado()
+        estado["propriedades"]["2"] = {"dono": 1, "nivel": 1}
+        estado = self.rolar_dois(estado)
+
+        atualizado = partida.decidir_melhoria(estado, 1, True)
+
+        self.assertEqual(atualizado["propriedades"]["2"]["nivel"], 2)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 1_965_000)
+        self.assertIsNone(atualizado["melhoria_pendente"])
+        self.assertEqual(atualizado["fase"], partida.FASE_ROLAR)
+        self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
+
+    def test_recusar_melhoria_nao_cobra_e_passa_a_vez(self):
+        estado = self.criar_estado()
+        estado["propriedades"]["2"] = {"dono": 1, "nivel": 0}
+        estado = self.rolar_dois(estado)
+
+        atualizado = partida.decidir_melhoria(estado, 1, False)
+
+        self.assertEqual(atualizado["propriedades"]["2"]["nivel"], 0)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 2_000_000)
+        self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
+
+    def test_tempo_esgotado_na_melhoria_recusa(self):
+        estado = self.criar_estado()
+        estado["propriedades"]["2"] = {"dono": 1, "nivel": 0}
+        estado = self.rolar_dois(estado)
+        estado["prazo_vez"] = 100
+
+        atualizado = partida.atualizar_tempo(estado, agora=100)
+
+        self.assertEqual(atualizado["propriedades"]["2"]["nivel"], 0)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 2_000_000)
+        self.assertIsNone(atualizado["melhoria_pendente"])
+        self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
+
+    def test_nivel_maximo_nao_oferece_melhoria(self):
+        estado = self.criar_estado()
+        estado["propriedades"]["2"] = {"dono": 1, "nivel": 3}
+
+        atualizado = self.rolar_dois(estado)
+
+        self.assertIsNone(atualizado["melhoria_pendente"])
+        self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
+
+    def test_sem_caixa_nao_oferece_melhoria(self):
+        estado = self.criar_estado(caixa=1_000)
+        estado["propriedades"]["2"] = {"dono": 1, "nivel": 0}
+
+        atualizado = self.rolar_dois(estado)
+
+        self.assertIsNone(atualizado["melhoria_pendente"])
+        self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
+
+    def test_nao_decide_melhoria_sem_oferta(self):
+        estado = self.criar_estado()
+
+        with self.assertRaisesRegex(partida.ErroDeRegra, "Não há uma melhoria"):
+            partida.decidir_melhoria(estado, 1, True)
 
     def test_nao_pode_comprar_propriedade_sem_ter_a_oferta_do_turno(self):
         estado = self.criar_estado()
@@ -281,6 +374,75 @@ class CompraPropriedadeTestes(unittest.TestCase):
         estado = self.criar_estado()
 
         self.assertTrue(all(jogador["posicao"] == 4 for jogador in estado["jogadores"]))
+        self.assertTrue(all(jogador["caixa"] == 2_000_000 for jogador in estado["jogadores"]))
+
+    def test_passar_pelo_inicio_paga_salario_uma_vez(self):
+        estado = self.criar_estado()
+        estado["jogadores"][0]["posicao"] = 6
+
+        atualizado = self.rolar_dois(estado)
+
+        self.assertEqual(atualizado["jogadores"][0]["posicao"], 4)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 2_300_000)
+        self.assertTrue(any(log["tipo"] == "salario_inicio" for log in atualizado["log"]))
+
+    def test_nao_paga_salario_se_nao_passou_pelo_inicio(self):
+        estado = self.criar_estado()
+
+        atualizado = self.rolar_dois(estado)
+
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 2_000_000)
+        self.assertFalse(any(log["tipo"] == "salario_inicio" for log in atualizado["log"]))
+
+    def test_custo_de_upgrade_e_um_quarto_do_preco_da_propriedade(self):
+        tabuleiro = partida.carregar_tabuleiro("vila_original")
+        casa = tabuleiro.casa(1)
+        estado = self.criar_estado()
+
+        self.assertEqual(partida._valor_upgrade(estado, casa), 32_500)
+
+    def test_aluguel_no_nivel_maximo_e_metade_da_tabela(self):
+        estado = self.criar_estado()
+        casa = partida.carregar_tabuleiro("vila_original").casa(37)
+
+        self.assertEqual(partida._valor_aluguel(estado, casa, {"nivel": 0}), 200_000)
+        self.assertEqual(partida._valor_aluguel(estado, casa, {"nivel": 3}), 500_000)
+
+    def test_melhoria_conta_no_patrimonio(self):
+        estado = self.criar_estado()
+        estado["propriedades"]["2"] = {"dono": 1, "nivel": 0}
+
+        antes = partida._patrimonio(estado, estado["jogadores"][0])
+        depois = partida.decidir_melhoria(self.rolar_dois(estado), 1, True)
+
+        self.assertEqual(depois["propriedades"]["2"]["nivel"], 1)
+        self.assertEqual(partida._patrimonio(depois, depois["jogadores"][0]), antes)
+
+    def test_venda_ao_banco_inclui_melhorias(self):
+        estado = self.criar_estado(caixa=0)
+        estado["propriedades"]["2"] = {"dono": 2, "nivel": 10}
+        estado["propriedades"]["1"] = {"dono": 1, "nivel": 2}
+        estado = self.rolar_dois(estado)
+
+        atualizado = partida.vender_propriedade_para_aluguel(estado, 1, 1)
+
+        # 35% de (130.000 + 2 x 32.500). Não cobre a dívida: o jogador fali e
+        # o valor da venda vai inteiro para o credor.
+        self.assertEqual(atualizado["jogadores"][1]["caixa"], 2_068_250)
+
+    def test_estado_publico_traz_valores_calculados(self):
+        estado = self.criar_estado()
+        estado["propriedades"]["1"] = {"dono": 1, "nivel": 1}
+
+        publica = partida.estado_publico(estado, 1)["propriedades"]["1"]
+
+        self.assertEqual(publica["dono"], 1)
+        self.assertEqual(publica["aluguel"], 39_000)
+        self.assertEqual(publica["aluguel_proximo_nivel"], 52_000)
+        self.assertEqual(publica["custo_melhoria"], 32_500)
+        self.assertEqual(publica["preco_compra"], 162_500)
+        self.assertEqual(publica["valor_banco"], 56_875)
+        self.assertEqual(publica["nivel_maximo"], 3)
 
     def test_detecta_cruzamento_da_inicial_no_sentido_horario(self):
         tabuleiro = partida.carregar_tabuleiro("vila_original")
@@ -335,7 +497,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
         estado["prazo_vez"] = 10_000
         estado["prazo_partida"] = 100
         estado["propriedades"]["2"] = {"dono": 2, "nivel": 0}
-        estado["jogadores"][0]["caixa"] = 11_000
+        estado["jogadores"][0]["caixa"] = 2_300_000
 
         atualizado = partida.atualizar_tempo(estado, agora=100)
         primeiro = partida.passar_turno(atualizado, agora=101)
@@ -354,7 +516,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
         self.assertEqual(final["fase"], partida.FASE_FIM)
         self.assertEqual(final["motivo_fim"], "tempo")
         self.assertEqual(final["vencedores"], [1])
-        self.assertEqual(final["patrimonios_finais"], {"1": 11_000, "2": 10_700, "3": 10_000})
+        self.assertEqual(final["patrimonios_finais"], {"1": 2_300_000, "2": 2_140_000, "3": 2_000_000})
         self.assertEqual(final["rodada"], 1)
 
     def test_tempo_esgotado_entre_turnos_finaliza_apos_rodada_corrente(self):
@@ -407,7 +569,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
         atualizado = partida.atualizar_tempo(estado, agora=100)
 
         self.assertEqual(atualizado["propriedades"], {})
-        self.assertEqual(atualizado["jogadores"][0]["caixa"], 10_000)
+        self.assertEqual(atualizado["jogadores"][0]["caixa"], 2_000_000)
         self.assertIsNone(atualizado["compra_pendente"])
         self.assertEqual(atualizado["jogadores"][atualizado["vez"]]["jogador_id"], 2)
 

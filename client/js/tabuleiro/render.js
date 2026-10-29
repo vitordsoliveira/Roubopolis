@@ -235,29 +235,50 @@ function pontoDoRotulo(geo) {
 
 /* O prédio diz a faixa de preço de longe: barraco com caixa d'água nas
    baratas, casinha de telhado nas médias, sobrado nas caras, prédio nas
-   muito caras e torre nas extremamente caras. */
+   muito caras e torre nas extremamente caras.
+
+   Cada nível de melhoria põe um andar a mais, com uma laje marcando a
+   emenda: quem passa vê de longe que ali o aluguel subiu. `andar` é a
+   altura desse andar extra — nas muito caras ele é mais baixo porque a
+   fileira de cima encosta no topo do quadro (ver `caixaVista`). */
 const PREDIOS = {
-  barata: { larg: 0.46, prof: 0.4, alt: 0.34, paredes: ["#c0603a", "#d9893d", "#9c6a4f"], caixaDagua: true },
-  media: { larg: 0.46, prof: 0.42, alt: 0.3, paredes: ["#f0e2c4", "#f3c6c6", "#cfe8b8"], telhado: "#c2452d" },
-  cara: { larg: 0.5, prof: 0.46, alt: 0.46, paredes: ["#9fd3e6", "#b8c7f0", "#c5e8d4"], telhado: "#3c4668", janelas: [2, 1] },
-  muito_cara: { larg: 0.46, prof: 0.46, alt: 0.78, paredes: ["#b9a4e0", "#d6c8f0", "#a8b8e8"], janelas: [2, 3] },
-  extremamente_cara: { larg: 0.42, prof: 0.42, alt: 1.08, paredes: ["#7fb4ff", "#ff9be6", "#b5f0ff"], janelas: [2, 4], antena: true },
+  barata: { larg: 0.46, prof: 0.4, alt: 0.34, andar: 0.16, paredes: ["#c0603a", "#d9893d", "#9c6a4f"], caixaDagua: true },
+  media: { larg: 0.46, prof: 0.42, alt: 0.3, andar: 0.16, paredes: ["#f0e2c4", "#f3c6c6", "#cfe8b8"], telhado: "#c2452d" },
+  cara: { larg: 0.5, prof: 0.46, alt: 0.46, andar: 0.2, paredes: ["#9fd3e6", "#b8c7f0", "#c5e8d4"], telhado: "#3c4668", janelas: [2, 1] },
+  muito_cara: { larg: 0.46, prof: 0.46, alt: 0.78, andar: 0.18, paredes: ["#b9a4e0", "#d6c8f0", "#a8b8e8"], janelas: [2, 3] },
+  extremamente_cara: { larg: 0.42, prof: 0.42, alt: 1.08, andar: 0.24, paredes: ["#7fb4ff", "#ff9be6", "#b5f0ff"], janelas: [2, 4], antena: true },
 };
 
-function predio(pai, casa, u, v, z) {
+function predio(pai, casa, u, v, z, nivel = 0) {
   const tipo = PREDIOS[casa.grupo] || PREDIOS.media;
   const parede = tipo.paredes[casa.i % tipo.paredes.length];
   const u0 = u - tipo.larg / 2;
   const u1 = u + tipo.larg / 2;
   const v0 = v - tipo.prof / 2;
   const v1 = v + tipo.prof / 2;
-  const topo = z + tipo.alt;
+  const topoOriginal = z + tipo.alt;
+  const topo = topoOriginal + nivel * tipo.andar;
 
   caixa(pai, u0, v0, u1, v1, z, topo, parede, tipo.telhado ? parede : clarear(parede, 0.25));
 
+  // Laje saliente na emenda de cada andar novo.
+  for (let k = 0; k < nivel; k += 1) {
+    const emenda = topoOriginal + k * tipo.andar;
+    const s = 0.02;
+    caixa(pai, u0 - s, v0 - s, u1 + s, v1 + s, emenda - 0.015, emenda + 0.015, escurecer(parede, 0.3));
+  }
+
   if (tipo.janelas) {
-    janelas(pai, u0, v0, u1, v1, z, topo, tipo.janelas[0], tipo.janelas[1], "#ffe79a");
+    janelas(pai, u0, v0, u1, v1, z, topoOriginal, tipo.janelas[0], tipo.janelas[1], "#ffe79a");
+    for (let k = 0; k < nivel; k += 1) {
+      const baixo = topoOriginal + k * tipo.andar;
+      janelas(pai, u0, v0, u1, v1, baixo, baixo + tipo.andar, tipo.janelas[0], 1, "#ffe79a");
+    }
   } else {
+    for (let k = 0; k < nivel; k += 1) {
+      const baixo = topoOriginal + k * tipo.andar;
+      janelas(pai, u0, v0, u1, v1, baixo, baixo + tipo.andar, 1, 1, "#ffe79a");
+    }
     // Casa pequena: uma porta na frente e uma janela do lado.
     const meio = (u0 + u1) / 2;
     face(pai, [[meio - 0.06, v1, z + 0.2], [meio + 0.06, v1, z + 0.2], [meio + 0.06, v1, z], [meio - 0.06, v1, z]],
@@ -415,9 +436,15 @@ function enfeitar(pai, casa, geo, ctx) {
 
   const [u, v] = pontoDoEnfeite(geo);
   if (casa.tipo === "propriedade") {
-    // Nasce escondido: só aparece quando alguém compra (`marcarDonos`).
-    const camada = no("g", { class: "casa__predio", display: "none" }, pai);
-    return predio(camada, casa, u, v, z);
+    // Nada é desenhado agora: o prédio de cada nível nasce na primeira vez
+    // que o terreno chega nele (`marcarDonos`), no lugar guardado aqui.
+    const lugar = no("g", { class: "casa__predios" }, pai);
+    ctx.predios.set(casa.i, (nivel) => {
+      const camada = no("g", { class: "casa__predio", "data-nivel": nivel, display: "none" }, lugar);
+      predio(camada, casa, u, v, z, nivel);
+      return camada;
+    });
+    return;
   }
   // Casa neutra não tem nome escrito: a árvore fica no meio dela.
   if (casa.tipo === "neutra") return iconeEmPe(pai, "arvore", geo.uc, geo.vc, z, 0.62 * C);
@@ -562,6 +589,8 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
   const comprimento = Math.hypot(du, dv) || 1;
   const ctx = {
     direcaoDaSaida: [du / comprimento, dv / comprimento],
+    /** Índice da casa → função que desenha o prédio de um nível. */
+    predios: new Map(),
   };
 
   const porProfundidade = (a, b) => a.geo.uc + a.geo.vc - (b.geo.uc + b.geo.vc);
@@ -600,13 +629,19 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
     }, alvos);
   }
 
-  /** Terreno com dono: prédio, anel e bandeira aparecem, na cor dele. */
+  /** Terreno com dono: o prédio do nível dele, o anel e a bandeira aparecem,
+      na cor do dono. */
   function marcarDonos(lista = {}) {
     for (const g of svg.querySelectorAll(".casa--terreno")) {
-      const dono = lista[g.dataset.i]?.dono;
-      for (const marca of g.querySelectorAll(".casa__predio, .casa__dono")) {
-        if (dono == null) marca.setAttribute("display", "none");
-        else marca.removeAttribute("display");
+      const posse = lista[g.dataset.i];
+      const dono = posse?.dono;
+      for (const marca of g.querySelectorAll(".casa__predio, .casa__dono")) marca.setAttribute("display", "none");
+      if (dono != null) {
+        const nivel = Number(posse.nivel || 0);
+        const camada = g.querySelector(`.casa__predio[data-nivel="${nivel}"]`)
+          || ctx.predios.get(Number(g.dataset.i))(nivel);
+        camada.removeAttribute("display");
+        g.querySelector(".casa__dono")?.removeAttribute("display");
       }
       const cor = dono == null ? null : corDoDono(dono);
       if (cor) g.style.setProperty("--cor-dono", cor);
@@ -629,7 +664,8 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
   return {
     proporcao: caixaVista.w / caixaVista.h,
 
-    /** Só mostra os prédios dos terrenos comprados, com a cor do dono. */
+    /** Só mostra os prédios dos terrenos comprados, na altura do nível e
+        com a cor do dono. */
     atualizarPropriedades: marcarDonos,
 
     /** Onde ficam os pés do peão, em % do quadro. */

@@ -169,6 +169,27 @@ def decidir_compra_jogador(sessao: Session, sala: Sala, jogador, comprar: bool) 
     return _envelope(estado, jogador, sala)
 
 
+def decidir_melhoria(sessao: Session, sala: Sala, jogador, melhorar: bool) -> dict:
+    """Decide a melhoria oferecida ao jogador ao cair na própria casa."""
+    linha = buscar_partida(sessao, sala, bloquear=True)
+    original = _ler(linha)
+    estado_atual = motor.atualizar_tempo(original)
+    if estado_atual != original:
+        # Resposta depois do prazo: a recusa automática já passou a vez.
+        _gravar(sessao, linha, estado_atual)
+        if estado_atual["fase"] != motor.FASE_MELHORIA:
+            _marcar_sala_encerrada(sala, estado_atual)
+            sessao.commit()
+            return _envelope(estado_atual, jogador, sala)
+    try:
+        estado = motor.decidir_melhoria(estado_atual, jogador.id, melhorar)
+    except motor.ErroDeRegra as erro:
+        raise _erro(erro)
+    _marcar_sala_encerrada(sala, estado)
+    _gravar(sessao, linha, estado)
+    return _envelope(estado, jogador, sala)
+
+
 def vender_propriedade_para_aluguel(
     sessao: Session, sala: Sala, jogador, casa_indice: int
 ) -> dict:

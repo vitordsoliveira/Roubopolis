@@ -34,8 +34,8 @@ continuam valendo durante essa rodada final.
 ## 3. Fluxo do turno
 
 1. O jogador rola os dados e move.
-2. A casa onde parou é resolvida (compra, aluguel, evento ou nada).
-3. Ações livres, se estiver habilitado: leilão, desafio ou upgrade.
+2. A casa onde parou é resolvida (compra, aluguel, melhoria, evento ou nada).
+3. Ações livres, se estiver habilitado: leilão ou desafio.
 4. O turno passa.
 
 **Limite: 30 segundos por turno.** Estourou, executa a ação padrão — não
@@ -50,22 +50,36 @@ Cinco grupos, do mais caro ao mais barato: **Extremamente caro · Muito caro ·
 Caro · Médio · Barato**.
 
 - **Aluguel base:** 20% do valor da propriedade.
-- **Upgrade:** máximo de 3 níveis; cada nível aumenta o aluguel-base em 15%.
+- **Upgrade:** máximo de 3 níveis. Cada nível custa 25% do preço de tabela
+  (o mesmo custo em todos os níveis) e soma **50% do aluguel-base** ao
+  aluguel: nível 1 = 30% da tabela, nível 2 = 40%, nível 3 = 50%.
+- **Quando melhorar:** só com o peão na casa, um nível por vez, como no
+  Business Tour. A oferta aparece logo **depois de comprar** a propriedade
+  (do banco ou de outro jogador) e quando o dono **cai de novo nela**. Há o
+  mesmo prazo de 30 segundos da compra; se acabar, a melhoria é recusada.
+  Sem caixa para o custo, ou já no nível 3, não há oferta.
+- **No tabuleiro:** cada nível põe um andar a mais no prédio da casa, com uma
+  laje marcando a emenda.
+- **Valor investido** de uma propriedade = preço de tabela + o que já foi pago
+  em melhorias. É esse valor que conta no patrimônio, que outro jogador paga
+  para comprá-la e sobre o qual o banco calcula a venda. Melhoria é
+  investimento: não some do placar e não passa de graça para quem compra a
+  casa.
+- **Escala da economia:** cada jogador começa com R$ 2.000.000 e recebe
+  R$ 300.000 ao cruzar o Início.
 - Ao parar em um terreno sem dono, o jogador pode comprá-lo pelo preço da
   tabela. Se recusar ou não tiver saldo suficiente, o terreno continua sem
   dono e sem casa.
-- Ao cair numa propriedade de outro jogador, o jogador da vez pode comprar pelo
-  preço original da tabela, desde que tenha saldo suficiente. A oferta aparece
+- Ao cair numa propriedade de outro jogador, o jogador da vez pode comprá-la
+  pelo **valor investido**, desde que tenha saldo suficiente. A oferta aparece
   apenas nessa situação; não é possível iniciar compras clicando em outras casas
   nem fora da própria vez. Se confirmar, o valor sai do caixa do comprador e
-  entra no caixa do dono anterior, e a propriedade muda de dono. Os upgrades são
-  mantidos, e não há cobrança adicional de aluguel nessa jogada. Se recusar ou
+  entra no caixa do dono anterior, e a propriedade muda de dono com as
+  melhorias. Não há cobrança adicional de aluguel nessa jogada. Se recusar ou
   o prazo acabar, paga aluguel ao dono e a vez passa. Quem não tiver saldo para
   comprar também paga o aluguel automaticamente.
-- **Cálculo implementado do aluguel:** 20% do preço da casa, mais 15% desse
-  aluguel-base por nível de upgrade (fator linear).
 - Se o caixa não cobrir o aluguel, o jogador escolhe propriedades próprias para
-  vender ao banco, uma por vez, por 35% do valor de tabela. Cada venda aumenta
+  vender ao banco, uma por vez, por 35% do valor investido. Cada venda aumenta
   o caixa; quando houver saldo suficiente, o aluguel é pago e a vez passa.
 - Se todas as propriedades forem vendidas e ainda faltar dinheiro, o saldo
   restante é entregue ao dono como pagamento parcial, o jogador vai à falência,
@@ -73,11 +87,15 @@ Caro · Médio · Barato**.
   continuam; se sobrar apenas um jogador ativo, a partida termina. Se o prazo de
   liquidação acabar, o jogador vai à falência automaticamente.
 
-**⚠ EM ABERTO:** o **preço do upgrade nunca foi definido** — e a Casa da
-Reconstrução dá 30% de desconto sobre esse valor inexistente. Também falta
-dizer se os +15% são cumulativos sobre o aluguel base ou compostos, e em que
-ordem multiplicam aluguel × upgrade × morro × evento de fim de ano. No topo
-isso chega a ~69% do valor da propriedade por aluguel.
+**Por que +50% por nível, e não os +15% de antes:** numa simulação de 400
+partidas com 4 jogadores, cada propriedade recebeu menos de uma visita por
+partida. Com +15%, a melhoria nunca se pagava e quem melhorava casas venceu 2
+de 400 partidas (o justo seria ~100). Com +50% e a melhoria contando no
+patrimônio, melhorar passa a ser uma aposta boa, mas não obrigatória.
+
+Todos esses percentuais ficam em `data/balanceamento/padrao.json`. A Casa da
+Reconstrução, o bônus do Morro e o evento de final de ano ainda não estão
+ativos no motor.
 
 ## 5. Bônus do Morro
 

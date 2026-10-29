@@ -10,8 +10,11 @@ Regras deste arquivo:
   com uma mensagem que pode ir direto para a tela.
 
 O jogador pode comprar um terreno livre onde parou ou, ao cair numa propriedade
-de outro jogador, comprá-la dele pelo preço da tabela ou pagar aluguel. Os
-demais efeitos das casas de evento ainda não fazem parte desta etapa.
+de outro jogador, comprá-la dele pelo valor investido (tabela + melhorias) ou
+pagar aluguel. Ao cair na própria casa, o dono pode subir um nível, e quem
+passa pelo Início recebe salário. Todos os valores vêm do perfil de
+balanceamento. Os demais efeitos das casas de evento ainda não fazem parte
+desta etapa.
 """
 
 from __future__ import annotations
@@ -23,17 +26,16 @@ from engine.board.tabuleiro import carregar_tabuleiro
 from engine.regras.balanceamento import carregar_balanceamento
 from engine.rng.gerador import Gerador
 
-#: v7: prazo total e encerramento por patrimônio ao fim da rodada.
-VERSAO_DO_ESTADO = 7
+#: v8: melhoria decidida ao cair na própria casa (`melhoria_pendente`).
+VERSAO_DO_ESTADO = 8
 
 FASE_SORTEIO = "sorteio_ordem"
 FASE_ROLAR = "aguardando_rolagem"
 FASE_COMPRA = "decidindo_compra"
 FASE_COMPRA_JOGADOR = "decidindo_compra_jogador"
 FASE_LIQUIDACAO_ALUGUEL = "liquidando_para_aluguel"
+FASE_MELHORIA = "decidindo_melhoria"
 FASE_FIM = "encerrada"
-
-TAXA_VENDA_BANCO = 35
 
 
 class ErroDeRegra(Exception):
@@ -106,10 +108,15 @@ def _observar_prazo_partida(estado: dict, agora: float | None = None) -> None:
 
 
 def _patrimonio(estado: dict, jogador: dict) -> int:
-    """Caixa mais valor de tabela das propriedades (upgrades ainda sem preço)."""
+    """Caixa mais o valor investido em cada propriedade (tabela + melhorias).
+
+    Melhoria é investimento, não despesa: se ela saísse do patrimônio, quem
+    melhorasse uma casa perderia pontos no placar final — e a simulação
+    mostrou que ninguém ganhava fazendo isso.
+    """
     tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
     valor_propriedades = sum(
-        tabuleiro.casa(int(indice)).preco or 0
+        _valor_investido(estado, tabuleiro.casa(int(indice)), propriedade)
         for indice, propriedade in estado["propriedades"].items()
         if propriedade["dono"] == jogador["jogador_id"]
     )
@@ -148,19 +155,116 @@ def _encerrar_partida(estado: dict, motivo: str) -> dict:
     return estado
 
 
-def _valor_aluguel(casa, propriedade: dict) -> int:
-    """Aluguel base de 20%, com +15% do base por nível de upgrade."""
+def _valor_aluguel(estado: dict, casa, propriedade: dict) -> int:
+    """Aluguel-base sobre a tabela, mais um acréscimo linear por nível de melhoria."""
+    aluguel = carregar_balanceamento(estado["perfil"])["aluguel"]
     nivel = max(0, int(propriedade.get("nivel", 0)))
-    return int(round(casa.preco * 0.20 * (1 + 0.15 * nivel)))
+    return int(round(casa.preco * aluguel["base"] * (1 + aluguel["por_nivel_de_upgrade"] * nivel)))
 
 
-def _valor_venda_banco(casa) -> int:
-    """O banco compra por 35% do preço de tabela, como no leilão."""
-    return (casa.preco * TAXA_VENDA_BANCO + 50) // 100
+def _valor_upgrade(estado: dict, casa) -> int:
+    balanceamento = carregar_balanceamento(estado["perfil"])
+    fracao = float(balanceamento.get("upgrade", {}).get("custo_por_nivel", 0))
+    return int(round((casa.preco or 0) * fracao))
+
+
+def _valor_investido(estado: dict, casa, propriedade: dict) -> int:
+    """Preço de tabela mais o que já foi pago em melhorias.
+
+    É o preço de quem compra a propriedade de outro jogador: as melhorias vão
+    junto com a casa, então quem as pagou precisa receber por elas.
+    """
+    nivel = max(0, int(propriedade.get("nivel", 0)))
+    return (casa.preco or 0) + nivel * _valor_upgrade(estado, casa)
+
+
+def _niveis_maximos(estado: dict) -> int:
+    return int(carregar_balanceamento(estado["perfil"])["aluguel"]["niveis_maximos"])
+
+
+def _oferecer_melhoria(estado: dict, jogador: dict, casa, propriedade: dict, origem: str) -> bool:
+    """Abre a decisão de subir um nível na casa onde o jogador está.
+
+    Como no Business Tour, melhoria só acontece com o peão na casa: logo
+    depois de comprá-la (`origem="compra"`) ou ao cair nela de novo
+    (`origem="visita"`). Amarrada ao tabuleiro, ela vira a escolha "investir
+    agora ou guardar o caixa", em vez de um botão que se aperta a qualquer vez
+    em qualquer casa. Oferecida só na visita, seria rara demais: cada jogador
+    cai na própria casa menos de uma vez por partida.
+    """
+    nivel = int(propriedade.get("nivel", 0))
+    custo = _valor_upgrade(estado, casa)
+    if nivel >= _niveis_maximos(estado) or custo <= 0 or jogador["caixa"] < custo:
+        # Depois da compra o silêncio basta; na visita, a tela conta por que
+        # não houve oferta.
+        if origem == "visita":
+            motivo = "já está no nível máximo" if nivel >= _niveis_maximos(estado) else "não tem caixa para melhorar"
+            _log(estado, "melhoria", f"{casa.nome}: {motivo}.", jogador["jogador_id"])
+        return False
+
+    estado["fase"] = FASE_MELHORIA
+    _definir_prazo(estado)
+    estado["melhoria_pendente"] = {
+        "casa": casa.indice,
+        "jogador_id": jogador["jogador_id"],
+        "origem": origem,
+        "nivel": nivel,
+        "custo": custo,
+        "aluguel_atual": _valor_aluguel(estado, casa, propriedade),
+        "aluguel_novo": _valor_aluguel(estado, casa, {**propriedade, "nivel": nivel + 1}),
+    }
+    _log(
+        estado,
+        "melhoria",
+        f"{jogador['nome']} pode melhorar {casa.nome} para o nível {nivel + 1} por {_reais(custo)}.",
+        jogador["jogador_id"],
+    )
+    return True
+
+
+def decidir_melhoria(estado: dict, jogador_id: int, melhorar: bool) -> dict:
+    """Aceita ou recusa subir um nível na casa própria onde o jogador parou."""
+    estado = atualizar_tempo(estado)
+    if estado["fase"] != FASE_MELHORIA or not estado.get("melhoria_pendente"):
+        raise ErroDeRegra("Não há uma melhoria para decidir agora.", http=409)
+
+    estado = copy.deepcopy(estado)
+    jogador = _exigir_vez(estado, jogador_id)
+    pendente = estado["melhoria_pendente"]
+    if pendente["jogador_id"] != jogador_id:
+        raise ErroDeRegra("Essa melhoria pertence a outro jogador.", http=403)
+
+    casa = carregar_tabuleiro(estado["tabuleiro"]).casa(pendente["casa"])
+    if melhorar:
+        propriedade = estado["propriedades"].get(str(pendente["casa"]))
+        if propriedade is None or propriedade["dono"] != jogador_id:
+            raise ErroDeRegra("Essa propriedade não é mais sua.", http=409)
+        if int(propriedade.get("nivel", 0)) != pendente["nivel"]:
+            raise ErroDeRegra("Essa propriedade já mudou de nível.", http=409)
+        if jogador["caixa"] < pendente["custo"]:
+            raise ErroDeRegra(f"Você precisa de {_reais(pendente['custo'])} para essa melhoria.", http=409)
+        jogador["caixa"] -= pendente["custo"]
+        propriedade["nivel"] = pendente["nivel"] + 1
+        _log(
+            estado,
+            "melhoria",
+            f"{jogador['nome']} melhorou {casa.nome} para o nível {propriedade['nivel']} por {_reais(pendente['custo'])}.",
+            jogador_id,
+        )
+    else:
+        _log(estado, "melhoria", f"{jogador['nome']} deixou {casa.nome} como está.", jogador_id)
+
+    return passar_turno(estado)
+
+
+def _valor_venda_banco(estado: dict, casa, propriedade: dict) -> int:
+    """O banco paga uma fração do valor investido (tabela + melhorias)."""
+    fracao = carregar_balanceamento(estado["perfil"])["banco"]["venda_ao_banco"]
+    return int(round(_valor_investido(estado, casa, propriedade) * fracao))
 
 
 def _cobrar_aluguel(estado: dict, pagador: dict, dono: dict, casa, propriedade: dict) -> int:
-    aluguel = _valor_aluguel(casa, propriedade)
+    aluguel = _valor_aluguel(estado, casa, propriedade)
     pagador["caixa"] -= aluguel
     dono["caixa"] += aluguel
     _log(
@@ -203,7 +307,7 @@ def _falir(estado: dict, jogador: dict, credor: dict, divida: int) -> dict:
 
 def _resolver_aluguel(estado: dict, pagador: dict, dono: dict, casa, propriedade: dict) -> dict:
     """Paga o aluguel, abre liquidação ou declara falência se não há ativos."""
-    aluguel = _valor_aluguel(casa, propriedade)
+    aluguel = _valor_aluguel(estado, casa, propriedade)
     if pagador["caixa"] >= aluguel:
         _cobrar_aluguel(estado, pagador, dono, casa, propriedade)
         return estado
@@ -271,7 +375,7 @@ def vender_propriedade_para_aluguel(estado: dict, jogador_id: int, casa_indice: 
     if not casa.e_propriedade or casa.preco is None:
         raise ErroDeRegra("Essa casa não pode ser vendida ao banco.")
 
-    valor = _valor_venda_banco(casa)
+    valor = _valor_venda_banco(estado, casa, propriedade)
     jogador["caixa"] += valor
     del estado["propriedades"][indice]
     _log(estado, "venda", f"{jogador['nome']} vendeu {casa.nome} ao banco por {_reais(valor)} para pagar aluguel.", jogador_id)
@@ -327,7 +431,7 @@ def _atualizar(estado: dict) -> dict:
             if "aluguel" not in pendente:
                 casa = carregar_tabuleiro(estado["tabuleiro"]).casa(pendente["casa"])
                 propriedade = estado.get("propriedades", {}).get(str(pendente["casa"]), {})
-                pendente["aluguel"] = _valor_aluguel(casa, propriedade)
+                pendente["aluguel"] = _valor_aluguel(estado, casa, propriedade)
 
     if versao < 7:
         bal = carregar_balanceamento(estado.get("perfil", "padrao"))
@@ -342,6 +446,9 @@ def _atualizar(estado: dict) -> dict:
         estado.setdefault("motivo_fim", None)
         estado.setdefault("vencedores", [])
         estado.setdefault("patrimonios_finais", {})
+
+    if versao < 8:
+        estado.setdefault("melhoria_pendente", None)
 
     estado["versao"] = VERSAO_DO_ESTADO
     if estava_comprando:
@@ -404,6 +511,7 @@ def criar_partida(
         "propriedades": {},
         "compra_pendente": None,
         "aluguel_pendente": None,
+        "melhoria_pendente": None,
         #: Contador de rolagens. A tela usa para saber o que já encenou.
         "lances": 0,
         "ultimo_movimento": None,
@@ -545,6 +653,17 @@ def rolar(estado: dict, jogador_id: int) -> dict:
     }
 
     casa = tabuleiro.casa(para)
+    if estado["ultimo_movimento"]["deu_a_volta"]:
+        bal = carregar_balanceamento(estado["perfil"])
+        salario = int(bal.get("dinheiro", {}).get("salario_ao_passar_inicio", 0))
+        if salario > 0:
+            jogador["caixa"] += salario
+            _log(
+                estado,
+                "salario_inicio",
+                f"{jogador['nome']} passou pelo Início e recebeu {_reais(salario)}.",
+                jogador_id,
+            )
     _log(estado, "dado",
          f"{jogador['nome']} tirou {' + '.join(map(str, dados))} = {passos} e parou em {casa.nome}.",
          jogador_id)
@@ -564,28 +683,31 @@ def rolar(estado: dict, jogador_id: int) -> dict:
         _log(estado, "compra", f"{jogador['nome']} não tem dinheiro para comprar {casa.nome}.", jogador_id)
     elif casa.tipo == "propriedade" and propriedade["dono"] != jogador_id:
         vendedor = _jogador_por_id(estado, propriedade["dono"])
-        if not vendedor["falido"] and jogador["caixa"] >= casa.preco:
+        preco = _valor_investido(estado, casa, propriedade)
+        if not vendedor["falido"] and jogador["caixa"] >= preco:
             estado["fase"] = FASE_COMPRA_JOGADOR
             _definir_prazo(estado)
             estado["compra_pendente"] = {
                 "tipo": "jogador",
                 "casa": para,
-                "preco": casa.preco,
-                "aluguel": _valor_aluguel(casa, propriedade),
+                "preco": preco,
+                "aluguel": _valor_aluguel(estado, casa, propriedade),
                 "jogador_id": jogador_id,
                 "vendedor_id": vendedor["jogador_id"],
             }
             _log(
                 estado,
                 "compra_jogador",
-                f"{jogador['nome']} parou em {casa.nome}, de {vendedor['nome']}, e pode comprar por {_reais(casa.preco)}.",
+                f"{jogador['nome']} parou em {casa.nome}, de {vendedor['nome']}, e pode comprar por {_reais(preco)}.",
                 jogador_id,
             )
             return estado
         if not vendedor["falido"]:
-            if jogador["caixa"] < casa.preco:
+            if jogador["caixa"] < preco:
                 _log(estado, "compra_jogador", f"{jogador['nome']} não tem dinheiro para comprar {casa.nome} de {vendedor['nome']}.", jogador_id)
             estado = _resolver_aluguel(estado, jogador, vendedor, casa, propriedade)
+    elif casa.tipo == "propriedade" and _oferecer_melhoria(estado, jogador, casa, propriedade, "visita"):
+        return estado
 
     # Aluguel de propriedade alheia é resolvido antes de passar a vez.
     if estado["fase"] == FASE_LIQUIDACAO_ALUGUEL or jogador["falido"]:
@@ -617,6 +739,9 @@ def decidir_compra(estado: dict, jogador_id: int, comprar: bool) -> dict:
         tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
         casa = tabuleiro.casa(pendente["casa"])
         _log(estado, "compra", f"{jogador['nome']} comprou {casa.nome} por {_reais(preco)}.", jogador_id)
+        estado["compra_pendente"] = None
+        if _oferecer_melhoria(estado, jogador, casa, estado["propriedades"][indice], "compra"):
+            return estado
     else:
         _log(estado, "compra", f"{jogador['nome']} recusou a compra.", jogador_id)
 
@@ -661,6 +786,9 @@ def decidir_compra_jogador(estado: dict, jogador_id: int, comprar: bool) -> dict
             f"{comprador['nome']} comprou {casa.nome} de {vendedor['nome']} por {_reais(preco)}.",
             jogador_id,
         )
+        estado["compra_pendente"] = None
+        if _oferecer_melhoria(estado, comprador, casa, propriedade, "compra"):
+            return estado
     else:
         casa = carregar_tabuleiro(estado["tabuleiro"]).casa(pendente["casa"])
         _log(estado, "compra_jogador", f"{comprador['nome']} recusou comprar {casa.nome} de {vendedor['nome']}.", jogador_id)
@@ -702,6 +830,7 @@ def passar_turno(estado: dict, agora: float | None = None) -> dict:
     _observar_prazo_partida(estado, instante)
     estado["compra_pendente"] = None
     estado["aluguel_pendente"] = None
+    estado["melhoria_pendente"] = None
     vivos = [i for i, j in enumerate(estado["jogadores"]) if not j["falido"]]
     if len(vivos) <= 1:
         return _encerrar_partida(estado, "ultimo_sobrevivente")
@@ -767,6 +896,8 @@ def atualizar_tempo(estado: dict, agora: float | None = None) -> dict:
             estado = _resolver_aluguel(estado, jogador, vendedor, casa, propriedade)
             if estado["fase"] in (FASE_LIQUIDACAO_ALUGUEL, FASE_FIM):
                 return estado
+    elif estado["fase"] == FASE_MELHORIA and estado.get("melhoria_pendente"):
+        _log(estado, "tempo", f"Tempo esgotado: {jogador['nome']} não melhorou a propriedade.", jogador["jogador_id"])
     elif estado["fase"] == FASE_LIQUIDACAO_ALUGUEL and estado.get("aluguel_pendente"):
         pendente = estado["aluguel_pendente"]
         dono = _jogador_por_id(estado, pendente["dono_id"])
@@ -782,6 +913,33 @@ def atualizar_tempo(estado: dict, agora: float | None = None) -> dict:
 # --------------------------------------------------------------------------
 # o que a tela recebe
 # --------------------------------------------------------------------------
+
+def _propriedades_publicas(estado: dict) -> dict:
+    """Posse de cada casa, com os valores já calculados.
+
+    A tela mostra aluguel, custo de melhoria e quanto o banco paga; se ela
+    refizesse essas contas, qualquer ajuste no balanceamento deixaria a tela
+    mostrando um número e o motor cobrando outro.
+    """
+    tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
+    maximo = _niveis_maximos(estado)
+    publicas = {}
+    for indice, propriedade in estado.get("propriedades", {}).items():
+        casa = tabuleiro.casa(int(indice))
+        nivel = int(propriedade.get("nivel", 0))
+        publicas[indice] = {
+            **propriedade,
+            "nivel_maximo": maximo,
+            "aluguel": _valor_aluguel(estado, casa, propriedade),
+            "aluguel_proximo_nivel": (
+                _valor_aluguel(estado, casa, {**propriedade, "nivel": nivel + 1}) if nivel < maximo else None
+            ),
+            "custo_melhoria": _valor_upgrade(estado, casa) if nivel < maximo else None,
+            "preco_compra": _valor_investido(estado, casa, propriedade),
+            "valor_banco": _valor_venda_banco(estado, casa, propriedade),
+        }
+    return publicas
+
 
 def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
     """Nada aqui é secreto — todo mundo vê o mesmo tabuleiro. A função existe
@@ -822,9 +980,10 @@ def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
             for j in estado["jogadores"]
         ],
         "sorteio": estado["sorteio"],
-        "propriedades": estado.get("propriedades", {}),
+        "propriedades": _propriedades_publicas(estado),
         "compra_pendente": estado.get("compra_pendente"),
         "aluguel_pendente": estado.get("aluguel_pendente"),
+        "melhoria_pendente": estado.get("melhoria_pendente"),
         "ultimo_movimento": estado["ultimo_movimento"],
         "log": estado["log"][-25:],
     }

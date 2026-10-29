@@ -13,47 +13,46 @@ Quando um item for decidido, escreva a decisão aqui **e** atualize o
 
 ## Fundação — trava todo o resto
 
-### 1. 🔴 Preço do upgrade
+### 1. 🟢 Preço do upgrade
 
-Nunca foi definido, e sem ele nada de dinheiro fecha: a Casa da Reconstrução
-dá "30% de desconto" sobre um valor que não existe, e o patrimônio (condição
-de vitória) soma "propriedades e upgrades".
+Decisão: cada nível custa **25% do preço de tabela da propriedade**, igual em
+todos os níveis, até o limite de três. Os três níveis custam 75% do terreno.
+A melhoria é oferecida logo depois de comprar a propriedade e quando o dono
+cai nela de novo (um nível por oferta). Só na visita era rara demais: menos de
+uma melhoria por partida, mesmo com todos aceitando sempre. O que foi
+pago em melhorias conta no patrimônio, entra no preço de compra entre jogadores
+e na venda ao banco (valor investido = tabela + melhorias).
 
-**Bloqueia:** Casa da Reconstrução, cálculo de patrimônio, todo o balanço.
+**Bloqueia:** Casa da Reconstrução.
 
-**Ver antes de decidir:** a análise de quantas vezes uma propriedade é pisada
-por partida, na seção "A economia do jogo" abaixo. Ela muda a pergunta.
+### 2. 🟢 Fórmula do aluguel
 
-### 2. 🔴 Fórmula do aluguel
+Decisão atual: acréscimo linear de **50%** do aluguel-base por nível (máximo
+de três), sem multiplicadores de Morro ou evento de fim de ano ativos ainda.
+Aluguel máximo configurado neste momento: 50% do valor de tabela.
 
-Os +15% por nível de upgrade são cumulativos sobre o aluguel base ou
-compostos? E em que ordem multiplicam aluguel × upgrade × morro × evento de
-fim de ano?
-
-No pior caso o aluguel chega perto de 69% do valor da propriedade — uma
-parada pode acabar com um jogador. A ordem dos fatores muda esse teto.
-
-**Bloqueia:** qualquer simulação de balanço.
+Era 15%. Simulação de 400 partidas (4 jogadores, 10 rodadas, bots que compram
+tudo): cada propriedade recebe menos de uma visita por partida, então +15% nunca
+pagava a melhoria. Quem melhorava venceu 2/400. Com +50% e a melhoria contando
+no patrimônio, venceu ~120/400 quando ninguém comprava de outro jogador.
 
 ---
 
 ## Experiência — decidem que jogo é
 
-### 3. 🔴 Falência elimina o jogador?
+### 3. 🟢 Falência elimina o jogador?
 
-Com aluguel de 20%, alguém pode quebrar aos 6 minutos e passar 9 assistindo.
-Em jogo de festa isso esvazia a mesa.
-
-Alternativas: eliminado vira espectador com alguma função; ou falência vira
-reset parcial (perde tudo, recomeça com o mínimo) em vez de eliminação.
+Decisão: quem não consegue pagar aluguel depois de vender propriedades ao banco
+é eliminado; os demais continuam. A duração padrão de 15 minutos limita o
+tempo de espectador.
 
 ### 4. 🟢 Fim da partida no meio da rodada
 
 Decisão: a partida padrão dura 15 minutos. Quando o cronômetro zera, a rodada
 em andamento é concluída por todos os jogadores ativos; então vence quem tiver
-maior patrimônio (caixa + valor de tabela das propriedades). Empates compartilham
-a vitória. Como o preço de upgrade segue em aberto, upgrades ainda não contam
-no patrimônio. Implementado no motor em `engine/partida.py`.
+maior patrimônio (caixa + valor investido nas propriedades, isto é, tabela +
+melhorias). Empates compartilham a vitória. Implementado no motor em
+`engine/partida.py`.
 
 ### 5. 🔴 Coringa pode tomar propriedade?
 

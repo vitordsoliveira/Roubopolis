@@ -81,8 +81,7 @@ class Tabuleiro:
     def passou_pelo_inicio(self, de: int, passos: int) -> bool:
         """Se o trajeto cruzou a casa inicial no sentido horário.
 
-        Ainda não há prêmio por isso — a especificação não define salário de
-        volta —, mas o motor já sabe responder quando a regra existir.
+        O motor usa esta resposta para pagar o salário ao passar pelo Início.
         """
         if passos <= 0:
             return False

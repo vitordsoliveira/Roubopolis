@@ -64,6 +64,17 @@ def comprar_propriedade(codigo: str):
     return jsonify(p.decidir_compra_jogador(sessao, sala, jogador, comprar)), 200
 
 
+@bp.post("/partidas/<codigo>/melhoria")
+def melhoria(codigo: str):
+    """Aceita ou recusa subir um nível na casa própria onde o jogador parou."""
+    sessao, sala, jogador = _sala_e_jogador(codigo)
+    dados = request.get_json(silent=True) or {}
+    melhorar = dados.get("melhorar")
+    if not isinstance(melhorar, bool):
+        return jsonify({"erro": "Informe se deseja melhorar a propriedade."}), 400
+    return jsonify(p.decidir_melhoria(sessao, sala, jogador, melhorar)), 200
+
+
 @bp.post("/partidas/<codigo>/vender-para-aluguel")
 def vender_para_aluguel(codigo: str):
     """Vende ao banco uma propriedade escolhida para cobrir aluguel pendente."""

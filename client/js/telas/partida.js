@@ -34,11 +34,20 @@ const cubosGrandes = [document.querySelector("#cubo-grande-a"), document.querySe
 const botaoJogar = document.querySelector("#jogar");
 const modalOrdem = document.querySelector("#modal-ordem");
 const modalCompra = document.querySelector("#modal-compra");
+const chamadaCompra = document.querySelector(".compra__chamada");
 const tituloCompra = document.querySelector("#compra-titulo");
+const vendedorCompra = document.querySelector("#compra-vendedor");
 const precoCompra = document.querySelector("#compra-preco");
+const aluguelCompra = document.querySelector("#compra-aluguel");
 const saldoCompra = document.querySelector("#compra-saldo");
 const tempoCompra = document.querySelector("#compra-tempo");
 const botoesCompra = [document.querySelector("#compra-nao"), document.querySelector("#compra-sim")];
+const modalLiquidacao = document.querySelector("#modal-liquidacao");
+const casaLiquidacao = document.querySelector("#liquidacao-casa");
+const dividaLiquidacao = document.querySelector("#liquidacao-divida");
+const caixaLiquidacao = document.querySelector("#liquidacao-caixa");
+const tempoLiquidacao = document.querySelector("#liquidacao-tempo");
+const listaLiquidacao = document.querySelector("#liquidacao-lista");
 const painelConfigPartida = document.querySelector("#painel-config-partida");
 const botaoAnimacoesPartida = document.querySelector("#animacoes-partida");
 const painelChat = document.querySelector("#chat");
@@ -104,6 +113,7 @@ let tabuleiro = null;
 let desenho = null;
 let estado = null;
 let prazoLocalMs = null;
+let prazoPartidaLocalMs = null;
 let consulta = null;
 let ocupado = false;
 let ordemMostrada = false;
@@ -483,7 +493,10 @@ function pintarCartoes() {
     cartao.classList.toggle("cartao--fora", jogador.falido);
     // Com o número correndo (`reagirAoDinheiro`), quem escreve é a contagem.
     const valor = cartao.querySelector(".cartao__valor");
-    if (!contando(valor)) valor.textContent = jogador.falido ? "SAIU" : reais(jogador.caixa);
+    const faliu = jogador.falido && estado.log.some(
+      (linha) => linha.tipo === "falencia" && linha.jogador_id === jogador.jogador_id,
+    );
+    if (!contando(valor)) valor.textContent = jogador.falido ? (faliu ? "FALIU" : "SAIU") : reais(jogador.caixa);
     cartao.querySelector(".cartao__terrenos-total").textContent = String(terrenosDe.get(jogador.jogador_id) || 0);
   }
 }
@@ -501,11 +514,25 @@ function pintarJogar() {
     mensagem = resumo.texto;
   } else if (estado.fase === "encerrada") {
     resumo = null;
-    const vencedor = ativos()[0];
-    mensagem = vencedor ? `A partida acabou — ${vencedor.nome} ficou sozinho.` : "A partida acabou.";
+    const vencedores = estado.jogadores.filter((jogador) => estado.vencedores?.includes(jogador.jogador_id));
+    if (estado.motivo_fim === "tempo" && vencedores.length > 1) {
+      mensagem = `Tempo! Empate: ${vencedores.map((j) => j.nome).join(", ")} · ${reais(estado.patrimonios_finais?.[String(vencedores[0].jogador_id)])} de patrimônio`;
+    } else if (estado.motivo_fim === "tempo" && vencedores.length === 1) {
+      const vencedor = vencedores[0];
+      mensagem = `Tempo! ${vencedor.nome} venceu com ${reais(estado.patrimonios_finais?.[String(vencedor.jogador_id)])} de patrimônio`;
+    } else {
+      const vencedor = vencedores[0] || ativos()[0];
+      mensagem = vencedor ? `A partida acabou — ${vencedor.nome} ficou de pé sozinho.` : "A partida acabou.";
+    }
   } else if (estado.fase === "decidindo_compra") {
     resumo = null;
     mensagem = minha ? "Escolha se deseja comprar o terreno" : `${estado.vez.nome} está decidindo uma compra`;
+  } else if (estado.fase === "decidindo_compra_jogador") {
+    resumo = null;
+    mensagem = minha ? "Você caiu numa propriedade. Decida se deseja comprar" : `${estado.vez.nome} caiu numa propriedade e está decidindo se compra`;
+  } else if (estado.fase === "liquidando_para_aluguel") {
+    resumo = null;
+    mensagem = minha ? "Venda uma propriedade para pagar o aluguel" : `${estado.vez.nome} está vendendo uma propriedade para pagar o aluguel`;
   } else {
     resumo = null;
     mensagem = podeRolar ? "Role os dados e faça sua jogada" : `Esperando ${estado.vez.nome} jogar`;
@@ -515,12 +542,24 @@ function pintarJogar() {
   if (restante !== null && estado.fase !== "encerrada" && estado.fase !== "sorteio_ordem") {
     mensagem += ` · ${formatarTempo(restante)}`;
   }
+  const restantePartida = segundosPartidaRestantes();
+  if (restantePartida !== null && estado.fase !== "encerrada") {
+    mensagem += ` · Partida ${formatarTempo(restantePartida)}`;
+    if (estado.encerrar_apos_rodada != null) {
+      mensagem += ` · termina ao fim da rodada ${estado.encerrar_apos_rodada}`;
+    }
+  }
   elAviso.textContent = mensagem;
 }
 
 function segundosRestantes() {
   if (prazoLocalMs == null) return null;
   return Math.max(0, Math.ceil((prazoLocalMs - performance.now()) / 1000));
+}
+
+function segundosPartidaRestantes() {
+  if (prazoPartidaLocalMs == null) return null;
+  return Math.max(0, Math.ceil((prazoPartidaLocalMs - performance.now()) / 1000));
 }
 
 function formatarTempo(segundos) {
@@ -546,7 +585,10 @@ function avisarQuemSaiu(antes) {
     const estava = antes.jogadores.find((j) => j.jogador_id === jogador.jogador_id);
     if (!estava || estava.falido || !jogador.falido) continue;
     som.tocar("aviso");
-    toast(`${jogador.nome} saiu da partida.`, "erro");
+    const faliu = [...estado.log].reverse().some(
+      (linha) => linha.tipo === "falencia" && linha.jogador_id === jogador.jogador_id,
+    );
+    toast(faliu ? `${jogador.nome} faliu e foi eliminado.` : `${jogador.nome} saiu da partida.`, "erro");
   }
 }
 
@@ -614,6 +656,9 @@ function aplicar(resposta) {
   prazoLocalMs = estado.segundos_restantes == null
     ? null
     : performance.now() + estado.segundos_restantes * 1000;
+  prazoPartidaLocalMs = estado.segundos_partida_restantes == null
+    ? null
+    : performance.now() + estado.segundos_partida_restantes * 1000;
   if (primeiraVez) {
     tabuleiro = resposta.tabuleiro;
     desenharTabuleiro(tabuleiro, estado.propriedades);
@@ -629,33 +674,90 @@ function aplicar(resposta) {
   // Remonta os peões quando alguém entra ou sai da mesa.
   const agora = ativos().map((j) => j.jogador_id).join(",");
   if (primeiraVez || agora !== assinaturaDosPeoes) montarPeoes();
-  if (antes) avisarQuemSaiu(antes);
 
   posicionarPeoes();
   pintarCartoes();
   if (antes) reagirAoDinheiro(antes);
   pintarJogar();
   atualizarModalCompra();
+  atualizarModalLiquidacao();
 
+  if (antes) avisarQuemSaiu(antes);
   if (antes && antes.fase !== "encerrada" && estado.fase === "encerrada") som.tocar("fim");
   if (!ordemMostrada && estado.sorteio?.length) mostrarOrdem();
   anunciarVez();
 }
 
 function atualizarModalCompra() {
-  const pendente = estado?.fase === "decidindo_compra" ? estado.compra_pendente : null;
+  const pendente = ["decidindo_compra", "decidindo_compra_jogador"].includes(estado?.fase)
+    ? estado.compra_pendente
+    : null;
   const minhaDecisao = Boolean(pendente && estado.vez.sou_eu);
   if (minhaDecisao && modalCompra.hidden) som.tocar("oferta");
   modalCompra.hidden = !minhaDecisao;
-  if (!minhaDecisao) return;
+  if (!minhaDecisao) {
+    vendedorCompra.hidden = true;
+    aluguelCompra.hidden = true;
+    return;
+  }
 
   const casa = tabuleiro.casas[pendente.casa];
   const eu = estado.jogadores.find((jogador) => jogador.sou_eu);
+  const compraDeJogador = pendente.tipo === "jogador";
+  const vendedor = compraDeJogador
+    ? estado.jogadores.find((jogador) => jogador.jogador_id === pendente.vendedor_id)
+    : null;
+  chamadaCompra.textContent = compraDeJogador ? "Você caiu numa propriedade" : "Terreno disponível";
   tituloCompra.textContent = casa?.nome || "Terreno";
+  vendedorCompra.hidden = !compraDeJogador;
+  vendedorCompra.textContent = vendedor ? `Propriedade de ${vendedor.nome}` : "";
   precoCompra.textContent = `Preço: ${reais(pendente.preco)}`;
+  aluguelCompra.hidden = !compraDeJogador;
+  aluguelCompra.textContent = compraDeJogador
+    ? `Se não comprar, pagará ${reais(pendente.aluguel)} de aluguel`
+    : "";
   saldoCompra.textContent = `Seu caixa: ${reais(eu?.caixa)} · após comprar: ${reais((eu?.caixa || 0) - pendente.preco)}`;
+  botoesCompra[0].textContent = compraDeJogador ? "Recusar e pagar aluguel" : "Deixar passar";
+  botoesCompra[1].textContent = "Comprar";
   const restante = segundosRestantes();
   tempoCompra.textContent = restante === null ? "Sem limite de tempo" : `Tempo para decidir: ${formatarTempo(restante)}`;
+}
+
+function atualizarModalLiquidacao() {
+  const pendente = estado?.fase === "liquidando_para_aluguel" ? estado.aluguel_pendente : null;
+  const jogador = estado?.jogadores.find((item) => item.sou_eu);
+  const minhaDecisao = Boolean(pendente && estado.vez.sou_eu && jogador && !jogador.falido);
+  modalLiquidacao.hidden = !minhaDecisao;
+  if (!minhaDecisao) return;
+
+  const casa = tabuleiro.casas[pendente.casa];
+  const dono = estado.jogadores.find((item) => item.jogador_id === pendente.dono_id);
+  casaLiquidacao.textContent = `Aluguel de ${casa?.nome || "propriedade"}${dono ? ` para ${dono.nome}` : ""}`;
+  dividaLiquidacao.textContent = `Dívida: ${reais(pendente.divida)}`;
+  caixaLiquidacao.textContent = `Seu caixa: ${reais(jogador.caixa)} · faltam ${reais(Math.max(0, pendente.divida - jogador.caixa))}`;
+  const restante = segundosRestantes();
+  tempoLiquidacao.textContent = restante === null ? "Resolva a dívida para continuar" : `Tempo para vender: ${formatarTempo(restante)}`;
+
+  const propriedades = Object.entries(estado.propriedades || {})
+    .filter(([, propriedade]) => propriedade.dono === jogador.jogador_id)
+    .map(([indice]) => tabuleiro.casas[Number(indice)])
+    .filter((casaPropria) => casaPropria?.tipo === "propriedade" && Number.isInteger(casaPropria.preco))
+    .sort((a, b) => a.i - b.i);
+
+  listaLiquidacao.replaceChildren(...propriedades.map((propriedade) => {
+    const valor = Math.round(propriedade.preco * 0.35);
+    const botao = elemento(
+      "button",
+      "liquidacao__vender",
+      `Vender ${propriedade.nome} · recebe ${reais(valor)}`,
+    );
+    botao.type = "button";
+    botao.disabled = ocupado;
+    botao.addEventListener("click", () => venderPropriedadeParaPagarAluguel(propriedade.i));
+    const item = elemento("li", "liquidacao__item");
+    item.appendChild(botao);
+    return item;
+  }));
 }
 
 /** O último segundo em que o relógio tiquetaqueou — o intervalo pode cair
@@ -666,11 +768,17 @@ setInterval(() => {
   if (!estado) return;
   pintarJogar();
   if (!modalCompra.hidden) atualizarModalCompra();
+  if (!modalLiquidacao.hidden) atualizarModalLiquidacao();
 
   // Os últimos 5 segundos da MINHA vez tiquetaqueiam: o prazo acabando sem
   // ninguém olhar para o relógio era jogada perdida em silêncio.
   const restante = segundosRestantes();
-  const decidindo = estado.fase === "aguardando_rolagem" || estado.fase === "decidindo_compra";
+  const decidindo = [
+    "aguardando_rolagem",
+    "decidindo_compra",
+    "decidindo_compra_jogador",
+    "liquidando_para_aluguel",
+  ].includes(estado.fase);
   if (estado.vez.sou_eu && decidindo && !ocupado && restante > 0 && restante <= 5 && restante !== ultimoTique) {
     som.tocar("tique");
   }
@@ -762,7 +870,14 @@ async function responderCompra(comprar) {
   // novo chega (`reagirAoDinheiro`); aqui é só o clique do botão.
   som.tocar(comprar ? "clique" : "voltar");
   try {
-    aplicar(await api.decidirCompra(codigo, comprar));
+    const compraDeJogador = estado.fase === "decidindo_compra_jogador";
+    const resposta = compraDeJogador
+      ? await api.decidirCompraPropriedade(codigo, comprar)
+      : await api.decidirCompra(codigo, comprar);
+    aplicar(resposta);
+    if (compraDeJogador && comprar) {
+      toast("Propriedade comprada. O pagamento foi para o dono anterior.", "sucesso");
+    }
   } catch (erro) {
     som.tocar("erro");
     toast(erro.message, "erro");
@@ -775,6 +890,31 @@ async function responderCompra(comprar) {
 
 document.querySelector("#compra-nao").addEventListener("click", () => responderCompra(false));
 document.querySelector("#compra-sim").addEventListener("click", () => responderCompra(true));
+
+async function venderPropriedadeParaPagarAluguel(casa) {
+  if (ocupado || modalLiquidacao.hidden) return;
+  ocupado = true;
+  pintarJogar();
+  atualizarModalLiquidacao();
+  som.tocar("clique");
+  try {
+    aplicar(await api.venderPropriedadeParaAluguel(codigo, casa));
+  } catch (erro) {
+    som.tocar("erro");
+    toast(erro.message, "erro");
+    try {
+      aplicar(await api.verPartida(codigo));
+    } catch {
+      // A consulta periódica recupera o estado quando o servidor responder.
+    }
+  } finally {
+    ocupado = false;
+    if (estado) {
+      atualizarModalLiquidacao();
+      pintarJogar();
+    }
+  }
+}
 
 // --- abertura ------------------------------------------------------------
 

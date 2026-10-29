@@ -180,6 +180,16 @@ export const api = {
   rolarDados: (codigo) => pedir(`/api/partidas/${codigo}/rolar`, { metodo: "POST", corpo: {} }),
   decidirCompra: (codigo, comprar) =>
     pedir(`/api/partidas/${codigo}/comprar`, { metodo: "POST", corpo: { comprar } }),
+  decidirCompraPropriedade: (codigo, comprar) =>
+    pedir(`/api/partidas/${codigo}/comprar-propriedade`, {
+      metodo: "POST",
+      corpo: { comprar },
+    }),
+  venderPropriedadeParaAluguel: (codigo, casa) =>
+    pedir(`/api/partidas/${codigo}/vender-para-aluguel`, {
+      metodo: "POST",
+      corpo: { casa },
+    }),
   /** Abandona a partida: o jogador sai da roda e a vez passa. */
   sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 };

@@ -53,6 +53,28 @@ def comprar(codigo: str):
     return jsonify(p.decidir_compra(sessao, sala, jogador, comprar)), 200
 
 
+@bp.post("/partidas/<codigo>/comprar-propriedade")
+def comprar_propriedade(codigo: str):
+    """Aceita ou recusa a oferta recebida ao cair numa propriedade alheia."""
+    sessao, sala, jogador = _sala_e_jogador(codigo)
+    dados = request.get_json(silent=True) or {}
+    comprar = dados.get("comprar")
+    if not isinstance(comprar, bool):
+        return jsonify({"erro": "Informe se deseja comprar a propriedade."}), 400
+    return jsonify(p.decidir_compra_jogador(sessao, sala, jogador, comprar)), 200
+
+
+@bp.post("/partidas/<codigo>/vender-para-aluguel")
+def vender_para_aluguel(codigo: str):
+    """Vende ao banco uma propriedade escolhida para cobrir aluguel pendente."""
+    sessao, sala, jogador = _sala_e_jogador(codigo)
+    dados = request.get_json(silent=True) or {}
+    casa = dados.get("casa")
+    if isinstance(casa, bool) or not isinstance(casa, int):
+        return jsonify({"erro": "Escolha uma propriedade válida para vender."}), 400
+    return jsonify(p.vender_propriedade_para_aluguel(sessao, sala, jogador, casa)), 200
+
+
 @bp.post("/partidas/<codigo>/sair")
 def sair(codigo: str):
     """Abandona a partida em andamento. Avisa os outros pelo log."""

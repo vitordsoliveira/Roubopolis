@@ -1,9 +1,10 @@
 # Roubopolis — regras do jogo
 
-Especificação de design. O motor já sorteia quem começa, rola, movimenta e
-permite comprar terrenos sem dono; aluguel e demais efeitos ainda não estão
-ativos. Onde um wireframe discordar deste documento, **este documento manda**:
-os wireframes foram desenhados antes das regras.
+Especificação de design. O motor já sorteia quem começa, rola, movimenta,
+permite comprar terrenos sem dono e comprar ou pagar aluguel ao cair em
+propriedade de outro jogador. Os demais efeitos ainda não estão ativos. Onde
+um wireframe discordar deste documento, **este documento manda**: os wireframes
+foram desenhados antes das regras.
 
 Pontos ainda em aberto estão marcados com **⚠ EM ABERTO**.
 
@@ -17,16 +18,18 @@ outros.
 
 ## 2. Condições de vitória
 
-- **Por tempo (padrão):** quando o cronômetro zera, vence quem tiver o maior
-  patrimônio total (dinheiro em caixa + valor de todas as propriedades e
-  upgrades).
+- **Por tempo (padrão):** a partida dura 15 minutos. Quando o cronômetro zera,
+  todos concluem a rodada em andamento; vence quem tiver o maior patrimônio
+  (caixa + valor de tabela das propriedades). Se houver empate, há mais de um
+  vencedor. Upgrades ainda não têm valor patrimonial definido.
 - **Antecipada:** se todos os outros falirem, a partida acaba na hora.
 - **Falência:** quem não consegue pagar uma dívida e não tem patrimônio para
   cobri-la é eliminado. Suas propriedades voltam ao banco e ficam à venda.
 
-**⚠ EM ABERTO:** se o cronômetro zera no meio da rodada, os últimos jogadores
-jogam menos vezes que os primeiros. Numa vitória por patrimônio isso é
-injusto. Solução usual: terminar a rodada em curso.
+O cronômetro total começa depois do sorteio da ordem. Ao zerar, o jogo marca a
+rodada corrente como a última e termina quando todos os jogadores ainda ativos
+tiverem concluído seus turnos nela. Os limites de decisão e de liquidação
+continuam valendo durante essa rodada final.
 
 ## 3. Fluxo do turno
 
@@ -47,10 +50,28 @@ Cinco grupos, do mais caro ao mais barato: **Extremamente caro · Muito caro ·
 Caro · Médio · Barato**.
 
 - **Aluguel base:** 20% do valor da propriedade.
-- **Upgrade:** máximo de 3 níveis; cada nível aumenta o aluguel em 15%.
+- **Upgrade:** máximo de 3 níveis; cada nível aumenta o aluguel-base em 15%.
 - Ao parar em um terreno sem dono, o jogador pode comprá-lo pelo preço da
   tabela. Se recusar ou não tiver saldo suficiente, o terreno continua sem
-  dono e sem casa. Nesta etapa, terrenos de outros jogadores não cobram aluguel.
+  dono e sem casa.
+- Ao cair numa propriedade de outro jogador, o jogador da vez pode comprar pelo
+  preço original da tabela, desde que tenha saldo suficiente. A oferta aparece
+  apenas nessa situação; não é possível iniciar compras clicando em outras casas
+  nem fora da própria vez. Se confirmar, o valor sai do caixa do comprador e
+  entra no caixa do dono anterior, e a propriedade muda de dono. Os upgrades são
+  mantidos, e não há cobrança adicional de aluguel nessa jogada. Se recusar ou
+  o prazo acabar, paga aluguel ao dono e a vez passa. Quem não tiver saldo para
+  comprar também paga o aluguel automaticamente.
+- **Cálculo implementado do aluguel:** 20% do preço da casa, mais 15% desse
+  aluguel-base por nível de upgrade (fator linear).
+- Se o caixa não cobrir o aluguel, o jogador escolhe propriedades próprias para
+  vender ao banco, uma por vez, por 35% do valor de tabela. Cada venda aumenta
+  o caixa; quando houver saldo suficiente, o aluguel é pago e a vez passa.
+- Se todas as propriedades forem vendidas e ainda faltar dinheiro, o saldo
+  restante é entregue ao dono como pagamento parcial, o jogador vai à falência,
+  é eliminado e suas propriedades restantes voltam ao banco. Os demais jogadores
+  continuam; se sobrar apenas um jogador ativo, a partida termina. Se o prazo de
+  liquidação acabar, o jogador vai à falência automaticamente.
 
 **⚠ EM ABERTO:** o **preço do upgrade nunca foi definido** — e a Casa da
 Reconstrução dá 30% de desconto sobre esse valor inexistente. Também falta

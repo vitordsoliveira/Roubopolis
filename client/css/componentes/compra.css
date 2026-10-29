@@ -90,3 +90,49 @@
 .compra__acoes .jogar__botao:disabled {
   opacity: 0.55;
 }
+
+.liquidacao {
+  width: min(660px, 100%);
+}
+
+.liquidacao__instrucao {
+  margin: 18px 0 10px;
+  color: rgba(255, 255, 255, 0.86);
+  font-family: var(--fonte-hud);
+}
+
+.liquidacao__lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  max-height: min(34vh, 280px);
+  padding: 4px;
+  overflow: auto;
+  list-style: none;
+}
+
+.liquidacao__vender {
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 2px solid #39ff14;
+  border-radius: 6px;
+  background: #10240a;
+  color: #c5ffb9;
+  font-family: var(--fonte-hud);
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.liquidacao__vender:hover,
+.liquidacao__vender:focus-visible {
+  background: #1c3e11;
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.liquidacao__vender:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}

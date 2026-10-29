@@ -170,6 +170,15 @@ function atalhos(alvo) {
 
 // Segunda instância só traz a primeira para a frente: duas janelas com o
 // mesmo jogador logado dariam confusão no lobby.
+// Perfil separado, apenas para abrir um segundo cliente em testes locais.
+// O processo principal continua usando o perfil normal do jogador.
+if (argumentos.includes("--perfil-teste")) {
+  app.setPath(
+    "userData",
+    path.join(app.getPath("appData"), "Roubopolis-perfil-teste")
+  );
+}
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {

@@ -47,12 +47,13 @@ Em jogo de festa isso esvazia a mesa.
 Alternativas: eliminado vira espectador com alguma função; ou falência vira
 reset parcial (perde tudo, recomeça com o mínimo) em vez de eliminação.
 
-### 4. 🔴 Fim da partida no meio da rodada
+### 4. 🟢 Fim da partida no meio da rodada
 
-Se o cronômetro zera no turno do jogador 2, os jogadores 3 e 4 jogaram uma
-vez a menos — e a vitória é por patrimônio. A ordem de assento decide o jogo.
-
-Solução usual: terminar a rodada em curso.
+Decisão: a partida padrão dura 15 minutos. Quando o cronômetro zera, a rodada
+em andamento é concluída por todos os jogadores ativos; então vence quem tiver
+maior patrimônio (caixa + valor de tabela das propriedades). Empates compartilham
+a vitória. Como o preço de upgrade segue em aberto, upgrades ainda não contam
+no patrimônio. Implementado no motor em `engine/partida.py`.
 
 ### 5. 🔴 Coringa pode tomar propriedade?
 
@@ -97,38 +98,20 @@ outro. Falta um limite.
 
 ---
 
-## A economia do jogo — leia antes do item 1
+## A economia do jogo — medir antes de rebalancear
 
-Uma conta que muda a natureza da pergunta sobre upgrades.
+A duração padrão agora é **15 minutos**, com turnos limitados a **30 segundos**;
+ao zerar o cronômetro, os jogadores concluem a rodada atual e vence o maior
+patrimônio. A estimativa anterior de 15–22 turnos por pessoa pressupunha turnos
+de 15 segundos e não era uma medição. Como decisões de compra e liquidação têm
+seus próprios prazos, ainda não temos uma estimativa confiável de quantas vezes
+cada propriedade será visitada por partida.
 
-O tabuleiro tem **40 casas**. Numa partida de 15 minutos com turnos de até 15
-segundos, cada jogador tem entre **15 e 22 turnos**. Com 4 jogadores, os
-**adversários** de uma propriedade específica param nela:
+Também não dá para dizer quantas vezes cada propriedade rende aluguel sem
+simulador e dados de partidas. O tabuleiro tem **40 casas**, mas a frequência de
+visita depende da distribuição dos dados, número de jogadores, duração efetiva
+das decisões e falências. Implementar métricas reproduzíveis de visitas,
+aluguéis, caixa, patrimônio e duração é pré-requisito para rebalancear números.
 
-```
-3 adversários × ~20 paradas ÷ 40 casas ≈ 1,5 vez por partida
-```
-
-**Cada propriedade rende aluguel cerca de uma vez e meia na partida inteira.**
-
-Isso tem duas consequências grandes:
-
-1. **Uma propriedade não se paga.** Comprando por V e recebendo 20% de V uma
-   vez e meia, ela retorna ~30% do custo antes do jogo acabar.
-2. **Comprar é neutro no patrimônio.** A vitória é por caixa + propriedades.
-   Trocar R$1.000 de caixa por uma propriedade de R$1.000 não muda nada. O
-   mesmo vale para o upgrade, se ele somar ao valor da propriedade.
-
-Ou seja: as únicas fontes reais de patrimônio são **aluguel recebido, eventos,
-Coletor de Impostos, Coringa, desafios e leilões** — e não a compra de
-terrenos, que é o tema do jogo.
-
-**A pergunta do item 1 deixa de ser "quanto custa o upgrade" e passa a ser
-"como fazer propriedade valer a pena num jogo curto".** Caminhos possíveis:
-
-- Aluguel **por rodada** (renda passiva), não só ao pisar
-- Tabuleiro menor (as casas brancas "nada a fazer" viram propriedades)
-- Partida mais longa
-- Upgrade que valha **mais** que o preço pago (aí ele gera patrimônio)
-
-Nada disso está decidido. É o item 1.
+Até lá, qualquer afirmação sobre retorno médio de propriedade ou preço ideal de
+upgrade deve ser tratada como hipótese, não como resultado medido.

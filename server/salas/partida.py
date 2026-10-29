@@ -8,6 +8,7 @@ que existe banco; o banco continua sem saber que existe regra de jogo.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -26,8 +27,12 @@ def _erro(erro: motor.ErroDeRegra) -> ErroDeSala:
     return ErroDeSala(erro.mensagem, http=erro.http)
 
 
-def buscar_partida(sessao: Session, sala: Sala) -> Partida:
-    linha = sessao.scalar(select(Partida).where(Partida.sala_id == sala.id))
+def buscar_partida(sessao: Session, sala: Sala, *, bloquear: bool = False) -> Partida:
+    consulta = select(Partida).where(Partida.sala_id == sala.id)
+    if bloquear:
+        # Serializa ações que leem e substituem o JSON completo da partida.
+        consulta = consulta.with_for_update()
+    linha = sessao.scalar(consulta)
     if linha is None:
         raise ErroDeSala("Esta sala ainda não começou a partida.", http=404)
     return linha
@@ -40,6 +45,12 @@ def _ler(linha: Partida) -> dict:
 def _gravar(sessao: Session, linha: Partida, estado: dict) -> None:
     linha.estado = json.dumps(estado, ensure_ascii=False)
     sessao.commit()
+
+
+def _marcar_sala_encerrada(sala: Sala, estado: dict) -> None:
+    if estado["fase"] == motor.FASE_FIM:
+        sala.status = StatusSala.ENCERRADA
+        sala.encerrada_em = datetime.now()
 
 
 def _atualizar_tempo(sessao: Session, linha: Partida) -> dict:
@@ -106,41 +117,88 @@ def iniciar(sessao: Session, sala: Sala, jogador) -> dict:
 
 def estado_para(sessao: Session, sala: Sala, jogador) -> dict:
     linha = buscar_partida(sessao, sala)
-    return _envelope(_atualizar_tempo(sessao, linha), jogador, sala)
+    estado = _atualizar_tempo(sessao, linha)
+    _marcar_sala_encerrada(sala, estado)
+    sessao.commit()
+    return _envelope(estado, jogador, sala)
 
 
 def rolar(sessao: Session, sala: Sala, jogador) -> dict:
-    linha = buscar_partida(sessao, sala)
-    estado_atual = _atualizar_tempo(sessao, linha)
+    linha = buscar_partida(sessao, sala, bloquear=True)
+    estado_atual = motor.atualizar_tempo(_ler(linha))
     try:
         estado = motor.rolar(estado_atual, jogador.id)
     except motor.ErroDeRegra as erro:
         raise _erro(erro)
+    _marcar_sala_encerrada(sala, estado)
     _gravar(sessao, linha, estado)
     return _envelope(estado, jogador, sala)
 
 
 def decidir_compra(sessao: Session, sala: Sala, jogador, comprar: bool) -> dict:
-    linha = buscar_partida(sessao, sala)
-    estado_atual = _atualizar_tempo(sessao, linha)
+    linha = buscar_partida(sessao, sala, bloquear=True)
+    estado_atual = motor.atualizar_tempo(_ler(linha))
     try:
         estado = motor.decidir_compra(estado_atual, jogador.id, comprar)
     except motor.ErroDeRegra as erro:
         raise _erro(erro)
+    _marcar_sala_encerrada(sala, estado)
+    _gravar(sessao, linha, estado)
+    return _envelope(estado, jogador, sala)
+
+
+def decidir_compra_jogador(sessao: Session, sala: Sala, jogador, comprar: bool) -> dict:
+    """Decide a compra oferecida ao jogador ao cair numa propriedade alheia."""
+    linha = buscar_partida(sessao, sala, bloquear=True)
+    original = _ler(linha)
+    estado_atual = motor.atualizar_tempo(original)
+    if estado_atual != original:
+        # Se a resposta chegou depois do prazo, persiste a resolução automática
+        # (pagamento, liquidação ou falência) e devolve o estado atualizado.
+        _gravar(sessao, linha, estado_atual)
+        if estado_atual["fase"] != motor.FASE_COMPRA_JOGADOR:
+            _marcar_sala_encerrada(sala, estado_atual)
+            sessao.commit()
+            return _envelope(estado_atual, jogador, sala)
+    try:
+        estado = motor.decidir_compra_jogador(estado_atual, jogador.id, comprar)
+    except motor.ErroDeRegra as erro:
+        raise _erro(erro)
+    _marcar_sala_encerrada(sala, estado)
+    _gravar(sessao, linha, estado)
+    return _envelope(estado, jogador, sala)
+
+
+def vender_propriedade_para_aluguel(
+    sessao: Session, sala: Sala, jogador, casa_indice: int
+) -> dict:
+    linha = buscar_partida(sessao, sala, bloquear=True)
+    original = _ler(linha)
+    estado_atual = motor.atualizar_tempo(original)
+    if estado_atual != original and estado_atual["fase"] != motor.FASE_LIQUIDACAO_ALUGUEL:
+        _gravar(sessao, linha, estado_atual)
+        _marcar_sala_encerrada(sala, estado_atual)
+        sessao.commit()
+        return _envelope(estado_atual, jogador, sala)
+    try:
+        estado = motor.vender_propriedade_para_aluguel(estado_atual, jogador.id, casa_indice)
+    except motor.ErroDeRegra as erro:
+        raise _erro(erro)
+    _marcar_sala_encerrada(sala, estado)
     _gravar(sessao, linha, estado)
     return _envelope(estado, jogador, sala)
 
 
 def abandonar(sessao: Session, sala: Sala, jogador) -> dict:
     """Sair no meio da partida. Os outros ficam sabendo pelo log."""
-    linha = buscar_partida(sessao, sala)
+    linha = buscar_partida(sessao, sala, bloquear=True)
     try:
         estado = motor.abandonar(_ler(linha), jogador.id)
     except motor.ErroDeRegra as erro:
         raise _erro(erro)
 
     if estado["fase"] == motor.FASE_FIM:
-        sala.status = StatusSala.ENCERRADA
+        _marcar_sala_encerrada(sala, estado)
 
     _gravar(sessao, linha, estado)
     return _envelope(estado, jogador, sala)

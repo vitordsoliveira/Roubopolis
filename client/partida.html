@@ -120,13 +120,28 @@
     <section class="compra moldura" role="dialog" aria-modal="true" aria-labelledby="compra-titulo">
       <p class="compra__chamada">Terreno disponível</p>
       <h2 class="compra__titulo" id="compra-titulo"></h2>
+      <p class="compra__saldo" id="compra-vendedor" hidden></p>
       <p class="compra__preco" id="compra-preco"></p>
+      <p class="compra__saldo" id="compra-aluguel" hidden></p>
       <p class="compra__saldo" id="compra-saldo"></p>
       <p class="compra__tempo" id="compra-tempo" role="timer"></p>
       <div class="compra__acoes">
         <button class="jogar__botao jogar__botao--pequeno compra__recusar moldura" type="button" id="compra-nao">Deixar passar</button>
         <button class="jogar__botao jogar__botao--pequeno compra__aceitar moldura" type="button" id="compra-sim">Comprar</button>
       </div>
+    </section>
+  </div>
+
+  <div class="cortina compra-cortina liquidacao-cortina" id="modal-liquidacao" hidden>
+    <section class="compra moldura liquidacao" role="dialog" aria-modal="true" aria-labelledby="liquidacao-titulo">
+      <p class="compra__chamada">Aluguel pendente</p>
+      <h2 class="compra__titulo" id="liquidacao-titulo">Venda propriedades para pagar</h2>
+      <p class="compra__saldo" id="liquidacao-casa"></p>
+      <p class="compra__preco" id="liquidacao-divida"></p>
+      <p class="compra__saldo" id="liquidacao-caixa"></p>
+      <p class="compra__tempo" id="liquidacao-tempo" role="timer"></p>
+      <p class="liquidacao__instrucao">Escolha uma propriedade para vender ao banco. O valor será usado para pagar o aluguel.</p>
+      <ol class="liquidacao__lista" id="liquidacao-lista"></ol>
     </section>
   </div>
 

@@ -27,6 +27,21 @@
   filter: drop-shadow(0 2.4cqw 2.2cqw rgba(8, 2, 20, 0.6));
 }
 
+.casa__alvo-clique {
+  cursor: pointer;
+  pointer-events: all;
+  stroke: transparent;
+  stroke-width: 0;
+}
+
+.casa__alvo-clique:focus,
+.casa__alvo-clique:focus-visible {
+  outline: none !important;
+  filter: none;
+  stroke: transparent !important;
+  stroke-width: 0 !important;
+}
+
 /* --- nomes das casas ---------------------------------------------- */
 
 /* Fonte comum, condensada e em negrito, como na arte — a de pixel do resto

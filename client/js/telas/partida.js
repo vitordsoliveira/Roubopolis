@@ -25,6 +25,10 @@ const elInicio = document.querySelector("#inicio-marcador");
 const elJogadores = document.querySelector("#jogadores");
 const elLegenda = document.querySelector("#legenda");
 const elAviso = document.querySelector("#aviso");
+const painelCasaInfo = document.querySelector("#painel-casa-info");
+const tipoCasaInfo = document.querySelector("#casa-info-tipo");
+const tituloCasaInfo = document.querySelector("#casa-info-titulo");
+const detalhesCasaInfo = document.querySelector("#casa-info-detalhes");
 const elAnuncio = document.querySelector("#anuncio");
 const elAnuncioTexto = document.querySelector("#anuncio-texto");
 const elAnuncioDados = document.querySelector("#anuncio-dados");
@@ -722,6 +726,109 @@ function atualizarModalCompra() {
   const restante = segundosRestantes();
   tempoCompra.textContent = restante === null ? "Sem limite de tempo" : `Tempo para decidir: ${formatarTempo(restante)}`;
 }
+
+const NOMES_TIPOS_CASA = {
+  propriedade: "Propriedade",
+  neutra: "Casa neutra",
+  inicial: "Início",
+  ganho: "Casa do Ganho",
+  roubo: "Casa do Roubo",
+  coletor: "Coletor de Impostos",
+  coringa: "Casa Coringa",
+  portal: "Casa Portal",
+  prisao: "Prisão",
+  reconstrucao: "Casa da Reconstrução",
+  prejuizo: "Casa do Prejuízo",
+};
+
+const DESCRICOES_CASA = {
+  neutra: "Não tem cobrança nem efeito especial.",
+  inicial: "Ponto de início e referência para a volta no tabuleiro.",
+  ganho: "Casa de evento que prevê um ganho de dinheiro. O efeito ainda não está ativo no jogo.",
+  roubo: "Casa de evento que prevê uma perda de dinheiro. O efeito ainda não está ativo no jogo.",
+  coletor: "Casa de evento ligada ao recolhimento de impostos. O efeito ainda não está ativo no jogo.",
+  coringa: "Casa de aposta com resultado variável. O efeito ainda não está ativo no jogo.",
+  portal: "Casa de teletransporte. O efeito ainda não está ativo no jogo.",
+  prisao: "Casa de prisão. O efeito ainda não está ativo no jogo.",
+  reconstrucao: "Casa de melhoria de propriedades. O efeito ainda não está ativo no jogo.",
+  prejuizo: "Casa de evento que pode afetar o jogador líder. O efeito ainda não está ativo no jogo.",
+};
+
+function linhaInfoCasa(rotulo, valor, nota = "") {
+  const linha = elemento("p", nota ? "casa-info__linha casa-info__nota" : "casa-info__linha");
+  const nome = elemento("strong", "", `${rotulo}: `);
+  linha.append(nome, document.createTextNode(valor));
+  return linha;
+}
+
+function mostrarInfoCasa(indice) {
+  const casa = tabuleiro?.casas[indice];
+  if (!casa) return;
+
+  const tipo = casa.inicio ? "inicial" : casa.tipo;
+  tipoCasaInfo.textContent = casa.grupo
+    ? `${NOMES_TIPOS_CASA[tipo] || tipo} · ${tabuleiro.grupos[casa.grupo]?.rotulo || casa.grupo}`
+    : NOMES_TIPOS_CASA[tipo] || tipo;
+  tituloCasaInfo.textContent = casa.nome;
+
+  const detalhes = [];
+  const propriedade = estado.propriedades?.[String(indice)];
+  if (tipo === "propriedade") {
+    const grupo = tabuleiro.grupos[casa.grupo]?.rotulo || casa.grupo;
+    detalhes.push(linhaInfoCasa("Grupo", grupo));
+    detalhes.push(linhaInfoCasa("Preço", reais(casa.preco)));
+    if (!propriedade) {
+      detalhes.push(linhaInfoCasa("Situação", "Sem dono — disponível para compra quando alguém cair aqui."));
+    } else {
+      const dono = estado.jogadores.find((j) => j.jogador_id === propriedade.dono);
+      const nivel = Number(propriedade.nivel || 0);
+      const aluguel = Math.round(casa.preco * 0.2 * (1 + 0.15 * nivel));
+      detalhes.push(linhaInfoCasa("Dono", dono?.nome || "Jogador"));
+      detalhes.push(linhaInfoCasa("Melhorias", `${nivel} de 3 níveis`));
+      detalhes.push(linhaInfoCasa("Aluguel atual", reais(aluguel)));
+      if (dono?.jogador_id === estado.jogadores.find((j) => j.sou_eu)?.jogador_id) {
+        detalhes.push(linhaInfoCasa("Ao cair aqui", "É sua propriedade; não há cobrança de aluguel."));
+      } else {
+        detalhes.push(linhaInfoCasa("Ao cair aqui", `Pode comprar por ${reais(casa.preco)} ou pagar o aluguel se recusar.`));
+      }
+    }
+  } else {
+    const descricao = DESCRICOES_CASA[tipo] || "Casa especial do tabuleiro.";
+    detalhes.push(linhaInfoCasa("Informação", descricao));
+    if (casa.easter_egg) detalhes.push(linhaInfoCasa("Curiosidade", casa.easter_egg));
+  }
+
+  detalhesCasaInfo.replaceChildren(...detalhes);
+  painelCasaInfo.hidden = false;
+  document.querySelector("#casa-info-fechar").focus();
+}
+
+function fecharInfoCasa() {
+  painelCasaInfo.hidden = true;
+}
+
+elSvg.addEventListener("click", (evento) => {
+  const casa = evento.target.closest?.(".casa__alvo-clique[data-i]");
+  if (!casa || !elSvg.contains(casa)) return;
+  casa.blur();
+  mostrarInfoCasa(Number(casa.dataset.i));
+});
+
+elSvg.addEventListener("keydown", (evento) => {
+  if (evento.key !== "Enter" && evento.key !== " ") return;
+  const casa = evento.target.closest?.(".casa__alvo-clique[data-i]");
+  if (!casa || !elSvg.contains(casa)) return;
+  evento.preventDefault();
+  mostrarInfoCasa(Number(casa.dataset.i));
+});
+
+document.querySelector("#casa-info-fechar").addEventListener("click", fecharInfoCasa);
+painelCasaInfo.addEventListener("click", (evento) => {
+  if (evento.target === painelCasaInfo) fecharInfoCasa();
+});
+document.addEventListener("keydown", (evento) => {
+  if (evento.key === "Escape" && !painelCasaInfo.hidden) fecharInfoCasa();
+});
 
 function atualizarModalLiquidacao() {
   const pendente = estado?.fase === "liquidando_para_aluguel" ? estado.aluguel_pendente : null;

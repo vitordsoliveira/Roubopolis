@@ -577,6 +577,29 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
   const rotulos = no("g", { class: "tabuleiro__rotulos" }, svg);
   itens.forEach((i) => rotular(rotulos, i.casa, i.geo, corDaCasa(i.casa, dados.grupos)));
 
+  // Alvos transparentes por cima de toda a arte: a cidade e os prédios altos
+  // podem cobrir visualmente partes de casas anteriores na ordem do SVG.
+  // Esta camada garante que qualquer ponto da superfície da casa seja clicável.
+  const alvos = no("g", { class: "tabuleiro__alvos-casa" }, svg);
+  for (const { casa, geo } of itens) {
+    const f = FRESTA / 2;
+    const pontosTopo = [
+      [geo.u0 + f, geo.v0 + f, ALTURA_CASA + 0.01],
+      [geo.u1 - f, geo.v0 + f, ALTURA_CASA + 0.01],
+      [geo.u1 - f, geo.v1 - f, ALTURA_CASA + 0.01],
+      [geo.u0 + f, geo.v1 - f, ALTURA_CASA + 0.01],
+    ];
+    no("polygon", {
+      points: pontos(pontosTopo),
+      fill: "transparent",
+      class: "casa__alvo-clique",
+      "data-i": casa.i,
+      role: "button",
+      tabindex: 0,
+      "aria-label": `Ver informações de ${casa.nome}`,
+    }, alvos);
+  }
+
   /** Terreno com dono: prédio, anel e bandeira aparecem, na cor dele. */
   function marcarDonos(lista = {}) {
     for (const g of svg.querySelectorAll(".casa--terreno")) {

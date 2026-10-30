@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="/css/base/reset.css">
   <link rel="stylesheet" href="/css/base/variaveis.css">
   <link rel="stylesheet" href="/css/base/tipografia.css">
+  <!-- O "Voltar" da configuração usa o botão do menu. -->
+  <link rel="stylesheet" href="/css/componentes/botao.css">
   <!-- Só pelo aviso passageiro (toast), que mora lá. -->
   <link rel="stylesheet" href="/css/componentes/modal.css">
   <link rel="stylesheet" href="/css/componentes/animacoes.css">
@@ -55,6 +57,11 @@
         <span id="evento-chip-texto"></span>
       </button>
     </div>
+
+    <!-- A frase da vez — de quem é, o que falta decidir e o relógio — no
+         alto, no centro, com a cara dos selos do tempo, da rodada e do
+         Coletor. -->
+    <p class="chip aviso-da-vez" id="aviso" role="status"></p>
 
     <!-- Um cartão em cada canto da tela, na ordem de jogada. -->
     <ol class="jogadores" id="jogadores" aria-label="Jogadores"></ol>
@@ -147,7 +154,6 @@
       <button class="jogar__extra jogar__extra--leilao moldura" type="button" id="ver-leilao" hidden>
         <span data-icone="martelo"></span>Ver o leilão
       </button>
-      <p class="jogar__aviso" id="aviso" role="status"></p>
     </div>
 
   </main>
@@ -173,6 +179,7 @@
        (js/ui/anuncios.js). -->
   <div class="cortina evento-cortina" id="modal-evento" hidden>
     <section class="compra moldura evento-janela" role="dialog" aria-modal="true" aria-labelledby="evento-titulo" aria-live="polite">
+      <button class="evento-janela__fechar" type="button" id="evento-fechar" aria-label="Fechar o aviso">×</button>
       <div class="evento-janela__selo" id="evento-selo" aria-hidden="true"></div>
       <p class="compra__chamada evento-janela__chamada" id="evento-chamada"></p>
       <h2 class="evento-janela__titulo" id="evento-titulo"></h2>
@@ -386,7 +393,15 @@
         <span>Animações</span>
         <button class="interruptor" type="button" id="animacoes-partida" aria-pressed="true">LIGADAS</button>
       </div>
-      <!-- Os mesmos volumes do menu: dá para baixar a música sem sair da mesa. -->
+      <!-- O mesmo áudio do menu: dá para calar ou baixar a música sem sair da mesa. -->
+      <div class="painel__linha">
+        <span>Som</span>
+        <button class="interruptor" type="button" id="som-partida" aria-pressed="true">LIGADO</button>
+      </div>
+      <div class="painel__linha">
+        <span>Música</span>
+        <button class="interruptor" type="button" id="musica-partida" aria-pressed="true">LIGADA</button>
+      </div>
       <label class="painel__linha controle-volume" for="volume-musica-partida">
         <span>Volume da música</span>
         <span class="controle-volume__valor" id="valor-volume-musica-partida">40%</span>

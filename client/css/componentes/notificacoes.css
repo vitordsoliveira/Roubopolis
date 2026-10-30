@@ -1,0 +1,111 @@
+/* Cartões de quem te chamou: convite para sala e pedido de amizade
+   (js/ui/notificacoes.js). Ficam no topo, por cima dos painéis, até a
+   pessoa responder ou fechar. */
+
+.notificacoes {
+  position: fixed;
+  top: var(--e3);
+  left: 50%;
+  /* Acima dos painéis (50) e abaixo do aviso passageiro (90). */
+  z-index: 80;
+  display: grid;
+  gap: var(--e2);
+  width: min(430px, calc(100vw - 2 * var(--e3)));
+  transform: translateX(-50%);
+  /* A pilha vazia não pode roubar o clique do que está embaixo. */
+  pointer-events: none;
+}
+
+.notificacao {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--e3);
+  padding: var(--e3) calc(var(--e3) + 30px) var(--e3) var(--e3);
+  background: var(--branco);
+  color: var(--preto);
+  border: var(--borda) solid var(--preto);
+  box-shadow: var(--sombra-dura);
+  pointer-events: auto;
+  animation: notificacao-entra 0.24s steps(4);
+}
+
+@keyframes notificacao-entra {
+  from { opacity: 0; transform: translateY(-24px); }
+  to { opacity: 1; transform: none; }
+}
+
+.notificacao__foto {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  background: var(--roxo);
+  border: 3px solid var(--preto);
+  color: var(--amarelo);
+  font-size: 1.1rem;
+}
+
+.notificacao__foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.notificacao__corpo {
+  display: grid;
+  gap: var(--e2);
+  min-width: 0;
+}
+
+.notificacao__titulo {
+  color: var(--roxo);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+/* O texto em fonte comum: nome de jogador em letra pixelada pequena fica
+   difícil de ler. */
+.notificacao__texto {
+  font-family: Tahoma, sans-serif;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.notificacao__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+}
+
+.notificacao__acoes .botao {
+  min-width: 0;
+  min-height: 34px;
+  padding: var(--e1) var(--e3);
+  font-size: 0.74rem;
+}
+
+.notificacao__fechar {
+  position: absolute;
+  top: var(--e2);
+  right: var(--e2);
+  width: 30px;
+  height: 30px;
+  border: 2px solid rgba(22, 16, 31, 0.25);
+  background: transparent;
+  color: var(--preto);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notificacao__fechar:hover,
+.notificacao__fechar:focus-visible {
+  border-color: var(--rosa);
+  color: var(--rosa);
+  outline: none;
+}

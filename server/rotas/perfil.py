@@ -32,7 +32,7 @@ def perfil():
 
 @bp.post("/perfil")
 def salvar_perfil():
-    """Altera nome, senha e/ou foto.
+    """Altera nome, nome de usuário (`login`), senha e/ou foto.
 
     Campo ausente no corpo não é tocado — mandar só `{"nome": "..."}` troca
     apenas o nome. Para tirar a foto, mande `remover_foto: true`.
@@ -45,6 +45,7 @@ def salvar_perfil():
         sessao,
         jogador,
         nome=corpo.get("nome"),
+        login=corpo.get("login"),
         senha_atual=corpo.get("senha_atual"),
         senha_nova=corpo.get("senha_nova"),
         foto=corpo.get("foto"),

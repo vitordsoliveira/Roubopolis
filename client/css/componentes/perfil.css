@@ -187,6 +187,14 @@
   font-size: 0.95rem;
 }
 
+/* Para que serve o campo de cima: colada nele, longe do próximo rótulo. */
+.perfil__dica {
+  margin: calc(var(--e2) * -1) 0 var(--e2);
+  font-size: 0.6rem;
+  line-height: 1.7;
+  opacity: 0.65;
+}
+
 .perfil__secao {
   margin-top: var(--e3);
   padding-top: var(--e3);

@@ -57,6 +57,7 @@ def estado(codigo: str):
     eu = g.jogador_por_token(sessao, token)
     if eu is not None:
         g.marcar_visto(sessao, eu)
+        g.marcar_presenca(sessao, sala, eu)
     return jsonify(g.estado_do_lobby(sessao, sala, token)), 200
 
 

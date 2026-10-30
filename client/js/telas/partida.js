@@ -774,6 +774,8 @@ function pintarJogar() {
     mensagem += ` · ${formatarTempo(restante)}`;
   }
   elAviso.textContent = mensagem;
+  elAviso.classList.toggle("aviso-da-vez--minha-vez", minha && !encerrada);
+  elAviso.classList.toggle("aviso-da-vez--acabando", minha && !encerrada && restante !== null && restante <= 5);
   pintarSituacao();
 }
 
@@ -953,7 +955,6 @@ function anunciarEvento(evento) {
     nota: EVENTO_DA_RODADA.has(evento.tipo) ? "Vale até o fim desta rodada." : undefined,
     icone: ICONE_DO_EVENTO[evento.tipo] || "trofeu",
     tom: "evento",
-    duracao: 8000,
     aoMostrar: () => som.tocar("evento"),
   });
 }
@@ -1052,7 +1053,7 @@ function revelarCoringa() {
   if (!resultado) return;
   const quem = estado.jogadores.find((j) => j.jogador_id === resultado.jogador_id);
   const nome = nomeDe(quem);
-  const comum = { chamada: "Casa Coringa", duracao: 4000 };
+  const comum = { chamada: "Casa Coringa" };
   if (!resultado.arriscou) {
     anunciar({
       ...comum,
@@ -2053,9 +2054,41 @@ document.querySelector("#ranking").addEventListener("click", () => {
   if (estado) mostrarRanking();
 });
 
-/* Os dois volumes do menu, aqui também: quem quer baixar a música no meio
+/* O áudio do menu, aqui também: quem quer calar ou baixar a música no meio
    da partida não precisa abandonar a mesa. Cada controle grava a mesma
-   preferência que o do menu. */
+   preferência que o do menu. "Som" é o geral (cala efeitos e música);
+   "Música" cala só a música. */
+const interruptoresPartida = [
+  {
+    botao: document.querySelector("#som-partida"),
+    ler: guardado.som,
+    salvar: guardado.salvarSom,
+    textos: ["LIGADO", "DESLIGADO"],
+  },
+  {
+    botao: document.querySelector("#musica-partida"),
+    ler: guardado.musica,
+    salvar: guardado.salvarMusica,
+    textos: ["LIGADA", "DESLIGADA"],
+  },
+];
+
+function pintarInterruptoresPartida() {
+  for (const { botao, ler, textos } of interruptoresPartida) {
+    botao.setAttribute("aria-pressed", String(ler()));
+    botao.textContent = ler() ? textos[0] : textos[1];
+  }
+}
+
+for (const { botao, ler, salvar } of interruptoresPartida) {
+  botao.addEventListener("click", () => {
+    salvar(!ler());
+    pintarInterruptoresPartida();
+    musica.atualizarVolume();
+    som.tocar("clique");
+  });
+}
+
 const volumesPartida = [
   {
     controle: document.querySelector("#volume-musica-partida"),
@@ -2091,6 +2124,7 @@ for (const { controle, valor, salvar, aoMudar } of volumesPartida) {
 
 function abrirConfiguracaoPartida() {
   pintarPreferenciaAnimacoes();
+  pintarInterruptoresPartida();
   pintarVolumesPartida();
   painelConfigPartida.hidden = false;
   botaoAnimacoesPartida.focus();

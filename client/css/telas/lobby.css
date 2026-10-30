@@ -161,6 +161,16 @@
   font: inherit;
 }
 
+/* --- convidar amigo (painel do dono) ------------------------------- */
+
+.convidar__dica {
+  margin-bottom: var(--e3);
+  font-size: 0.66rem;
+  line-height: 1.8;
+  text-align: center;
+  opacity: 0.7;
+}
+
 @media (max-width: 480px) {
   .chat__mensagem {
     display: block;

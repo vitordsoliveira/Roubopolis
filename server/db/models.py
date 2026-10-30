@@ -229,6 +229,10 @@ class SalaJogador(Base):
     ordem: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     pronto: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     entrou_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+    # Última vez que a tela desta sala (lobby ou partida) consultou o
+    # servidor: é o que diz aos amigos onde a pessoa está AGORA. Gravada pelo
+    # relógio do Python (datetime.now), como a conta que a lê.
+    visto_em: Mapped[datetime | None] = mapped_column(DateTime)
 
     sala: Mapped["Sala"] = relationship(back_populates="participantes")
     jogador: Mapped["Jogador"] = relationship(back_populates="participacoes")
@@ -347,6 +351,34 @@ class Amizade(Base):
         return f"<Amizade {self.de_id}->{self.para_id} {self.status.value}>"
 
 
+class ConviteSala(Base):
+    """O dono de uma sala chamando um amigo para entrar nela.
+
+    Só existe enquanto espera resposta: aceito, recusado ou vencido, a linha
+    some (regras em server/social/convites_de_sala.py).
+    """
+
+    __tablename__ = "convite_sala"
+    __table_args__ = (
+        # Convidar de novo a mesma pessoa renova o convite, não duplica.
+        UniqueConstraint("sala_id", "para_id", name="uq_convite_sala_para"),
+        ARGS_MYSQL,
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    sala_id: Mapped[int] = mapped_column(ForeignKey("sala.id", ondelete="CASCADE"), nullable=False)
+    de_id: Mapped[int] = mapped_column(ForeignKey("jogador.id", ondelete="CASCADE"), nullable=False)
+    para_id: Mapped[int] = mapped_column(ForeignKey("jogador.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Pelo relógio do Python, como a conta da validade que o lê.
+    criado_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
+
+    sala: Mapped["Sala"] = relationship()
+    de: Mapped["Jogador"] = relationship(foreign_keys=[de_id])
+
+    def __repr__(self) -> str:
+        return f"<ConviteSala sala={self.sala_id} {self.de_id}->{self.para_id}>"
+
+
 class ItemDoJogador(Base):
     """Item da loja que o jogador comprou. O catálogo (preço, cores) mora em
     data/loja/catalogo.json; aqui só fica a posse."""
@@ -367,4 +399,4 @@ class ItemDoJogador(Base):
 
 
 #: Ordem de criação (respeita as chaves estrangeiras).
-TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador, Partida, MensagemChat, Amizade, ItemDoJogador)
+TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador, Partida, MensagemChat, Amizade, ConviteSala, ItemDoJogador)

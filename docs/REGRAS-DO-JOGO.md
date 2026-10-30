@@ -218,9 +218,11 @@ que aconteceu e uma **frase de sátira** (`data/eventos/mensagens_casas.json`,
 uma lista por casa; a mesa toda lê a mesma frase). O aluguel pago a outro
 jogador também abre a janela, contada do ponto de vista de quem olha: quem
 pagou vê em vermelho, quem recebeu em verde, o resto da mesa em roxo — e,
-quando foi mais caro, por quê (bônus do Morro, final de ano). A janela fecha sozinha em
-uns 5 segundos, no Continuar, no Esc ou quando quem tem a vez aperta JOGAR:
-ela não segura o relógio de ninguém.
+quando foi mais caro, por quê (bônus do Morro, final de ano).
+
+A janela fica **1 minuto**, ou até a pessoa fechar — no ×, no Continuar, no
+Esc ou apertando JOGAR — e não segura o relógio de ninguém. Se chega outra,
+a da tela cede depois de 7 segundos, para a fila não andar atrás da mesa.
 
 | Casa | Efeito |
 |---|---|
@@ -285,9 +287,10 @@ ninguém com propriedade).
   começa a vez dentro da região (antes de rolar) e para quem termina o
   movimento nela. Uma venda por jogador por evento.
 
-Quando o evento cai, a mesa inteira vê a janela dele por 8 segundos, com uma
-**frase de sátira** (`data/eventos/tematicos.json`) e o efeito em números; o
-selo do evento no alto da tela reabre a janela durante a rodada.
+Quando o evento cai, a mesa inteira vê a janela dele (1 minuto, ou até
+fechar), com uma **frase de sátira** (`data/eventos/tematicos.json`) e o
+efeito em números; o selo do evento no alto da tela reabre a janela durante
+a rodada.
 
 A frequência (`eventos.chance_por_rodada`) e o peso de cada evento ficam no
 balanceamento. As divergências antigas com o README foram resolvidas a favor

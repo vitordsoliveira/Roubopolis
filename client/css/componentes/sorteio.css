@@ -93,8 +93,10 @@
   animation-delay: calc(var(--ordem, 0) * 0.1s);
 }
 
+/* Sem esmaecer: os dados giram dentro do posto, e opacidade no meio do
+   caminho deixa o cubo 3D transparente, uma face vazando pela outra. */
 @keyframes posto-entra {
-  from { transform: translateY(60px) scale(0.7); opacity: 0; }
+  from { transform: translateY(60px) scale(0.7); }
 }
 
 /* --- os dados de cada um -------------------------------------------- */
@@ -117,8 +119,8 @@
 .posto--revelado .dado:nth-child(2) { animation-delay: 0.07s; }
 
 @keyframes posto-dado-cai {
-  0%   { transform: translateY(-46px) scale(0.6); opacity: 0.4; }
-  60%  { transform: translateY(6px) scale(1.12); opacity: 1; }
+  0%   { transform: translateY(-46px) scale(0.6); }
+  60%  { transform: translateY(6px) scale(1.12); }
   100% { transform: translateY(0) scale(1); }
 }
 

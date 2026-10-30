@@ -2,16 +2,26 @@
    Fulano perdeu R$ 100.000") ou um evento temático ("O Presidente passou
    aqui"), com uma frase de sátira (data/eventos/) e o que mudou na mesa.
 
+   Fica 1 minuto, ou até a pessoa fechar: no ×, no Continuar, no Esc ou
+   apertando JOGAR. A janela não trava a mesa: o relógio da vez continua
+   correndo, e o clique fora dela passa para o jogo.
+
    Uma de cada vez, em fila: duas casas no mesmo lance (o portal e a casa
-   onde o peão caiu) aparecem em sequência, sem uma cobrir a outra. Cada uma
-   fecha sozinha quando a barra acaba, ou antes, no Continuar, no Esc ou
-   quando quem tem a vez aperta JOGAR. A janela não trava a mesa: o relógio
-   da vez continua correndo, e o clique fora dela passa para o jogo. Com as
-   animações desligadas a janela aparece parada, mas aparece: é informação
-   de jogo, não enfeite. */
+   onde o peão caiu) aparecem em sequência, sem uma cobrir a outra. Com
+   outra esperando, a da tela cede depois de alguns segundos — senão a fila
+   andava atrás da mesa, contando a jogada de duas vezes atrás. O suspense
+   da Coringa passa na frente: a mesa está parada esperando o resultado.
+
+   Com as animações desligadas a janela aparece parada, mas aparece: é
+   informação de jogo, não enfeite. */
 
 import { guardado } from "../core/api.js";
 import { iconePixel } from "../tabuleiro/pixel.js";
+
+/** Quanto a janela fica na tela se ninguém fechar: 1 minuto. */
+const DURACAO_PADRAO = 60000;
+/** Com outra janela esperando, a da tela cede depois deste tanto. */
+const MINIMO_COM_FILA = 7000;
 
 const cortina = document.querySelector("#modal-evento");
 const janela = cortina.querySelector(".evento-janela");
@@ -23,6 +33,7 @@ const texto = document.querySelector("#evento-texto");
 const nota = document.querySelector("#evento-nota");
 const barra = document.querySelector("#evento-barra");
 const botao = document.querySelector("#evento-continuar");
+const botaoFechar = document.querySelector("#evento-fechar");
 
 const fila = [];
 let atual = null;
@@ -36,14 +47,24 @@ let atual = null;
  * @param {string} [anuncio.nota]  ex.: "Vale até o fim da rodada."
  * @param {string} [anuncio.icone]  nome de um desenho de tabuleiro/pixel.js
  * @param {"bom"|"ruim"|"neutro"|"evento"|"suspense"} [anuncio.tom]
- * @param {number} [anuncio.duracao]  ms na tela
+ * @param {number} [anuncio.duracao]  ms na tela; o padrão é 1 minuto
  * @param {() => void} [anuncio.aoMostrar]  o som, na hora em que aparece
  * @returns {Promise<void>} resolve quando ESTA janela fecha
  */
 export function anunciar(anuncio) {
   return new Promise((resolver) => {
-    fila.push({ tom: "neutro", duracao: 4500, ...anuncio, resolver });
-    if (!atual) proximo();
+    const item = { tom: "neutro", duracao: DURACAO_PADRAO, ...anuncio, resolver };
+    if (item.tom === "suspense") {
+      // O tambor da Coringa não espera na fila: o resultado da jogada só
+      // entra na mesa depois dele.
+      fila.unshift(item);
+      if (atual) fechar();
+      else proximo();
+      return;
+    }
+    fila.push(item);
+    if (atual) apressar();
+    else proximo();
   });
 }
 
@@ -55,13 +76,31 @@ export function limparAnuncios() {
   if (atual) fechar();
 }
 
+/** A barra esvazia de `de` (1 = cheia) até zero em `ms`. A janela precisa
+    já estar visível: transição que começa dentro de algo escondido não
+    anda, e a barra aparecia vazia. */
+function esvaziarBarra(de, ms) {
+  barra.style.transition = "none";
+  barra.style.transform = `scaleX(${de})`;
+  void barra.offsetWidth;
+  if (guardado.animacoes()) {
+    barra.style.transition = `transform ${ms}ms linear`;
+    barra.style.transform = "scaleX(0)";
+  }
+}
+
+/** Agenda o fechamento da janela da tela para daqui a `ms`. */
+function fecharEm(ms) {
+  clearTimeout(atual.relogio);
+  const agora = performance.now();
+  atual.fim = agora + ms;
+  atual.relogio = setTimeout(fechar, ms);
+}
+
 function proximo() {
   const item = fila.shift();
   if (!item) return;
   atual = item;
-
-  // Fila longa (vários eventos de uma vez) anda mais rápido.
-  const duracao = item.duracao * (fila.length > 1 ? 0.65 : 1);
   // O suspense da Coringa não se fecha na mão: é o tambor rufando.
   const fechavel = item.tom !== "suspense";
 
@@ -77,21 +116,28 @@ function proximo() {
   nota.textContent = item.nota || "";
   nota.hidden = !item.nota;
   botao.hidden = !fechavel;
+  botaoFechar.hidden = !fechavel;
   cortina.hidden = false;
 
-  // A barra esvazia no tempo que falta para a janela fechar sozinha. A
-  // janela precisa já estar visível: transição que começa dentro de algo
-  // escondido não anda, e a barra aparecia vazia.
-  barra.style.transition = "none";
-  barra.style.transform = "scaleX(1)";
-  void barra.offsetWidth;
-  if (guardado.animacoes()) {
-    barra.style.transition = `transform ${duracao}ms linear`;
-    barra.style.transform = "scaleX(0)";
-  }
-
+  item.inicio = performance.now();
+  // Já há outra esperando: esta fica o mínimo e cede a vez.
+  const duracao = fila.length && fechavel ? Math.min(item.duracao, MINIMO_COM_FILA) : item.duracao;
+  item.total = duracao;
+  esvaziarBarra(1, duracao);
+  fecharEm(duracao);
   item.aoMostrar?.();
-  item.relogio = setTimeout(fechar, duracao);
+}
+
+/** Chegou outra janela: a da tela não fica mais o minuto inteiro — cede
+    quando completar o mínimo, e a barra acompanha. */
+function apressar() {
+  if (!atual || atual.tom === "suspense") return;
+  const agora = performance.now();
+  const novoFim = atual.inicio + MINIMO_COM_FILA;
+  if (novoFim >= atual.fim) return;
+  const resta = Math.max(0, novoFim - agora);
+  esvaziarBarra(Math.max(0, (atual.fim - agora) / atual.total), resta);
+  fecharEm(resta);
 }
 
 function fechar() {
@@ -104,9 +150,10 @@ function fechar() {
   proximo();
 }
 
-/** O Continuar, o Esc e o JOGAR: fecha a janela da tela agora. */
+/** O ×, o Continuar, o Esc e o JOGAR: fecha a janela da tela agora. */
 export function fecharAnuncio() {
   if (atual && atual.tom !== "suspense") fechar();
 }
 
 botao.addEventListener("click", fecharAnuncio);
+botaoFechar.addEventListener("click", fecharAnuncio);

@@ -4,6 +4,7 @@ import { api, guardado } from "../core/api.js";
 import { musica } from "../core/musica.js";
 import { som } from "../core/som.js";
 import { elemento, inicial } from "../ui/comum.js";
+import { acompanharNotificacoes, pararNotificacoes } from "../ui/notificacoes.js";
 import { toast } from "../ui/toast.js";
 import { previaDaCasa, previaDoDado, previaDoItem } from "../ui/vitrine.js";
 
@@ -27,9 +28,9 @@ const atalhoNome = document.querySelector("#atalho-nome");
 const atalhoCoins = document.querySelector("#atalho-coins");
 const rodapeMensagem = document.querySelector("#rodape-mensagem");
 const botaoSom = document.querySelector("#som");
+const botaoMusica = document.querySelector("#musica");
 const botaoAnimacoes = document.querySelector("#animacoes");
 const modoExibicao = document.querySelector("#modo-exibicao");
-const botaoAplicarModoExibicao = document.querySelector("#aplicar-modo-exibicao");
 const controleVolumeSom = document.querySelector("#volume-som");
 const valorVolumeSom = document.querySelector("#valor-volume-som");
 const controleVolumeMusica = document.querySelector("#volume-musica");
@@ -43,6 +44,7 @@ const perfilFotoVazia = document.querySelector("#perfil-foto-vazia");
 const perfilArquivo = document.querySelector("#perfil-arquivo");
 const perfilRemoverFoto = document.querySelector("#perfil-remover-foto");
 const perfilNomeCampo = document.querySelector("#perfil-nome-campo");
+const perfilLoginCampo = document.querySelector("#perfil-login-campo");
 const perfilSenhaAtual = document.querySelector("#perfil-senha-atual");
 const perfilSenhaNova = document.querySelector("#perfil-senha-nova");
 const perfilSalvar = document.querySelector("#perfil-salvar");
@@ -85,7 +87,6 @@ if (guardado.abaPropria()) {
 
 // --- nome -----------------------------------------------------------
 
-campoNome.value = guardado.nome();
 campoLogin.focus();
 
 campoNome.addEventListener("input", () => {
@@ -126,10 +127,12 @@ function pintarAtalho(jogador) {
 }
 
 function mostrarJogo(jogador) {
-  campoNome.value = jogador.nome;
   document.querySelector(".menu__login").hidden = true;
   opcoes.hidden = false;
   pintarAtalho(jogador);
+  // Convite de amigo e pedido de amizade aparecem em cartão no topo; cada
+  // consulta também acerta o selo do AMIGOS.
+  acompanharNotificacoes({ aoAtualizar: (dados) => pintarSelo(dados.pedidos.length) });
   // Foco no CONTÊINER, não no primeiro botão. Focar o botão acendia a
   // setinha do `:focus-visible` no JOGAR, que ficava parecendo uma seleção
   // travada e concorria com a setinha do mouse. Assim o leitor de tela
@@ -138,6 +141,8 @@ function mostrarJogo(jogador) {
 }
 
 function voltarAoLogin() {
+  document.querySelectorAll(".painel:not([hidden])").forEach(fechar);
+  pararNotificacoes();
   guardado.esquecer();
   campoLogin.value = "";
   campoSenha.value = "";
@@ -192,7 +197,7 @@ campoSenha.addEventListener("keydown", (evento) => evento.key === "Enter" && ace
 
 // --- ações ----------------------------------------------------------
 
-async function comIndicador(tarefa) {
+async function comIndicador(tarefa, { logado = false } = {}) {
   if (ocupado) return;
   ocupado = true;
   opcoes.setAttribute("aria-busy", "true");
@@ -200,6 +205,14 @@ async function comIndicador(tarefa) {
     await tarefa();
   } catch (erro) {
     som.tocar("erro");
+    if (logado && erro.status === 401) {
+      // O token guardado não vale mais (a conta entrou em outra máquina,
+      // por exemplo): o caminho é entrar de novo. No login, 401 é só
+      // senha errada — por isso o `logado`.
+      voltarAoLogin();
+      toast("Sua sessão expirou. Entre de novo.", "erro");
+      return;
+    }
     toast(erro.message, "erro");
   } finally {
     ocupado = false;
@@ -207,20 +220,19 @@ async function comIndicador(tarefa) {
   }
 }
 
+/* JOGAR e o código usam a conta já logada (o token guardado) e não mandam
+   nome nenhum. Antes os dois mandavam o nome do campo de cadastro, que só
+   era preenchido ao abrir o menu: trocado o nome no perfil, o antigo
+   voltava ao servidor na entrada da sala. */
 function jogar() {
-  const nome = nomeValido();
-  if (!nome) return;
   return comIndicador(async () => {
-    await api.identificar(nome);
     const sala = await api.criarSala();
     await new Promise((resolver) => setTimeout(resolver, 140));
     window.location.href = `/lobby?codigo=${sala.codigo}`;
-  });
+  }, { logado: true });
 }
 
 function entrarComCodigo() {
-  const nome = nomeValido();
-  if (!nome) return;
   const codigo = campoCodigo.value.trim().toUpperCase();
   if (codigo.length < 4) {
     campoCodigo.classList.add("campo--erro");
@@ -229,10 +241,9 @@ function entrarComCodigo() {
   }
   return comIndicador(async () => {
     som.tocar("entrar");
-    await api.identificar(nome);
     const sala = await api.entrarNaSala(codigo);
     window.location.href = `/lobby?codigo=${sala.codigo}`;
-  });
+  }, { logado: true });
 }
 
 // --- painéis --------------------------------------------------------
@@ -274,6 +285,7 @@ function mostrarFoto(foto) {
 
 function preencherPerfil({ jogador, estatisticas }) {
   perfilNomeCampo.value = jogador.nome;
+  perfilLoginCampo.value = jogador.login || "";
   perfilPartidas.textContent = estatisticas.partidas_jogadas;
   perfilVitorias.textContent = estatisticas.vitorias;
   perfilTaxa.textContent = `${estatisticas.taxa_vitorias}%`;
@@ -324,6 +336,10 @@ async function salvarPerfil() {
   const corpo = {};
   const nome = perfilNomeCampo.value.trim();
   if (nome) corpo.nome = nome;
+  // Mandar o mesmo de agora não muda nada: o servidor só recusa o que já é
+  // de outra pessoa.
+  const login = perfilLoginCampo.value.trim();
+  if (login) corpo.login = login;
 
   if (perfilSenhaNova.value) {
     corpo.senha_atual = perfilSenhaAtual.value;
@@ -684,8 +700,8 @@ abasLoja.forEach((aba) => aba.addEventListener("click", () => {
 
 // --- som e música ------------------------------------------------------
 
-/* "Som" é o interruptor geral: desligado, cala efeitos E música. Os dois
-   volumes ajustam cada um separado. */
+/* "Som" é o interruptor geral: desligado, cala efeitos E música. "Música"
+   cala só a música. Os dois volumes ajustam cada um separado. */
 
 musica.iniciar();
 
@@ -695,6 +711,13 @@ function pintarSom() {
   botaoSom.textContent = ligado ? "LIGADO" : "DESLIGADO";
 }
 pintarSom();
+
+function pintarMusica() {
+  const ligada = guardado.musica();
+  botaoMusica.setAttribute("aria-pressed", String(ligada));
+  botaoMusica.textContent = ligada ? "LIGADA" : "DESLIGADA";
+}
+pintarMusica();
 
 function aplicarAnimacoes(ligadas) {
   document.documentElement.classList.toggle("sem-animacao", !ligadas);
@@ -730,6 +753,13 @@ botaoSom.addEventListener("click", () => {
   pintarSom();
   musica.atualizarVolume();
   if (ligado) som.tocar("confirmar");
+});
+
+botaoMusica.addEventListener("click", () => {
+  guardado.salvarMusica(!guardado.musica());
+  pintarMusica();
+  musica.atualizarVolume();
+  som.tocar("clique");
 });
 
 controleVolumeMusica.addEventListener("input", () => {
@@ -797,8 +827,11 @@ async function aplicarModoExibicao() {
   }
 }
 
-botaoAplicarModoExibicao.addEventListener("click", aplicarModoExibicao);
-botaoAplicarModoExibicao.addEventListener("click", () => som.tocar("confirmar"));
+// Vale na hora, como o resto da configuração: não há botão de aplicar.
+modoExibicao.addEventListener("change", () => {
+  som.tocar("confirmar");
+  aplicarModoExibicao();
+});
 // Quem avisa que a janela mudou é o processo do Electron (F11 inclusive),
 // não o evento `fullscreenchange` do HTML.
 ponteDesktop()?.aoMudarTelaCheia?.(pintarTelaCheia);
@@ -852,8 +885,8 @@ document.addEventListener("click", (evento) => {
   acoes[alvo.dataset.acao]?.(alvo);
 });
 
-// Enter no nome já começa a partida; no código, entra na sala.
-campoNome.addEventListener("keydown", (e) => e.key === "Enter" && jogar());
+// Enter no nome do cadastro cria a conta; no código, entra na sala.
+campoNome.addEventListener("keydown", (e) => e.key === "Enter" && acessar());
 campoCodigo.addEventListener("keydown", (e) => e.key === "Enter" && entrarComCodigo());
 
 /* Entrada da tela.
@@ -875,8 +908,6 @@ if (guardado.token()) {
       // O servidor é a verdade: corrige nome/foto se mudaram em outra máquina.
       guardado.salvarSessao(jogador);
       pintarAtalho(jogador);
-      // Pedido de amizade esperando acende o selo do AMIGOS.
-      api.amigos().then((painel) => pintarSelo(painel.recebidos.length)).catch(() => {});
     })
     .catch((erro) => {
       // Só derruba a sessão se o servidor DISSE que o token não vale mais.

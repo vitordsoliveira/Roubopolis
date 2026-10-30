@@ -234,6 +234,12 @@ const efeitos = {
     tom(audio, t + 0.07, { freq: 1318.5, duracao: 0.12, volume: 0.08 });
   },
 
+  /** Alguém te chamou (convite, pedido de amizade): dim-dom de campainha. */
+  chamado(audio, t) {
+    tom(audio, t, { freq: 987.77, forma: "sine", duracao: 0.4, volume: 0.14 });
+    tom(audio, t + 0.24, { freq: 783.99, forma: "sine", duracao: 0.6, volume: 0.14 });
+  },
+
   /** Dou-lhe uma, dou-lhe duas, dou-lhe três: três marteladas e o sino. */
   arrematado(audio, t) {
     [0, 0.3, 0.6].forEach((atraso) => efeitos.martelo(audio, t + atraso));

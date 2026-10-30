@@ -11,6 +11,7 @@ const CHAVE_FOTO = "roubopolis.foto";
 const CHAVE_SOM = "roubopolis.som";
 const CHAVE_VOLUME_SOM = "roubopolis.volume-som";
 const CHAVE_VOLUME_MUSICA = "roubopolis.volume-musica";
+const CHAVE_MUSICA = "roubopolis.musica";
 const CHAVE_ANIMACOES = "roubopolis.animacoes";
 const CHAVE_ABA = "roubopolis.aba-propria";
 const CHAVE_CHAT = "roubopolis.chat-aberto";
@@ -58,7 +59,10 @@ export const guardado = {
   token: () => ler(CHAVE_TOKEN),
   nome: () => ler(CHAVE_NOME),
   foto: () => ler(CHAVE_FOTO) || null,
+  /** Interruptor geral: desligado, cala efeitos E música. */
   som: () => ler(CHAVE_SOM, "1") === "1",
+  /** Só a música; os efeitos seguem. */
+  musica: () => ler(CHAVE_MUSICA, "1") === "1",
   volumeSom: () => Number(ler(CHAVE_VOLUME_SOM, "100")),
   /** Começa baixa: a música é fundo, não pode brigar com os efeitos. */
   volumeMusica: () => Number(ler(CHAVE_VOLUME_MUSICA, "40")),
@@ -67,6 +71,7 @@ export const guardado = {
   salvarNome: (valor) => gravar(CHAVE_NOME, valor),
   salvarFoto: (valor) => gravar(CHAVE_FOTO, valor || ""),
   salvarSom: (ligado) => gravar(CHAVE_SOM, ligado ? "1" : "0"),
+  salvarMusica: (ligada) => gravar(CHAVE_MUSICA, ligada ? "1" : "0"),
   salvarVolumeSom: (valor) => gravar(CHAVE_VOLUME_SOM, String(valor)),
   salvarVolumeMusica: (valor) => gravar(CHAVE_VOLUME_MUSICA, String(valor)),
   salvarAnimacoes: (ligado) => gravar(CHAVE_ANIMACOES, ligado ? "1" : "0"),
@@ -162,12 +167,6 @@ export const api = {
     guardado.salvarSessao(jogador);
     return jogador;
   },
-  /** Menu: manda o nome, recebe e guarda o token. */
-  async identificar(nome) {
-    const jogador = await pedir("/api/jogador", { metodo: "POST", corpo: { nome } });
-    guardado.salvarSessao(jogador);
-    return jogador;
-  },
   criarSala: () => pedir("/api/salas", { metodo: "POST", corpo: {} }),
   entrarNaSala: (codigo) => pedir(`/api/salas/${codigo}/entrar`, { metodo: "POST", corpo: {} }),
   verSala: (codigo) => pedir(`/api/salas/${codigo}`),
@@ -236,6 +235,13 @@ export const api = {
   aceitarAmizade: (id) => pedir(`/api/amigos/${id}/aceitar`, { metodo: "POST", corpo: {} }),
   /** Recusa pedido recebido, cancela pedido enviado ou desfaz a amizade. */
   desfazerAmizade: (id) => pedir(`/api/amigos/${id}`, { metodo: "DELETE" }),
+  /** Convites para sala e pedidos de amizade que esperam resposta. */
+  notificacoes: () => pedir("/api/notificacoes"),
+  convidarParaSala: (codigo, amigoId) =>
+    pedir(`/api/salas/${codigo}/convites`, { metodo: "POST", corpo: { amigo_id: amigoId } }),
+  /** Entra na sala do convite; devolve `{codigo}` para a tela ir até ela. */
+  aceitarConvite: (id) => pedir(`/api/convites/${id}/aceitar`, { metodo: "POST", corpo: {} }),
+  recusarConvite: (id) => pedir(`/api/convites/${id}/recusar`, { metodo: "POST", corpo: {} }),
 
   // --- loja --------------------------------------------------------------
   loja: () => pedir("/api/loja"),

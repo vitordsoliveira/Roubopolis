@@ -61,6 +61,7 @@ def iniciar(codigo: str):
 def estado(codigo: str):
     sessao, sala, jogador = _sala_e_jogador(codigo)
     g.marcar_visto(sessao, jogador)
+    g.marcar_presenca(sessao, sala, jogador)
     return jsonify(p.estado_para(sessao, sala, jogador)), 200
 
 

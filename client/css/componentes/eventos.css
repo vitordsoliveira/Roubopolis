@@ -130,19 +130,43 @@
    abaixo das janelas de decisão (compra, leilão...): elas têm prazo, esta
    só conta. A cor da borda diz se a notícia é boa, ruim ou da vila inteira. */
 
-/* O fundo escurece mas deixa o clique passar: o relógio da vez não para
-   enquanto a janela conta a novidade, e quem tem a vez joga sem esperar. */
+/* O fundo escurece de leve e deixa o clique passar: a janela fica até 1
+   minuto, o relógio da vez não para enquanto ela conta a novidade, e o
+   tabuleiro continua à vista. Quem tem a vez joga sem esperar. */
 .evento-cortina {
   z-index: 78;
   pointer-events: none;
+  background: rgba(14, 5, 28, 0.35);
+  backdrop-filter: none;
 }
 
 .evento-janela {
   --tom: #9b3dff;
   --moldura-borda: var(--tom);
+  position: relative;
   width: min(560px, 100%);
   font-family: var(--fonte-hud);
   pointer-events: auto;
+}
+
+.evento-janela__fechar {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: var(--branco);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.evento-janela__fechar:hover,
+.evento-janela__fechar:focus-visible {
+  border-color: var(--amarelo);
+  color: var(--amarelo);
 }
 
 .evento-janela--bom { --tom: var(--verde-neon); }

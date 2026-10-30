@@ -486,7 +486,7 @@ function guardarPosicao() {
 }
 
 function volumeAlvo() {
-  if (!guardado.som() || document.hidden) return 0;
+  if (!guardado.som() || !guardado.musica() || document.hidden) return 0;
   return (TETO * Math.max(0, Math.min(100, guardado.volumeMusica()))) / 100;
 }
 
@@ -540,7 +540,7 @@ export const musica = {
     window.addEventListener("pagehide", guardarPosicao);
   },
 
-  /** A configuração mudou (volume da música ou o som inteiro). */
+  /** A configuração mudou (a música, o volume dela ou o som inteiro). */
   atualizarVolume() {
     aplicarVolume();
   },

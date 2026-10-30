@@ -8,6 +8,7 @@ import { api, guardado } from "../core/api.js";
 import { musica } from "../core/musica.js";
 import { som } from "../core/som.js";
 import { montarChat } from "../ui/chat.js";
+import { acompanharNotificacoes } from "../ui/notificacoes.js";
 import { toast } from "../ui/toast.js";
 
 // A música continua de onde o menu parou.
@@ -18,6 +19,9 @@ const rotuloCodigo = document.querySelector("#codigo-sala");
 const botaoPronto = document.querySelector("#pronto");
 const botaoIniciar = document.querySelector("#iniciar");
 const aviso = document.querySelector("#aviso");
+const painelConvidar = document.querySelector("#painel-convidar");
+const listaConvidar = document.querySelector("#convidar-lista");
+const botaoFecharConvidar = document.querySelector("#convidar-fechar");
 const codigo = new URLSearchParams(location.search).get("codigo")?.toUpperCase() || "";
 let estado = null;
 let consulta = null;
@@ -36,7 +40,7 @@ const chat = montarChat({
 });
 
 if (!codigo || !guardado.token()) {
-  toast("Volte ao menu e digite seu nome primeiro.", "erro");
+  toast("Volte ao menu e entre na sua conta primeiro.", "erro");
   setTimeout(() => (location.href = "/"), 1400);
 } else {
   rotuloCodigo.textContent = codigo;
@@ -50,6 +54,8 @@ async function entrar() {
     som.tocar("entrar");
     await chat.atualizar();
     iniciarConsulta();
+    // Convite de outro amigo e pedido de amizade chegam aqui também.
+    acompanharNotificacoes();
   } catch (erro) {
     som.tocar("erro");
     toast(erro.message, "erro");
@@ -134,11 +140,23 @@ function montarSlots(dados) {
 
     if (!participante) {
       const vazio = elemento("li", "slot slot--vazio");
-      const perfil = elemento("div", "slot__perfil");
+      // O dono convida um amigo clicando no lugar vago; para os outros, o
+      // lugar só espera alguém entrar com o código.
+      const perfil = elemento(dados.sou_dono ? "button" : "div", "slot__perfil");
       perfil.appendChild(elemento("span", "slot__mais", "+"));
+      if (dados.sou_dono) {
+        perfil.type = "button";
+        perfil.classList.add("slot__convidar");
+        perfil.setAttribute("aria-label", "Convidar um amigo para este lugar");
+        perfil.addEventListener("click", abrirConvidar);
+      }
       // Marcas vazias no topo para o quadro vago ficar na mesma altura
       // dos ocupados.
-      vazio.append(montarMarcas(null), perfil, elemento("span", "slot__nome slot__espera", "lugar vago"));
+      vazio.append(
+        montarMarcas(null),
+        perfil,
+        elemento("span", "slot__nome slot__espera", dados.sou_dono ? "convidar amigo" : "lugar vago"),
+      );
       itens.push(vazio);
       continue;
     }
@@ -224,6 +242,116 @@ botaoIniciar.addEventListener("click", async () => {
     toast(erro.message, "erro");
     botaoIniciar.disabled = false;
   }
+});
+
+// --- convidar amigo ---------------------------------------------------
+
+/* Só o dono convida, e só amigos — o servidor confere os dois. A lista é a
+   do painel de AMIGOS do menu, com quem está jogando ou online primeiro. Um
+   amigo recém-convidado fica marcado por um tempo, para o dono não mandar
+   dois convites sem querer. */
+
+const convidadosEm = new Map(); // amigo_id → quando o convite saiu (ms)
+const ESPERA_PARA_CONVIDAR_DE_NOVO_MS = 30000;
+
+async function abrirConvidar() {
+  som.tocar("selecionar");
+  painelConvidar.hidden = false;
+  botaoFecharConvidar.focus();
+  listaConvidar.replaceChildren(elemento("li", "amigos__vazio", "Carregando seus amigos..."));
+  try {
+    pintarConvidar((await api.amigos()).amigos);
+  } catch (erro) {
+    listaConvidar.replaceChildren(elemento("li", "amigos__vazio", erro.message));
+  }
+}
+
+function fecharConvidar() {
+  painelConvidar.hidden = true;
+}
+
+function pintarConvidar(amigos) {
+  if (!amigos.length) {
+    listaConvidar.replaceChildren(elemento(
+      "li",
+      "amigos__vazio",
+      "Você ainda não tem amigos. Adicione pelo menu, em AMIGOS, com o nome de usuário de alguém.",
+    ));
+    return;
+  }
+  listaConvidar.replaceChildren(...amigos.map(itemParaConvidar));
+}
+
+function statusParaConvite(amigo) {
+  if (amigo.sala?.codigo === codigo) return ["Nesta sala", "amigo__status--lobby"];
+  if (amigo.sala?.status === "em_partida") return ["Em partida", "amigo__status--partida"];
+  if (amigo.sala?.status === "aguardando") return ["Em outro lobby", "amigo__status--lobby"];
+  return amigo.online ? ["Online", "amigo__status--online"] : ["Offline", ""];
+}
+
+function itemParaConvidar(amigo) {
+  const foto = elemento("span", "amigo__foto");
+  if (amigo.foto) {
+    const img = elemento("img");
+    img.src = amigo.foto;
+    img.alt = "";
+    foto.appendChild(img);
+  } else {
+    foto.textContent = (amigo.nome || "?").trim().charAt(0);
+  }
+
+  const [rotulo, classe] = statusParaConvite(amigo);
+  const detalhe = elemento("span", "amigo__detalhe");
+  detalhe.append(elemento("span", `amigo__status ${classe}`, rotulo), elemento("span", "", `@${amigo.login || "?"}`));
+  const info = elemento("div", "amigo__info");
+  info.append(elemento("span", "amigo__nome", amigo.nome), detalhe);
+
+  const botao = elemento("button", "botao botao--pequeno botao--verde", "Convidar");
+  botao.type = "button";
+  if (amigo.sala?.codigo === codigo) {
+    botao.disabled = true;
+    botao.textContent = "Já está aqui";
+  } else if (Date.now() - (convidadosEm.get(amigo.id) || 0) < ESPERA_PARA_CONVIDAR_DE_NOVO_MS) {
+    marcarConvidado(botao);
+  }
+  botao.addEventListener("click", () => convidar(amigo, botao));
+  const acoes = elemento("div", "amigo__acoes");
+  acoes.appendChild(botao);
+
+  const item = elemento("li", "amigo");
+  item.append(foto, info, acoes);
+  return item;
+}
+
+function marcarConvidado(botao) {
+  botao.disabled = true;
+  botao.textContent = "Convidado";
+}
+
+async function convidar(amigo, botao) {
+  botao.disabled = true;
+  try {
+    await api.convidarParaSala(codigo, amigo.id);
+    convidadosEm.set(amigo.id, Date.now());
+    marcarConvidado(botao);
+    som.tocar("confirmar");
+    toast(`Convite enviado para ${amigo.nome}.`, "ok");
+  } catch (erro) {
+    botao.disabled = false;
+    som.tocar("erro");
+    toast(erro.message, "erro");
+  }
+}
+
+botaoFecharConvidar.addEventListener("click", () => {
+  som.tocar("voltar");
+  fecharConvidar();
+});
+painelConvidar.addEventListener("click", (evento) => {
+  if (evento.target === painelConvidar) fecharConvidar();
+});
+document.addEventListener("keydown", (evento) => {
+  if (evento.key === "Escape" && !painelConvidar.hidden) fecharConvidar();
 });
 
 // --- trocar de boneco ------------------------------------------------

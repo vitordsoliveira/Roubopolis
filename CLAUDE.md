@@ -50,8 +50,9 @@ jogador: Roubopolis. Caminhos: Roubodopolis.
   mudou o formato, suba a versão e trate o estado antigo em `_atualizar()` —
   partida em andamento no banco volta com o formato velho.
 - **`server/`** — Flask, rotas, banco. O `engine/` nunca importa daqui.
-  `server/social/` tem amigos (quem pode assistir a uma partida) e loja
-  (créditos, itens, prêmio do fim de partida).
+  `server/social/` tem amigos (quem pode assistir a uma partida), convites
+  para sala (o cartão que aparece na tela do amigo, junto com o pedido de
+  amizade) e loja (créditos, itens, prêmio do fim de partida).
 - **`client/`** — telas. Caminhos absolutos (`/css`, `/assets`) e scripts
   `type="module"`, servidos pelo Flask.
 - **`electron/`** — só a casca. Abre a URL do servidor; não contém o jogo.

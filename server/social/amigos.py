@@ -25,8 +25,17 @@ from server.social.loja import resumo_visual
 
 #: Quem foi visto há menos que isto aparece como online.
 JANELA_ONLINE = timedelta(minutes=2)
+#: Quem teve a tela da sala (lobby ou partida) aberta há menos que isto
+#: ainda está nela. As telas consultam a cada segundo ou dois e a presença
+#: é gravada a cada 10 s (server/salas/gerenciador.py, `marcar_presenca`).
+JANELA_PRESENCA = timedelta(seconds=30)
 #: Partida cuja vez venceu há mais que isto foi largada: ninguém mais joga.
-PARTIDA_PARADA_SEGUNDOS = 10 * 60
+#: Numa partida de verdade a tela consulta o servidor a cada segundo, e a
+#: consulta faz a vez andar quando o prazo vence — o prazo nunca fica dois
+#: minutos para trás (a vez dura 30 segundos; o leilão, no máximo 45). Com
+#: 10 minutos, quem fechava o jogo no meio da partida ainda aparecia "em
+#: partida" para os amigos, com o botão de assistir.
+PARTIDA_PARADA_SEGUNDOS = 2 * 60
 
 
 def _par(sessao: Session, a_id: int, b_id: int) -> Amizade | None:
@@ -55,27 +64,55 @@ def pode_assistir(sessao: Session, jogador_id: int, ids_da_mesa: list[int]) -> b
     return bool(_ids_de_amigos(sessao, jogador_id) & set(ids_da_mesa))
 
 
+def sao_amigos(sessao: Session, a_id: int, b_id: int) -> bool:
+    amizade = _par(sessao, a_id, b_id)
+    return amizade is not None and amizade.status is StatusAmizade.ACEITA
+
+
 def online(jogador: Jogador) -> bool:
     # abs(): em desenvolvimento o SQLite grava o horário de criação em UTC e
     # o resto em hora local; sem isso, conta nova aparecia "no futuro".
     return bool(jogador.visto_em) and abs(datetime.now() - jogador.visto_em) <= JANELA_ONLINE
 
 
-def _partida_viva(linha: Partida | None) -> bool:
-    """A partida ainda está sendo jogada? O prazo da vez é hora do relógio do
-    motor (time.time), então a conta não depende do fuso do banco."""
+def _jogando_nela(linha: Partida | None, jogador_id: int, agora: float | None = None) -> bool:
+    """A partida ainda está sendo jogada, e com este jogador na mesa?
+
+    Parada há mais de `PARTIDA_PARADA_SEGUNDOS` é partida largada. Quem
+    abandonou não está mais nela, mesmo com os outros jogando. O prazo da vez
+    é hora do relógio do motor (time.time), então a conta não depende do fuso
+    do banco."""
     if linha is None:
         return False
     estado = json.loads(linha.estado)
     if estado.get("fase") == motor.FASE_FIM:
         return False
     prazo = estado.get("prazo_vez")
-    return prazo is None or time.time() - prazo < PARTIDA_PARADA_SEGUNDOS
+    instante = time.time() if agora is None else agora
+    if prazo is not None and instante - prazo >= PARTIDA_PARADA_SEGUNDOS:
+        return False
+    jogador = next((j for j in estado.get("jogadores", []) if j.get("jogador_id") == jogador_id), None)
+    return jogador is not None and not jogador.get("abandonou")
+
+
+def _presente(sala: Sala, jogador_id: int, agora: datetime | None = None) -> bool:
+    """O jogador está com a tela desta sala aberta agora? Quem fechou o jogo,
+    voltou ao menu ou saiu da partida para de consultar, e em segundos deixa
+    de contar — sem esperar o "online" vencer."""
+    assento = next((p for p in sala.participantes if p.jogador_id == jogador_id), None)
+    if assento is None or assento.visto_em is None:
+        return False
+    instante = datetime.now() if agora is None else agora
+    return abs(instante - assento.visto_em) <= JANELA_PRESENCA
 
 
 def _onde_esta(sessao: Session, amigo: Jogador) -> dict | None:
     """A sala em que o amigo está agora: partida viva (para assistir) ou
-    lobby (para entrar, se houver lugar)."""
+    lobby (para entrar, se houver lugar). Só conta a sala cuja tela ele tem
+    aberta agora (`_presente`): a que ficou para trás quando ele fechou o
+    jogo ou saiu não conta."""
+    if not online(amigo):
+        return None
     salas = sessao.scalars(
         select(Sala)
         .join(SalaJogador, SalaJogador.sala_id == Sala.id)
@@ -86,11 +123,13 @@ def _onde_esta(sessao: Session, amigo: Jogador) -> dict | None:
         .order_by(Sala.atualizada_em.desc(), Sala.id.desc())
     ).all()
     for sala in salas:
+        if not _presente(sala, amigo.id):
+            continue
         if sala.status is StatusSala.EM_PARTIDA:
             linha = sessao.scalar(select(Partida).where(Partida.sala_id == sala.id))
-            if _partida_viva(linha):
+            if _jogando_nela(linha, amigo.id):
                 return {"codigo": sala.codigo, "status": "em_partida"}
-        elif online(amigo):
+        else:
             return {"codigo": sala.codigo, "status": "aguardando", "cheia": sala.cheia}
     return None
 
@@ -123,6 +162,15 @@ def painel(sessao: Session, jogador: Jogador) -> dict:
     # Quem está jogando primeiro, depois quem está online, depois o resto.
     amigos.sort(key=lambda a: (a["sala"] is None, not a["online"], a["nome"].lower()))
     return {"eu": _cartao(jogador), "amigos": amigos, "recebidos": recebidos, "enviados": enviados}
+
+
+def pedidos_recebidos(sessao: Session, jogador: Jogador) -> list[dict]:
+    """Quem pediu amizade a este jogador e ainda espera resposta: é o que
+    aparece num cartão na tela dele (server/social/convites_de_sala.py)."""
+    pedidos = sessao.scalars(
+        select(Amizade).where(Amizade.para_id == jogador.id, Amizade.status == StatusAmizade.PENDENTE)
+    ).all()
+    return [_cartao(amizade.de) for amizade in pedidos]
 
 
 def pedir(sessao: Session, jogador: Jogador, login_bruto: str) -> dict:

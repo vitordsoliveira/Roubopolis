@@ -33,6 +33,8 @@
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  /* Camada própria: o giro não força o navegador a redesenhar a tela. */
+  will-change: transform;
   /* Curva com leve "passar do ponto": o dado assenta como peça pesada. */
   transition: transform 0.9s cubic-bezier(0.25, 1.2, 0.4, 1);
   transform: rotateX(-20deg) rotateY(-24deg);
@@ -51,6 +53,11 @@
   border: 2px solid var(--dado-borda, #4a060b);
   border-radius: 16%;
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
+  /* O cubo é oco e as faces têm canto arredondado: sem esconder o verso,
+     girando rápido apareciam pelos cantos as faces de trás e o miolo
+     vazio — as "falhas" que piscavam na tela durante a rolagem. */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 /* Cada face é empurrada meia aresta para fora do centro. */

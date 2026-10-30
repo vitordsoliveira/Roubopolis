@@ -120,6 +120,7 @@ def atualizar_perfil(
     jogador: Jogador,
     *,
     nome: str | None = None,
+    login: str | None = None,
     senha_atual: str | None = None,
     senha_nova: str | None = None,
     foto: str | None = None,
@@ -127,9 +128,20 @@ def atualizar_perfil(
 ) -> Jogador:
     """Altera o que o jogador pode mudar de si. Cada campo é opcional:
     `None` quer dizer 'não mexe', não 'apaga'.
+
+    O nome é o que a mesa vê e pode repetir; o nome de usuário (login) é
+    com o que se entra na conta e se acha um amigo, por isso é único.
     """
     if nome is not None:
         jogador.nome = limpar_nome(nome)
+
+    if login is not None:
+        novo = limpar_login(login)
+        if novo != jogador.login:
+            dono = jogador_por_login(sessao, novo)
+            if dono is not None and dono.id != jogador.id:
+                raise ErroDeSala("Esse nome de usuário já é de outra pessoa. Escolha outro.", http=409)
+            jogador.login = novo
 
     if senha_nova:
         # Trocar senha exige provar que sabe a atual: sem isso, um token
@@ -146,14 +158,20 @@ def atualizar_perfil(
         jogador.foto = validar_foto(foto)
 
     jogador.visto_em = datetime.now()
-    sessao.commit()
+    try:
+        sessao.commit()
+    except IntegrityError:
+        # Outra pessoa pegou o mesmo nome de usuário entre a consulta e a
+        # gravação: o índice único do banco é quem decide.
+        sessao.rollback()
+        raise ErroDeSala("Esse nome de usuário já é de outra pessoa. Escolha outro.", http=409)
     return jogador
 
 
 def exigir_jogador(sessao: Session, token: str | None) -> Jogador:
     jogador = jogador_por_token(sessao, token)
     if jogador is None:
-        raise ErroDeSala("Não reconheci você. Volte ao menu e digite seu nome.", http=401)
+        raise ErroDeSala("Não reconheci você. Volte ao menu e entre na sua conta.", http=401)
     return jogador
 
 
@@ -168,6 +186,25 @@ def marcar_visto(sessao: Session, jogador: Jogador) -> None:
     agora = datetime.now()
     if jogador.visto_em is None or abs(agora - jogador.visto_em) >= INTERVALO_VISTO:
         jogador.visto_em = agora
+        sessao.commit()
+
+
+#: A presença na sala é regravada no máximo a cada tanto: lobby e partida
+#: consultam o servidor a cada segundo ou dois.
+INTERVALO_PRESENCA = timedelta(seconds=10)
+
+
+def marcar_presenca(sessao: Session, sala: Sala, jogador: Jogador) -> None:
+    """Anota que o jogador está com a tela desta sala aberta agora — o lobby
+    ou a partida. É o que a lista de amigos usa para "em partida" e "no
+    lobby": fechou a tela, em segundos deixa de aparecer lá. Espectador não
+    tem cadeira na sala, então não marca nada."""
+    assento = next((p for p in sala.participantes if p.jogador_id == jogador.id), None)
+    if assento is None:
+        return
+    agora = datetime.now()
+    if assento.visto_em is None or abs(agora - assento.visto_em) >= INTERVALO_PRESENCA:
+        assento.visto_em = agora
         sessao.commit()
 
 

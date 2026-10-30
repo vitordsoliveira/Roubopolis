@@ -105,6 +105,25 @@
   color: rgba(255, 255, 255, 0.65);
 }
 
+/* O dono convida um amigo clicando no lugar vago. */
+.slot__convidar {
+  cursor: pointer;
+  transition: transform 0.1s steps(2), background 0.1s steps(2);
+}
+
+.slot__convidar:hover,
+.slot__convidar:focus-visible {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: var(--branco);
+  outline: none;
+  transform: translateY(-3px);
+}
+
+.slot__convidar:hover .slot__mais,
+.slot__convidar:focus-visible .slot__mais {
+  color: var(--branco);
+}
+
 .slot__espera {
   font-size: clamp(0.7rem, 1.2vw, 0.95rem);
   color: rgba(255, 255, 255, 0.7);

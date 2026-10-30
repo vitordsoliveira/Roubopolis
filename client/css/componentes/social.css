@@ -1,0 +1,275 @@
+/* Os painéis sociais do menu: Amigos e Loja. A caixa é a mesma do perfil
+   (modal.css, `.painel__caixa`), só mais larga — por dentro, listas. */
+
+.painel__caixa--largo {
+  width: min(620px, 100%);
+}
+
+/* O número de pedidos de amizade esperando, no AMIGOS do menu. */
+.opcao__selo {
+  position: absolute;
+  top: 6%;
+  right: -10px;
+  min-width: 24px;
+  padding: 2px 6px;
+  color: var(--branco);
+  background: var(--rosa);
+  border: 3px solid var(--preto);
+  font-size: 0.7rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* --- amigos ------------------------------------------------------------- */
+
+.amigos__eu {
+  margin-bottom: var(--e3);
+  font-size: 0.72rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.amigos__eu strong {
+  color: var(--roxo);
+  text-transform: none;
+}
+
+.amigos__adicionar {
+  display: flex;
+  gap: var(--e2);
+}
+
+.amigos__adicionar .campo {
+  flex: 1;
+  min-width: 0;
+  padding: var(--e2);
+  font-size: 0.95rem;
+  text-transform: none;
+}
+
+.amigos__secao {
+  margin-top: var(--e4);
+}
+
+.amigos__subtitulo {
+  margin-bottom: var(--e2);
+  padding-bottom: var(--e1);
+  border-bottom: 2px dashed rgba(22, 16, 31, 0.2);
+  color: var(--roxo);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.amigos__lista {
+  display: grid;
+  gap: var(--e2);
+}
+
+.amigos__vazio {
+  font-size: 0.68rem;
+  line-height: 1.8;
+  opacity: 0.6;
+  text-align: center;
+}
+
+.amigo {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--e3);
+  padding: var(--e2);
+  background: rgba(123, 47, 191, 0.08);
+  border: 2px solid rgba(123, 47, 191, 0.4);
+}
+
+.amigo__foto {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  background: var(--roxo);
+  border: 3px solid var(--preto);
+  color: var(--amarelo);
+  font-size: 1rem;
+}
+
+.amigo__foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.amigo__info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.amigo__nome {
+  overflow: hidden;
+  font-family: Tahoma, sans-serif;
+  font-size: 0.95rem;
+  font-weight: bold;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amigo__detalhe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e2);
+  font-family: Tahoma, sans-serif;
+  font-size: 0.74rem;
+  letter-spacing: 0;
+  opacity: 0.85;
+}
+
+.amigo__status {
+  padding: 1px 6px;
+  color: var(--branco);
+  background: var(--cinza);
+  font-family: var(--fonte-pixel);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.amigo__status--online { background: var(--grupo-morro); }
+.amigo__status--partida { background: var(--rosa); }
+.amigo__status--lobby { background: var(--amarelo-escuro); }
+
+/* O que o amigo está usando: o dado e a casinha da loja, pequenos. */
+.amigo__visual {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.amigo__visual .dado--vitrine { --aresta: 20px; }
+.amigo__visual .dado--vitrine .dado__face { padding: 2px; border-width: 1.5px; }
+.amigo__visual .casa-vitrine { width: 22px; height: 22px; }
+
+.amigo__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--e1);
+}
+
+.amigo__acoes .botao {
+  min-width: 0;
+  padding: var(--e1) var(--e2);
+  font-size: 0.68rem;
+}
+
+/* --- loja --------------------------------------------------------------- */
+
+.loja__saldo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--e2);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.loja__saldo strong {
+  color: var(--amarelo-escuro);
+  font-size: 1.6rem;
+  text-shadow: 2px 2px 0 var(--preto);
+}
+
+.loja__como {
+  margin: var(--e1) 0 var(--e3);
+  font-family: Tahoma, sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  line-height: 1.5;
+  text-align: center;
+  opacity: 0.75;
+}
+
+.loja__abas .login__aba {
+  color: var(--preto);
+}
+
+.loja__abas .login__aba--ativa {
+  color: var(--roxo);
+  border-color: var(--roxo);
+}
+
+.loja__itens {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--e2);
+  margin-top: var(--e3);
+}
+
+.item-loja {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  justify-items: center;
+  gap: var(--e1);
+  padding: var(--e3) var(--e2) var(--e2);
+  background: rgba(123, 47, 191, 0.07);
+  border: 3px solid rgba(22, 16, 31, 0.25);
+  text-align: center;
+}
+
+.item-loja--equipado {
+  border-color: var(--grupo-barata);
+  background: rgba(64, 192, 87, 0.12);
+}
+
+.item-loja__nome {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.item-loja__descricao {
+  font-family: Tahoma, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+
+.item-loja .botao {
+  width: 100%;
+  min-width: 0;
+  padding: var(--e1) var(--e2);
+  font-size: 0.7rem;
+}
+
+.vitrine {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  background: radial-gradient(circle at 50% 60%, rgba(123, 47, 191, 0.18), transparent 70%);
+}
+
+.dado--vitrine {
+  --aresta: 46px;
+  position: relative;
+}
+
+.casa-vitrine {
+  width: 60px;
+  height: 62px;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.2));
+}
+
+@media (max-width: 520px) {
+  .amigo {
+    grid-template-columns: auto 1fr;
+  }
+
+  .amigo__acoes {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+}

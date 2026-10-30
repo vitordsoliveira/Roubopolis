@@ -45,6 +45,11 @@ class StatusSala(str, enum.Enum):
     ABANDONADA = "abandonada"
 
 
+class StatusAmizade(str, enum.Enum):
+    PENDENTE = "pendente"
+    ACEITA = "aceita"
+
+
 def _enum_texto(classe: type[enum.Enum], nome: str) -> Enum:
     """Grava o valor legível ('aguardando') em vez do nome ('AGUARDANDO')."""
     return Enum(classe, name=nome, values_callable=lambda e: [m.value for m in e])
@@ -76,7 +81,12 @@ class Jogador(Base):
     # `prepararFoto` em client/js/telas/menu.js), então TEXT sobra.
     foto: Mapped[str | None] = mapped_column(Text, nullable=True)
     token: Mapped[str] = mapped_column(String(48), nullable=False, unique=True, default=gerar_token)
+    # Os créditos da loja. A coluna manteve o nome antigo para não migrar
+    # banco; na tela eles se chamam créditos.
     coins: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Slugs de data/loja/catalogo.json. Nulo é o item padrão, que todo mundo tem.
+    dado_equipado: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    casa_equipada: Mapped[str | None] = mapped_column(String(40), nullable=True)
     partidas_jogadas: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     vitorias: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     derrotas: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
@@ -95,8 +105,11 @@ class Jogador(Base):
         return round(self.vitorias * 100 / self.partidas_jogadas, 1)
 
     def para_dict(self) -> dict:
-        """Versão pública: nunca inclui o token nem o hash da senha."""
-        return {"id": self.id, "nome": self.nome, "foto": self.foto, "coins": self.coins}
+        """Versão pública: nunca inclui o token nem o hash da senha.
+
+        O login vai junto porque é por ele que um amigo adiciona o outro.
+        """
+        return {"id": self.id, "nome": self.nome, "login": self.login, "foto": self.foto, "coins": self.coins}
 
     def __repr__(self) -> str:
         return f"<Jogador {self.id} {self.nome!r}>"
@@ -306,5 +319,52 @@ class MensagemChat(Base):
         return f"<MensagemChat sala={self.sala_id} jogador={self.jogador_id}>"
 
 
+class Amizade(Base):
+    """Pedido de amizade de `de_id` para `para_id`, e a amizade depois de aceito.
+
+    Uma linha só por par, na direção de quem pediu: quem confere amizade
+    procura nos dois sentidos (ver server/social/amigos.py).
+    """
+
+    __tablename__ = "amizade"
+    __table_args__ = (
+        UniqueConstraint("de_id", "para_id", name="uq_amizade_par"),
+        ARGS_MYSQL,
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    de_id: Mapped[int] = mapped_column(ForeignKey("jogador.id", ondelete="CASCADE"), nullable=False, index=True)
+    para_id: Mapped[int] = mapped_column(ForeignKey("jogador.id", ondelete="CASCADE"), nullable=False, index=True)
+    status: Mapped[StatusAmizade] = mapped_column(
+        _enum_texto(StatusAmizade, "status_amizade"), nullable=False, default=StatusAmizade.PENDENTE
+    )
+    criada_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+    de: Mapped["Jogador"] = relationship(foreign_keys=[de_id])
+    para: Mapped["Jogador"] = relationship(foreign_keys=[para_id])
+
+    def __repr__(self) -> str:
+        return f"<Amizade {self.de_id}->{self.para_id} {self.status.value}>"
+
+
+class ItemDoJogador(Base):
+    """Item da loja que o jogador comprou. O catálogo (preço, cores) mora em
+    data/loja/catalogo.json; aqui só fica a posse."""
+
+    __tablename__ = "item_jogador"
+    __table_args__ = (
+        UniqueConstraint("jogador_id", "item", name="uq_item_jogador"),
+        ARGS_MYSQL,
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    jogador_id: Mapped[int] = mapped_column(ForeignKey("jogador.id", ondelete="CASCADE"), nullable=False, index=True)
+    item: Mapped[str] = mapped_column(String(40), nullable=False)
+    comprado_em: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+    def __repr__(self) -> str:
+        return f"<ItemDoJogador {self.jogador_id} {self.item}>"
+
+
 #: Ordem de criação (respeita as chaves estrangeiras).
-TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador, Partida, MensagemChat)
+TODOS_OS_MODELOS = (Jogador, Personagem, Sala, SalaJogador, Partida, MensagemChat, Amizade, ItemDoJogador)

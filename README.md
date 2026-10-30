@@ -36,13 +36,16 @@ ROUBODOPOLIS/
 │   │   └── passivas.json           # definição das habilidades
 │   │
 │   ├── eventos/
-│   │   ├── tematicos.json          # textos e valores dos eventos
-│   │   └── mensagens_casas.json    # textos exibidos ao pisar
+│   │   ├── tematicos.json          # frases de sátira dos eventos temáticos
+│   │   └── mensagens_casas.json    # frases de sátira das casas de evento
 │   │
 │   ├── balanceamento/
-│   │   ├── padrao.json             # 15 min — perfil principal
+│   │   ├── padrao.json             # 25 min — perfil principal
 │   │   ├── rapido.json             # 10 min
 │   │   └── longo.json              # 25 min
+│   │
+│   ├── loja/
+│   │   └── catalogo.json           # dados e casas à venda, preços e créditos por partida
 │   │
 │   └── i18n/
 │       └── pt_br.json              # todo texto exibido ao jogador
@@ -133,6 +136,10 @@ ROUBODOPOLIS/
 │   │   ├── sala.py                 # uma partida em memória
 │   │   ├── gerenciador.py          # criar, entrar, sair, limpar
 │   │   └── convites.py             # código de sala e link de convite
+│   │
+│   ├── social/
+│   │   ├── amigos.py               # pedidos, amizade, quem pode assistir
+│   │   └── loja.py                 # créditos, compra, item equipado, prêmio do fim
 │   │
 │   ├── sockets/                    # UM ARQUIVO POR CANAL
 │   │   ├── conexao.py              # connect, disconnect, reconexão

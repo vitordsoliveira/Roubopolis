@@ -1,0 +1,84 @@
+{
+  "_sobre": "Frases de sátira das janelas das casas de evento. A chave é o tipo da linha que o motor escreve no log (engine/partida.py, `_log`); a tela escolhe uma frase pelo número da linha, então a mesa inteira lê a mesma. Só texto: os valores ficam em data/balanceamento/padrao.json.",
+
+  "ganho": [
+    "Ninguém viu, ninguém sabe. Na vila, isso se chama renda extra.",
+    "Achou uma carteira, devolveu o documento e ficou com o resto. Meio honesto já é alguma coisa.",
+    "Empreendedorismo de rua: sem CNPJ, sem imposto e sem culpa."
+  ],
+
+  "roubo": [
+    "Celular no bolso de trás em São Paulo? Ousadia.",
+    "O ladrão agradeceu a preferência e ainda mandou o comprovante do Pix.",
+    "Era só ir na padaria. Voltou sem a carteira e sem o pão.",
+    "Perdeu, playboy. Faz parte do roteiro turístico."
+  ],
+
+  "coletor": [
+    "Imposto pago com o suor dos outros é o mais gostoso.",
+    "A Receita está em choque: alguém recebeu imposto de volta.",
+    "Quem nunca sonhou em sacar o caixa da prefeitura?"
+  ],
+
+  "coletor_vazio": [
+    "O cofre estava vazio. Alguém do governo passou antes.",
+    "Dentro do cofre, só um clipe e um bilhete: volto já."
+  ],
+
+  "prisao": [
+    "A cela é apertada, mas pelo menos o aluguel é de graça.",
+    "O advogado prometeu soltar rapidinho. Cobrou adiantado, claro.",
+    "Preso por excesso de confiança. Agravante: estava ganhando."
+  ],
+
+  "portal": [
+    "O único transporte da cidade que chega na hora. Só não avisa onde.",
+    "Entrou na Casa Portal e saiu em outro bairro. O metrô morre de inveja.",
+    "Teleporte grátis! A tarifa vem no próximo reajuste."
+  ],
+
+  "easter_egg": [
+    "A Augusta não perdoa: entrou para um drinque e saiu sem a carteira e com um telefone errado.",
+    "Amor à primeira vista, prejuízo à segunda."
+  ],
+
+  "prejuizo": [
+    "Quem está no topo também cai. Às vezes, empurrado.",
+    "A vila decidiu que o líder vai dividir. Nem que seja à força.",
+    "Ser o mais rico tem um preço, e ele é cobrado na Casa do Prejuízo."
+  ],
+
+  "reconstrucao": [
+    "Obra com desconto: começou, parou e recomeçou mais barata. Um milagre da engenharia.",
+    "O mestre de obras prometeu entregar em 30 dias. Ninguém acreditou."
+  ],
+
+  "bonus_banco": [
+    "Vendeu ao banco com lucro. O gerente ainda não percebeu.",
+    "Pela primeira vez na história, o banco saiu perdendo."
+  ],
+
+  "morro": [
+    "O Morro é de quem chega primeiro e cobra mais caro.",
+    "Monopólio da laje: o aluguel subiu junto com o morro."
+  ],
+
+  "leilao_cancelado": [
+    "O leiloeiro bateu o martelo no vazio: o vendedor sumiu antes do fim."
+  ],
+
+  "coringa_ganhou": [
+    "A sorte sorriu. Desconfie: ela também cobra juros.",
+    "Apostou tudo no feeling e o feeling pagou."
+  ],
+
+  "coringa_perdeu": [
+    "Arriscou e perdeu. O cassino agradece a visita.",
+    "A Casa Coringa manda lembranças e um boleto."
+  ],
+
+  "coringa_nao_arriscou": [
+    "Prudência: o jeito mais sem graça de não perder dinheiro.",
+    "Guardou o dinheiro debaixo do colchão. A inflação manda um abraço."
+  ]
+}

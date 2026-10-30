@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -155,6 +155,20 @@ def exigir_jogador(sessao: Session, token: str | None) -> Jogador:
     if jogador is None:
         raise ErroDeSala("Não reconheci você. Volte ao menu e digite seu nome.", http=401)
     return jogador
+
+
+#: De quanto em quanto tempo o "visto por último" é regravado. As telas
+#: consultam o servidor a cada segundo; gravar em toda consulta seria uma
+#: escrita no banco por segundo por jogador, só para dizer "está online".
+INTERVALO_VISTO = timedelta(seconds=60)
+
+
+def marcar_visto(sessao: Session, jogador: Jogador) -> None:
+    """Atualiza o "visto por último" que a lista de amigos usa para o online."""
+    agora = datetime.now()
+    if jogador.visto_em is None or abs(agora - jogador.visto_em) >= INTERVALO_VISTO:
+        jogador.visto_em = agora
+        sessao.commit()
 
 
 def entrar_ou_criar_jogador(sessao: Session, nome_bruto: str, token: str | None = None) -> Jogador:

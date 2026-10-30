@@ -38,16 +38,19 @@
   transform: rotateX(-20deg) rotateY(-24deg);
 }
 
+/* As cores vêm do dado da loja que quem rola equipou (--dado-face-a,
+   --dado-face-b, --dado-borda, --dado-ponto, gravadas pela tela no pai).
+   Sem nada equipado, é o vermelho clássico. */
 .dado__face {
   position: absolute;
   inset: 0;
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   padding: 14%;
-  background: linear-gradient(150deg, #ff4f4f, #c8141d);
-  border: 2px solid #4a060b;
+  background: linear-gradient(150deg, var(--dado-face-a, #ff4f4f), var(--dado-face-b, #c8141d));
+  border: 2px solid var(--dado-borda, #4a060b);
   border-radius: 16%;
-  box-shadow: inset 0 0 8px rgba(80, 0, 6, 0.35);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Cada face é empurrada meia aresta para fora do centro. */
@@ -63,7 +66,11 @@
   height: 70%;
   align-self: center;
   justify-self: center;
-  background: radial-gradient(circle at 35% 30%, #ffffff, #e4dede);
+  background: radial-gradient(
+    circle at 35% 30%,
+    var(--dado-ponto, #ffffff),
+    color-mix(in srgb, var(--dado-ponto, #ffffff) 82%, #000000)
+  );
   border-radius: 50%;
   box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.25);
 }

@@ -15,6 +15,7 @@ from server.salas.gerenciador import (
     criar_conta,
     entrar_ou_criar_jogador,
     jogador_por_token,
+    marcar_visto,
 )
 
 bp = Blueprint("auth", __name__, url_prefix="/api")
@@ -55,7 +56,9 @@ def cadastrar():
 
 @bp.get("/jogador")
 def quem_sou_eu():
-    jogador = jogador_por_token(Sessao(), token_da_requisicao())
+    sessao = Sessao()
+    jogador = jogador_por_token(sessao, token_da_requisicao())
     if jogador is None:
         raise ErroDeSala("Token desconhecido.", http=401)
+    marcar_visto(sessao, jogador)
     return jsonify(jogador.para_dict()), 200

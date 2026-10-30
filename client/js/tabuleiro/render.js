@@ -33,6 +33,15 @@ const FRESTA = 0.05;
 /** Folga entre o anel de casas e o meio-fio da cidade. */
 const RECUO_CIDADE = 0.12;
 
+/** Altura do peão, em fração da largura do quadro. É a fonte da verdade do
+    --peao-alt do CSS: a tela grava o valor de `alturaDoPeao` no tabuleiro.
+    O enquadramento precisa dela porque o peão é HTML por cima do SVG — em
+    pé no canto de cima, ele passa da borda do desenho. */
+const ALTURA_PEAO = 0.06;
+/** Quanto o peão sobe no pulo de cada casa, em fração da altura dele: o
+    `peao-salto` de css/componentes/tabuleiro.css. */
+const PULO_PEAO = 0.42;
+
 // --- projeção ------------------------------------------------------------
 
 /* A proporção vem da CIDADE.png: o chão dela, em losango, tem a altura
@@ -104,7 +113,7 @@ function corDaCasa(casa, grupos) {
     barato, depois evento e neutra. */
 export function itensDaLegenda(dados) {
   return [
-    ...dados.ordem_dos_grupos.map((chave) => ({ rotulo: dados.grupos[chave].rotulo, cor: dados.grupos[chave].cor })),
+    ...dados.ordem_dos_grupos.map((chave) => ({ chave, rotulo: dados.grupos[chave].rotulo, cor: dados.grupos[chave].cor })),
     { rotulo: "Casa evento", cor: COR_EVENTO },
     { rotulo: "Casa neutra", cor: COR_NEUTRA },
   ];
@@ -249,8 +258,15 @@ const PREDIOS = {
   extremamente_cara: { larg: 0.42, prof: 0.42, alt: 1.08, andar: 0.24, paredes: ["#7fb4ff", "#ff9be6", "#b5f0ff"], janelas: [2, 4], antena: true },
 };
 
-function predio(pai, casa, u, v, z, nivel = 0) {
-  const tipo = PREDIOS[casa.grupo] || PREDIOS.media;
+/* `visual` é a casa da loja que o dono equipou: troca as cores — paredes,
+   telhado e janelas —, nunca o formato. O formato diz a faixa de preço, e
+   isso a mesa precisa ler de longe, de qualquer dono. */
+function predio(pai, casa, u, v, z, nivel = 0, visual = null) {
+  const padrao = PREDIOS[casa.grupo] || PREDIOS.media;
+  const tipo = visual
+    ? { ...padrao, paredes: visual.paredes || padrao.paredes, telhado: padrao.telhado && (visual.telhado || padrao.telhado) }
+    : padrao;
+  const corJanela = visual?.janelas || "#ffe79a";
   const parede = tipo.paredes[casa.i % tipo.paredes.length];
   const u0 = u - tipo.larg / 2;
   const u1 = u + tipo.larg / 2;
@@ -269,15 +285,15 @@ function predio(pai, casa, u, v, z, nivel = 0) {
   }
 
   if (tipo.janelas) {
-    janelas(pai, u0, v0, u1, v1, z, topoOriginal, tipo.janelas[0], tipo.janelas[1], "#ffe79a");
+    janelas(pai, u0, v0, u1, v1, z, topoOriginal, tipo.janelas[0], tipo.janelas[1], corJanela);
     for (let k = 0; k < nivel; k += 1) {
       const baixo = topoOriginal + k * tipo.andar;
-      janelas(pai, u0, v0, u1, v1, baixo, baixo + tipo.andar, tipo.janelas[0], 1, "#ffe79a");
+      janelas(pai, u0, v0, u1, v1, baixo, baixo + tipo.andar, tipo.janelas[0], 1, corJanela);
     }
   } else {
     for (let k = 0; k < nivel; k += 1) {
       const baixo = topoOriginal + k * tipo.andar;
-      janelas(pai, u0, v0, u1, v1, baixo, baixo + tipo.andar, 1, 1, "#ffe79a");
+      janelas(pai, u0, v0, u1, v1, baixo, baixo + tipo.andar, 1, 1, corJanela);
     }
     // Casa pequena: uma porta na frente e uma janela do lado.
     const meio = (u0 + u1) / 2;
@@ -436,12 +452,13 @@ function enfeitar(pai, casa, geo, ctx) {
 
   const [u, v] = pontoDoEnfeite(geo);
   if (casa.tipo === "propriedade") {
-    // Nada é desenhado agora: o prédio de cada nível nasce na primeira vez
-    // que o terreno chega nele (`marcarDonos`), no lugar guardado aqui.
+    // Nada é desenhado agora: o prédio de cada nível (e de cada visual da
+    // loja) nasce na primeira vez que o terreno chega nele (`marcarDonos`),
+    // no lugar guardado aqui.
     const lugar = no("g", { class: "casa__predios" }, pai);
-    ctx.predios.set(casa.i, (nivel) => {
-      const camada = no("g", { class: "casa__predio", "data-nivel": nivel, display: "none" }, lugar);
-      predio(camada, casa, u, v, z, nivel);
+    ctx.predios.set(casa.i, (nivel, slug, visual) => {
+      const camada = no("g", { class: "casa__predio", "data-nivel": nivel, "data-visual": slug, display: "none" }, lugar);
+      predio(camada, casa, u, v, z, nivel, visual);
       return camada;
     });
     return;
@@ -547,12 +564,34 @@ function desenharCasa(pai, item, dados, ctx) {
   enfeitar(g, casa, geo, ctx);
 }
 
+/* Até quatro peões na mesma casa, cada um num lugar fixo. Nas casas da
+   borda os lugares correm ao longo da borda e um pouco para a frente do
+   prédio; nos cantos, que são maiores, espalham mais. */
+const LUGARES = [[-0.22, -0.02], [0.22, -0.02], [-0.22, 0.26], [0.22, 0.26]];
+const LUGARES_CANTO = [[-0.34, -0.34], [0.3, -0.36], [-0.36, 0.3], [0.06, 0.06]];
+
+/** Onde ficam os pés do peão no assento `assento` da casa, em (u, v). */
+function lugarDoPeao(geo, assento) {
+  if (geo.canto) {
+    const [a, b] = LUGARES_CANTO[assento % 4];
+    return [geo.uc + a, geo.vc + b];
+  }
+  const [ao, prof] = LUGARES[assento % 4];
+  // Ao longo da borda é o eixo que não é o da profundidade.
+  return [
+    geo.uc + (geo.prof[0] ? 0 : ao) + geo.prof[0] * prof,
+    geo.vc + (geo.prof[1] ? 0 : ao) + geo.prof[1] * prof,
+  ];
+}
+
 /**
  * Desenha o tabuleiro dentro do `svg` e devolve como conversar com ele.
- * `corDoDono(jogadorId)` diz a cor do peão de quem comprou cada terreno.
- * @returns {{proporcao: number, ponto: Function, destacar: Function, atualizarPropriedades: Function}}
+ * `corDoDono(jogadorId)` diz a cor do peão de quem comprou cada terreno, e
+ * `visualDoDono(jogadorId)` a casa da loja que ele equipou ({slug, visual}).
+ * @returns {{proporcao: number, alturaDoPeao: number, ponto: Function, destacar: Function,
+ *            atualizarPropriedades: Function, marcarRegiao: Function}}
  */
-export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () => null } = {}) {
+export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () => null, visualDoDono = () => null } = {}) {
   const largura = dados.largura;
   const altura = dados.altura;
   const lu = ladoDoTabuleiro(largura);
@@ -560,8 +599,10 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
   const itens = dados.casas.map((casa) => ({ casa, geo: geometria(casa, largura, altura) }));
   const total = itens.length;
 
-  // Enquadramento: da ponta esquerda à direita, do telhado da Mansão (o
-  // ponto mais alto do canto de cima) até o pé da base.
+  // Enquadramento: da ponta esquerda à direita e até o pé da base. Em cima,
+  // o que manda é o peão em pé (e pulando) no canto de cima: a cabeça dele
+  // é o ponto mais alto da cena. Enquadrar só pelo telhado da Mansão, como
+  // antes, cortava o boneco na borda da tela.
   const margem = 14;
   const caixaVista = {
     x: -lv * A - margem,
@@ -569,6 +610,11 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
     w: (lu + lv) * A + 2 * margem,
     h: 0,
   };
+  const pesMaisAltos = Math.min(
+    ...itens.flatMap(({ geo }) => [0, 1, 2, 3].map((assento) => tela(...lugarDoPeao(geo, assento), ALTURA_CASA)[1])),
+  );
+  const cabecaMaisAlta = pesMaisAltos - ALTURA_PEAO * (1 + PULO_PEAO) * caixaVista.w;
+  caixaVista.y = Math.min(caixaVista.y, cabecaMaisAlta - margem);
   caixaVista.h = (lu + lv) * B + ESPESSURA_BASE * C + margem - caixaVista.y;
   svg.setAttribute("viewBox", `${caixaVista.x} ${caixaVista.y} ${caixaVista.w} ${caixaVista.h}`);
   svg.replaceChildren();
@@ -629,8 +675,8 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
     }, alvos);
   }
 
-  /** Terreno com dono: o prédio do nível dele, o anel e a bandeira aparecem,
-      na cor do dono. */
+  /** Terreno com dono: o prédio do nível dele (com a casa da loja que o dono
+      usa), o anel e a bandeira aparecem, na cor do dono. */
   function marcarDonos(lista = {}) {
     for (const g of svg.querySelectorAll(".casa--terreno")) {
       const posse = lista[g.dataset.i];
@@ -638,8 +684,10 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
       for (const marca of g.querySelectorAll(".casa__predio, .casa__dono")) marca.setAttribute("display", "none");
       if (dono != null) {
         const nivel = Number(posse.nivel || 0);
-        const camada = g.querySelector(`.casa__predio[data-nivel="${nivel}"]`)
-          || ctx.predios.get(Number(g.dataset.i))(nivel);
+        const loja = visualDoDono(dono);
+        const slug = loja?.slug || "padrao";
+        const camada = g.querySelector(`.casa__predio[data-nivel="${nivel}"][data-visual="${slug}"]`)
+          || ctx.predios.get(Number(g.dataset.i))(nivel, slug, loja?.visual || null);
         camada.removeAttribute("display");
         g.querySelector(".casa__dono")?.removeAttribute("display");
       }
@@ -655,35 +703,26 @@ export function montarTabuleiro(svg, dados, propriedades = {}, { corDoDono = () 
     y: ((y - caixaVista.y) / caixaVista.h) * 100,
   });
 
-  /* Até quatro peões na mesma casa, cada um num lugar fixo. Nas casas da
-     borda os lugares correm ao longo da borda e um pouco para a frente do
-     prédio; nos cantos, que são maiores, espalham mais. */
-  const LUGARES = [[-0.22, -0.02], [0.22, -0.02], [-0.22, 0.26], [0.22, 0.26]];
-  const LUGARES_CANTO = [[-0.34, -0.34], [0.3, -0.36], [-0.36, 0.3], [0.06, 0.06]];
-
   return {
     proporcao: caixaVista.w / caixaVista.h,
+    alturaDoPeao: ALTURA_PEAO,
 
     /** Só mostra os prédios dos terrenos comprados, na altura do nível e
         com a cor do dono. */
     atualizarPropriedades: marcarDonos,
 
+    /** Acende as casas da região sorteada no Bônus do banco (lista vazia apaga). */
+    marcarRegiao(indices = []) {
+      const dentro = new Set(indices.map(Number));
+      for (const g of svg.querySelectorAll(".casa[data-i]")) {
+        g.classList.toggle("casa--regiao", dentro.has(Number(g.dataset.i)));
+      }
+    },
+
     /** Onde ficam os pés do peão, em % do quadro. */
     ponto(indice, assento = 0) {
       const { geo } = itens[((indice % total) + total) % total];
-      let u;
-      let v;
-      if (geo.canto) {
-        const [a, b] = LUGARES_CANTO[assento % 4];
-        u = geo.uc + a;
-        v = geo.vc + b;
-      } else {
-        const [ao, prof] = LUGARES[assento % 4];
-        // Ao longo da borda é o eixo que não é o da profundidade.
-        u = geo.uc + (geo.prof[0] ? 0 : ao) + geo.prof[0] * prof;
-        v = geo.vc + (geo.prof[1] ? 0 : ao) + geo.prof[1] * prof;
-      }
-      return emPorcento(tela(u, v, ALTURA_CASA));
+      return emPorcento(tela(...lugarDoPeao(geo, assento), ALTURA_CASA));
     },
 
     /** Posição do marcador dentro da casa inicial. */

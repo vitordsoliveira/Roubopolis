@@ -10,6 +10,11 @@
    cima da casa certa, em qualquer tamanho de janela. */
 
 .tabuleiro {
+  /* Só o valor de partida: quem manda é `ALTURA_PEAO` em
+     js/tabuleiro/render.js, que também reserva espaço no topo do desenho
+     para o peão em pé no canto de cima. Se os dois divergirem, a cabeça do
+     boneco volta a sair cortada da tela. */
+  --peao-alt: 6cqw;
   position: relative;
   width: 100%;
   aspect-ratio: var(--proporcao, 1.3);
@@ -170,6 +175,36 @@
   }
 }
 
+/* --- região do Bônus do banco (render.js, `marcarRegiao`) ------------- */
+
+/* Brilho dourado pulsando: quem estiver ali na rodada pode vender ao banco
+   acima do valor. */
+.casa--regiao {
+  animation: casa-regiao 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes casa-regiao {
+  from { filter: drop-shadow(0 0 2px rgba(255, 217, 61, 0.5)) brightness(1.05); }
+  to   { filter: drop-shadow(0 0 9px rgba(255, 217, 61, 0.95)) brightness(1.25); }
+}
+
+/* --- peão na prisão ----------------------------------------------------- */
+
+/* Grade na frente do boneco e cor apagada: perde a próxima vez. */
+.peao--preso .peao__pino::after {
+  content: "";
+  position: absolute;
+  inset: 8% -8% 0;
+  background: repeating-linear-gradient(90deg, rgba(40, 40, 52, 0.9) 0 14%, transparent 14% 30%);
+  border-top: 3px solid rgba(40, 40, 52, 0.9);
+  pointer-events: none;
+}
+
+.peao--preso .peao__figura,
+.peao--preso .peao__ficha {
+  filter: grayscale(0.6) brightness(0.85);
+}
+
 /* --- peões -------------------------------------------------------- */
 
 .peoes {
@@ -184,8 +219,8 @@
      o peão é puxado para a casa seguinte antes de pousar e passa a
      deslizar em vez de andar. */
   --ms-passo: 330ms;
-  /* Tamanho do boneco num lugar só: a figura, a base e a sombra saem dele. */
-  --peao-alt: 6cqw;
+  /* Tamanho do boneco num lugar só (--peao-alt, herdado do tabuleiro): a
+     figura, a base e a sombra saem dele. */
   --base-larg: calc(var(--peao-alt) * 0.5);
   --base-alt: calc(var(--peao-alt) * 0.2);
   position: absolute;

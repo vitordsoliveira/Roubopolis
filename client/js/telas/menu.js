@@ -3,7 +3,9 @@
 import { api, guardado } from "../core/api.js";
 import { musica } from "../core/musica.js";
 import { som } from "../core/som.js";
+import { elemento, inicial } from "../ui/comum.js";
 import { toast } from "../ui/toast.js";
+import { previaDaCasa, previaDoDado, previaDoItem } from "../ui/vitrine.js";
 
 const campoLogin = document.querySelector("#login");
 const campoSenha = document.querySelector("#senha");
@@ -44,6 +46,23 @@ const perfilNomeCampo = document.querySelector("#perfil-nome-campo");
 const perfilSenhaAtual = document.querySelector("#perfil-senha-atual");
 const perfilSenhaNova = document.querySelector("#perfil-senha-nova");
 const perfilSalvar = document.querySelector("#perfil-salvar");
+const painelAmigos = document.querySelector("#painel-amigos");
+const amigosMeuLogin = document.querySelector("#amigos-meu-login");
+const amigosFormulario = document.querySelector("#amigos-formulario");
+const amigosCampo = document.querySelector("#amigos-login");
+const amigosAviso = document.querySelector("#amigos-aviso");
+const amigosLista = document.querySelector("#amigos-lista");
+const amigosRecebidos = document.querySelector("#amigos-recebidos");
+const amigosEnviados = document.querySelector("#amigos-enviados");
+const seloAmigos = document.querySelector("#selo-amigos");
+const painelLoja = document.querySelector("#painel-loja");
+const lojaCreditos = document.querySelector("#loja-creditos");
+const lojaComo = document.querySelector("#loja-como");
+const lojaAviso = document.querySelector("#loja-aviso");
+const lojaItens = document.querySelector("#loja-itens");
+const abasLoja = document.querySelectorAll("[data-loja-aba]");
+
+const PAINEIS = () => [painelCodigo, painelConfig, painelPerfil, painelSaida, painelAmigos, painelLoja];
 
 let ocupado = false;
 let modo = "entrar";
@@ -98,7 +117,7 @@ function avisarNoCampo(mensagem) {
 function pintarAtalho(jogador) {
   const temFoto = Boolean(jogador.foto);
   atalhoNome.textContent = jogador.nome;
-  atalhoCoins.textContent = `${Number(jogador.coins) || 0} COINS`;
+  if (jogador.coins !== undefined) atalhoCoins.textContent = `${Number(jogador.coins) || 0} CRÉDITOS`;
   atalhoInicial.textContent = (jogador.nome || "?").trim().charAt(0);
   atalhoFoto.src = temFoto ? jogador.foto : "";
   atalhoFoto.hidden = !temFoto;
@@ -231,6 +250,7 @@ function abrirConfiguracao() {
 function fechar(painel) {
   painel.hidden = true;
   campoCodigo.classList.remove("campo--erro");
+  if (painel === painelAmigos) pararAmigos();
 }
 
 // --- perfil ---------------------------------------------------------
@@ -354,17 +374,313 @@ perfilSalvar.addEventListener("click", salvarPerfil);
 
 document.addEventListener("keydown", (evento) => {
   if (evento.key !== "Escape") return;
-  [painelCodigo, painelConfig, painelPerfil, painelSaida].forEach((p) => {
+  PAINEIS().forEach((p) => {
     if (!p.hidden) fechar(p);
   });
 });
 
 // Clicar no fundo escuro fecha o painel.
-[painelCodigo, painelConfig, painelPerfil, painelSaida].forEach((painel) => {
+PAINEIS().forEach((painel) => {
   painel.addEventListener("click", (evento) => {
     if (evento.target === painel) fechar(painel);
   });
 });
+
+// --- amigos -------------------------------------------------------------
+
+/* Amizade se pede pelo nome de usuário, que é único — o nome no jogo não
+   serve, dois jogadores podem se chamar igual. A lista diz onde cada amigo
+   está: numa partida (dá para assistir, sem jogar) ou num lobby (dá para
+   entrar, se houver lugar). Enquanto o painel está aberto, ela se atualiza
+   sozinha. */
+
+const INTERVALO_AMIGOS_MS = 5000;
+let consultaAmigos = null;
+
+function avisarAmigos(mensagem, ok = false) {
+  amigosAviso.textContent = mensagem;
+  amigosAviso.hidden = !mensagem;
+  amigosAviso.classList.toggle("perfil__aviso--ok", ok);
+}
+
+function pintarSelo(recebidos) {
+  seloAmigos.hidden = recebidos === 0;
+  seloAmigos.textContent = recebidos > 9 ? "9+" : String(recebidos);
+}
+
+function fotoDoAmigo(amigo) {
+  const quadro = elemento("span", "amigo__foto");
+  if (amigo.foto) {
+    const img = elemento("img");
+    img.src = amigo.foto;
+    img.alt = "";
+    quadro.appendChild(img);
+  } else {
+    quadro.textContent = inicial(amigo.nome);
+  }
+  return quadro;
+}
+
+function botaoPequeno(rotulo, classe, aoClicar) {
+  const botao = elemento("button", `botao botao--pequeno ${classe}`, rotulo);
+  botao.type = "button";
+  botao.addEventListener("click", aoClicar);
+  return botao;
+}
+
+function statusDoAmigo(amigo) {
+  if (amigo.sala?.status === "em_partida") return ["Em partida", "amigo__status--partida"];
+  if (amigo.sala?.status === "aguardando") return ["No lobby", "amigo__status--lobby"];
+  return amigo.online ? ["Online", "amigo__status--online"] : ["Offline", ""];
+}
+
+function cartaoDeAmigo(amigo, { detalhe, acoes }) {
+  const item = elemento("li", "amigo");
+  const info = elemento("div", "amigo__info");
+  info.append(elemento("span", "amigo__nome", amigo.nome), detalhe);
+  const caixaAcoes = elemento("div", "amigo__acoes");
+  caixaAcoes.append(...acoes);
+  item.append(fotoDoAmigo(amigo), info, caixaAcoes);
+  return item;
+}
+
+/** Amigo aceito: status, o dado e a casa que está usando, e o que dá para
+    fazer agora. */
+function itemDeAmigo(amigo) {
+  const [rotulo, classe] = statusDoAmigo(amigo);
+  const detalhe = elemento("span", "amigo__detalhe");
+  const visual = elemento("span", "amigo__visual");
+  visual.title = `Usando: dado ${amigo.visual?.dado?.nome || "Clássico"} e casa ${amigo.visual?.casa?.nome || "Da vila"}`;
+  visual.append(previaDoDado(amigo.visual?.dado?.visual), previaDaCasa(amigo.visual?.casa?.visual));
+  detalhe.append(elemento("span", `amigo__status ${classe}`, rotulo), elemento("span", "", `@${amigo.login || "?"}`), visual);
+
+  const acoes = [];
+  if (amigo.sala?.status === "em_partida") {
+    acoes.push(botaoPequeno("Assistir", "botao--verde", () => {
+      som.tocar("entrar");
+      location.href = `/partida?codigo=${amigo.sala.codigo}`;
+    }));
+  } else if (amigo.sala?.status === "aguardando" && !amigo.sala.cheia) {
+    acoes.push(botaoPequeno("Entrar na sala", "", () => entrarNaSalaDoAmigo(amigo.sala.codigo)));
+  }
+  acoes.push(botaoQueConfirma("Remover", () => desfazerAmizade(amigo)));
+  return cartaoDeAmigo(amigo, { detalhe, acoes });
+}
+
+/** Desfazer amizade não tem volta: o primeiro clique só arma o botão
+    ("Certeza?") e o segundo, em até 3 segundos, confirma. Sem caixa de
+    diálogo do navegador — ela destoa do resto do jogo. */
+let confirmando = false;
+
+function botaoQueConfirma(rotulo, aoConfirmar) {
+  let armado = null;
+  const botao = botaoPequeno(rotulo, "botao--perigo", () => {
+    if (armado) {
+      clearTimeout(armado);
+      confirmando = false;
+      aoConfirmar();
+      return;
+    }
+    som.tocar("aviso");
+    botao.textContent = "Certeza?";
+    confirmando = true;
+    armado = setTimeout(() => {
+      armado = null;
+      confirmando = false;
+      botao.textContent = rotulo;
+    }, 3000);
+  });
+  return botao;
+}
+
+function pintarAmigos(painel) {
+  amigosMeuLogin.textContent = painel.eu.login ? `@${painel.eu.login}` : "sem usuário";
+  pintarSelo(painel.recebidos.length);
+
+  amigosLista.replaceChildren(
+    ...(painel.amigos.length
+      ? painel.amigos.map(itemDeAmigo)
+      : [elemento("li", "amigos__vazio", "Nenhum amigo ainda. Peça o usuário de alguém e adicione aqui.")]),
+  );
+
+  document.querySelector("#amigos-recebidos-secao").hidden = !painel.recebidos.length;
+  amigosRecebidos.replaceChildren(...painel.recebidos.map((outro) => cartaoDeAmigo(outro, {
+    detalhe: elemento("span", "amigo__detalhe", `@${outro.login || "?"} quer ser seu amigo`),
+    acoes: [
+      botaoPequeno("Aceitar", "botao--verde", () => aceitarAmizade(outro)),
+      botaoPequeno("Recusar", "botao--perigo", () => desfazerAmizade(outro)),
+    ],
+  })));
+
+  document.querySelector("#amigos-enviados-secao").hidden = !painel.enviados.length;
+  amigosEnviados.replaceChildren(...painel.enviados.map((outro) => cartaoDeAmigo(outro, {
+    detalhe: elemento("span", "amigo__detalhe", `@${outro.login || "?"} ainda não respondeu`),
+    acoes: [botaoPequeno("Cancelar", "botao--roxo", () => desfazerAmizade(outro))],
+  })));
+}
+
+async function carregarAmigos() {
+  // Com um "Certeza?" armado, a lista não é redesenhada por baixo do clique.
+  if (confirmando) return;
+  try {
+    pintarAmigos(await api.amigos());
+  } catch (erro) {
+    avisarAmigos(erro.message);
+  }
+}
+
+function abrirAmigos() {
+  abrir(painelAmigos);
+  avisarAmigos("");
+  carregarAmigos();
+  pararAmigos();
+  consultaAmigos = setInterval(() => !document.hidden && carregarAmigos(), INTERVALO_AMIGOS_MS);
+}
+
+function pararAmigos() {
+  if (consultaAmigos) clearInterval(consultaAmigos);
+  consultaAmigos = null;
+}
+
+/** Ação de amizade: manda, redesenha com a resposta e avisa. */
+async function mexerNaAmizade(promessa, mensagemOk) {
+  try {
+    pintarAmigos(await promessa);
+    if (mensagemOk) {
+      som.tocar("sucesso");
+      avisarAmigos(mensagemOk, true);
+    }
+  } catch (erro) {
+    som.tocar("erro");
+    avisarAmigos(erro.message);
+  }
+}
+
+amigosFormulario.addEventListener("submit", (evento) => {
+  evento.preventDefault();
+  const login = amigosCampo.value.trim().replace(/^@/, "");
+  if (!login) {
+    amigosCampo.focus();
+    return;
+  }
+  mexerNaAmizade(api.pedirAmizade(login), "Pedido enviado. Quando aceitar, aparece na sua lista.")
+    .then(() => (amigosCampo.value = ""));
+});
+
+function aceitarAmizade(outro) {
+  mexerNaAmizade(api.aceitarAmizade(outro.id), `Agora você e ${outro.nome} são amigos.`);
+}
+
+function desfazerAmizade(outro) {
+  som.tocar("voltar");
+  mexerNaAmizade(api.desfazerAmizade(outro.id), "");
+}
+
+async function entrarNaSalaDoAmigo(codigoDaSala) {
+  try {
+    som.tocar("entrar");
+    const sala = await api.entrarNaSala(codigoDaSala);
+    location.href = `/lobby?codigo=${sala.codigo}`;
+  } catch (erro) {
+    som.tocar("erro");
+    avisarAmigos(erro.message);
+  }
+}
+
+// --- loja ---------------------------------------------------------------
+
+/* Dados e casas para a partida, pagos com os créditos que as partidas dão.
+   O que está equipado entra na partida seguinte e aparece para a mesa
+   inteira: o dado de quem rola na faixa do resultado, a casa nos terrenos
+   de quem é dono. */
+
+let abaDaLoja = "dado";
+let vitrine = null;
+
+function avisarLoja(mensagem, ok = false) {
+  lojaAviso.textContent = mensagem;
+  lojaAviso.hidden = !mensagem;
+  lojaAviso.classList.toggle("perfil__aviso--ok", ok);
+}
+
+function itemDaLoja(item) {
+  const cartao = elemento("li", `item-loja${item.equipado ? " item-loja--equipado" : ""}`);
+  let botao;
+  if (item.equipado) {
+    botao = elemento("button", "botao botao--pequeno botao--verde", "Equipado");
+    botao.disabled = true;
+  } else if (item.meu) {
+    botao = elemento("button", "botao botao--pequeno botao--roxo", "Equipar");
+    botao.addEventListener("click", () => equipar(item));
+  } else {
+    const faltam = item.preco - vitrine.creditos;
+    botao = elemento("button", "botao botao--pequeno", `Comprar · ${item.preco}`);
+    botao.disabled = faltam > 0;
+    botao.title = faltam > 0 ? `Faltam ${faltam} créditos` : "";
+    botao.addEventListener("click", () => comprar(item));
+  }
+  botao.type = "button";
+  cartao.append(
+    previaDoItem(item),
+    elemento("strong", "item-loja__nome", item.nome),
+    elemento("span", "item-loja__descricao", item.descricao || ""),
+    botao,
+  );
+  return cartao;
+}
+
+function pintarLoja(dados) {
+  vitrine = dados;
+  lojaCreditos.textContent = String(dados.creditos);
+  lojaComo.textContent =
+    `Cada vitória vale ${dados.recompensas.vitoria} créditos e cada partida até o fim, ${dados.recompensas.participacao}. `
+    + "O que você equipar aparece para toda a mesa na próxima partida.";
+  atalhoCoins.textContent = `${dados.creditos} CRÉDITOS`;
+  abasLoja.forEach((aba) => {
+    const ativa = aba.dataset.lojaAba === abaDaLoja;
+    aba.classList.toggle("login__aba--ativa", ativa);
+    aba.setAttribute("aria-selected", String(ativa));
+  });
+  lojaItens.replaceChildren(...dados.itens.filter((item) => item.tipo === abaDaLoja).map(itemDaLoja));
+}
+
+async function abrirLoja() {
+  abrir(painelLoja);
+  avisarLoja("");
+  try {
+    pintarLoja(await api.loja());
+  } catch (erro) {
+    avisarLoja(erro.message);
+  }
+}
+
+async function comprar(item) {
+  try {
+    pintarLoja(await api.comprarItem(item.slug));
+    som.tocar("caixa");
+    avisarLoja(`${item.nome} é seu. Equipe para usar na próxima partida.`, true);
+  } catch (erro) {
+    som.tocar("erro");
+    avisarLoja(erro.message);
+  }
+}
+
+async function equipar(item) {
+  try {
+    pintarLoja(await api.equiparItem(item.slug));
+    som.tocar("confirmar");
+    avisarLoja(`${item.nome} equipado.`, true);
+  } catch (erro) {
+    som.tocar("erro");
+    avisarLoja(erro.message);
+  }
+}
+
+abasLoja.forEach((aba) => aba.addEventListener("click", () => {
+  abaDaLoja = aba.dataset.lojaAba;
+  som.tocar("selecionar");
+  if (vitrine) pintarLoja(vitrine);
+}));
 
 // --- som e música ------------------------------------------------------
 
@@ -496,9 +812,9 @@ const acoes = {
   "entrar-codigo": entrarComCodigo,
   perfil: abrirPerfil,
   config: abrirConfiguracao,
-  fechar: (elemento) => fechar(elemento.closest(".painel")),
-  amigos: () => toast("AMIGOS ainda não foi construído. Em breve.", ""),
-  loja: () => toast("A LOJA ainda não abriu. Em breve.", ""),
+  fechar: (alvo) => fechar(alvo.closest(".painel")),
+  amigos: abrirAmigos,
+  loja: abrirLoja,
   sair: () => abrir(painelSaida),
   logout: () => {
     fechar(painelSaida);
@@ -559,6 +875,8 @@ if (guardado.token()) {
       // O servidor é a verdade: corrige nome/foto se mudaram em outra máquina.
       guardado.salvarSessao(jogador);
       pintarAtalho(jogador);
+      // Pedido de amizade esperando acende o selo do AMIGOS.
+      api.amigos().then((painel) => pintarSelo(painel.recebidos.length)).catch(() => {});
     })
     .catch((erro) => {
       // Só derruba a sessão se o servidor DISSE que o token não vale mais.

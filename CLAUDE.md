@@ -43,16 +43,29 @@ jogador: Roubopolis. Caminhos: Roubodopolis.
 
 - **`engine/`** — motor puro: sem Flask, sem banco, sem rede. Recebe estado +
   ação, devolve estado novo. É o que permite simular 10.000 partidas sem
-  abrir o navegador. **Hoje está vazio**; é a próxima fase.
+  abrir o navegador. A regra inteira mora em `engine/partida.py`, em seções
+  (sorteio, rolar, casas de evento, eventos temáticos, leilão, turno); os arquivos de
+  `engine/casas/`, `engine/eventos/` e `engine/acoes/` são esqueletos vazios
+  da estrutura do README. O estado é um dict versionado (`VERSAO_DO_ESTADO`):
+  mudou o formato, suba a versão e trate o estado antigo em `_atualizar()` —
+  partida em andamento no banco volta com o formato velho.
 - **`server/`** — Flask, rotas, banco. O `engine/` nunca importa daqui.
+  `server/social/` tem amigos (quem pode assistir a uma partida) e loja
+  (créditos, itens, prêmio do fim de partida).
 - **`client/`** — telas. Caminhos absolutos (`/css`, `/assets`) e scripts
   `type="module"`, servidos pelo Flask.
 - **`electron/`** — só a casca. Abre a URL do servidor; não contém o jogo.
   Por isso publicar no servidor atualiza o desktop junto, sem reinstalar.
-- **`data/`** — todo número que dá para ajustar sem mexer em código.
+- **`data/`** — todo número que dá para ajustar sem mexer em código. As regras
+  em `data/balanceamento/padrao.json`; o catálogo e os créditos da loja em
+  `data/loja/catalogo.json`; as frases de sátira das janelas de evento em
+  `data/eventos/` (a tela busca por `GET /api/eventos/frases`).
 
 Princípio geral: **comportamento diferente vira arquivo, valor diferente vira
 dado.**
+
+Testes: `python -m unittest discover -s tests -t .` (motor e partidas inteiras
+jogadas pelo simulador). Mudou o balanceamento? `python -m sim.simulador`.
 
 ## Regras técnicas que já quebraram o projeto
 

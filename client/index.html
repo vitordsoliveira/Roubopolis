@@ -15,6 +15,9 @@
   <link rel="stylesheet" href="/css/componentes/modal.css">
   <link rel="stylesheet" href="/css/componentes/animacoes.css">
   <link rel="stylesheet" href="/css/componentes/perfil.css">
+  <!-- O dado da vitrine da loja é o mesmo da partida. -->
+  <link rel="stylesheet" href="/css/componentes/dados.css">
+  <link rel="stylesheet" href="/css/componentes/social.css">
   <link rel="stylesheet" href="/css/telas/menu.css">
 </head>
 
@@ -40,7 +43,7 @@
     </span>
     <span class="perfil-atalho__info">
       <span class="perfil-atalho__nome" id="atalho-nome"></span>
-      <span class="perfil-atalho__coins" id="atalho-coins">0 COINS</span>
+      <span class="perfil-atalho__coins" id="atalho-coins">0 CRÉDITOS</span>
     </span>
   </button>
 
@@ -81,10 +84,11 @@
         <button class="opcao opcao--texto" type="button" data-acao="abrir-codigo">
           Entrar com código
         </button>
-        <button class="opcao opcao--dormindo" type="button" data-acao="amigos">
+        <button class="opcao" type="button" data-acao="amigos">
           <img src="/assets/menu/amigos.png" alt="Amigos">
+          <span class="opcao__selo" id="selo-amigos" hidden></span>
         </button>
-        <button class="opcao opcao--dormindo" type="button" data-acao="loja">
+        <button class="opcao" type="button" data-acao="loja">
           <img src="/assets/menu/loja.png" alt="Loja">
         </button>
         <button class="opcao" type="button" data-acao="config">
@@ -206,6 +210,60 @@
       <p class="perfil__aviso" id="perfil-aviso" hidden></p>
       <div class="painel__acoes">
         <button class="botao botao--pequeno" type="button" id="perfil-salvar">Salvar</button>
+        <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Amigos: adicionar pelo nome de usuário, aceitar pedidos e ver onde
+       cada um está — partida para assistir, lobby para entrar. -->
+  <div class="painel" id="painel-amigos" hidden>
+    <div class="painel__caixa painel__caixa--largo" role="dialog" aria-modal="true" aria-labelledby="titulo-amigos">
+      <h2 class="painel__titulo" id="titulo-amigos">Amigos</h2>
+      <p class="amigos__eu">Seu usuário: <strong id="amigos-meu-login">—</strong></p>
+      <form class="amigos__adicionar" id="amigos-formulario">
+        <label class="visualmente-oculto" for="amigos-login">Nome de usuário do amigo</label>
+        <input class="campo" id="amigos-login" type="text" maxlength="32" autocomplete="off" spellcheck="false" placeholder="usuário do amigo">
+        <button class="botao botao--pequeno" type="submit">Adicionar</button>
+      </form>
+      <p class="perfil__aviso" id="amigos-aviso" hidden></p>
+
+      <section class="amigos__secao" id="amigos-recebidos-secao" hidden>
+        <h3 class="amigos__subtitulo">Pedidos para você</h3>
+        <ul class="amigos__lista" id="amigos-recebidos"></ul>
+      </section>
+      <section class="amigos__secao">
+        <h3 class="amigos__subtitulo">Seus amigos</h3>
+        <ul class="amigos__lista" id="amigos-lista"></ul>
+      </section>
+      <section class="amigos__secao" id="amigos-enviados-secao" hidden>
+        <h3 class="amigos__subtitulo">Esperando resposta</h3>
+        <ul class="amigos__lista" id="amigos-enviados"></ul>
+      </section>
+
+      <div class="painel__acoes">
+        <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loja: dados e casas comprados com os créditos das partidas. O que
+       estiver equipado aparece para a mesa inteira. -->
+  <div class="painel" id="painel-loja" hidden>
+    <div class="painel__caixa painel__caixa--largo" role="dialog" aria-modal="true" aria-labelledby="titulo-loja">
+      <h2 class="painel__titulo" id="titulo-loja">Loja</h2>
+      <div class="loja__saldo">
+        <span>Seus créditos</span>
+        <strong id="loja-creditos">0</strong>
+      </div>
+      <p class="loja__como" id="loja-como"></p>
+      <div class="login__abas loja__abas" role="tablist" aria-label="Tipo de item">
+        <button class="login__aba login__aba--ativa" type="button" data-loja-aba="dado" role="tab" aria-selected="true">Dados</button>
+        <button class="login__aba" type="button" data-loja-aba="casa" role="tab" aria-selected="false">Casas</button>
+      </div>
+      <p class="perfil__aviso" id="loja-aviso" hidden></p>
+      <ul class="loja__itens" id="loja-itens"></ul>
+      <div class="painel__acoes">
         <button class="botao botao--pequeno botao--roxo" type="button" data-acao="fechar">Voltar</button>
       </div>
     </div>

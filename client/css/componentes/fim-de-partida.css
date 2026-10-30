@@ -1,0 +1,263 @@
+/* O fim da partida (js/modais/fim_de_partida.js): pódio, confete e o placar
+   de cada um.
+
+   A ordem da cena é a do sorteio de abertura, de propósito: os degraus
+   sobem do terceiro para o primeiro, e o vencedor é a última coisa que a
+   mesa descobre — com a coroa caindo na cabeça. */
+
+.fim {
+  z-index: 85;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 28%, rgba(96, 36, 160, 0.9), rgba(10, 4, 20, 0.95) 70%);
+}
+
+/* --- confete -------------------------------------------------------------- */
+
+.fim__confete {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confete {
+  position: absolute;
+  top: -5vh;
+  left: var(--x);
+  width: 1.1vh;
+  height: 1.7vh;
+  background: var(--cor);
+  animation: confete-cai var(--duracao) linear var(--atraso) infinite;
+}
+
+@keyframes confete-cai {
+  0%   { transform: translate(0, 0) rotate(0); }
+  100% { transform: translate(var(--desvio), 112vh) rotate(var(--giro)); }
+}
+
+/* --- caixa ---------------------------------------------------------------- */
+
+.fim__caixa {
+  --moldura-borda: var(--amarelo);
+  --moldura-fundo: #170a30;
+  position: relative;
+  width: min(1000px, 100%);
+  max-height: 94vh;
+  overflow-y: auto;
+  padding: clamp(14px, 2.4vh, 30px) clamp(14px, 3vw, 40px);
+  color: var(--branco);
+  text-align: center;
+  box-shadow: 0 1.4vh 0 rgba(0, 0, 0, 0.5), 0 0 6vh rgba(255, 217, 61, 0.25);
+  animation: sorteio-chega 0.5s cubic-bezier(0.18, 1.5, 0.4, 1);
+}
+
+.fim__chamada {
+  color: var(--verde-neon);
+  font-size: clamp(0.72rem, 1.8vh, 1rem);
+  text-transform: uppercase;
+}
+
+.fim__titulo {
+  margin-top: 0.4vh;
+  color: var(--amarelo);
+  font-size: clamp(1.4rem, 5vh, 3rem);
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-shadow: 0 0.5vh 0 #6b4b00, 0 0 3vh rgba(255, 217, 61, 0.55);
+  animation: fim-titulo 0.7s cubic-bezier(0.2, 1.8, 0.4, 1) 1.5s backwards;
+}
+
+@keyframes fim-titulo {
+  0%   { transform: scale(0.2) rotate(-8deg); opacity: 0; }
+  70%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
+  100% { transform: none; }
+}
+
+/* --- pódio ----------------------------------------------------------------- */
+
+.podio {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(8px, 2.2vw, 26px);
+  margin: 1vh 0 1.6vh;
+}
+
+.podio__lugar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5vh;
+  width: clamp(92px, 19vh, 176px);
+  animation: podio-sobe 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) var(--atraso, 0s) backwards;
+}
+
+@keyframes podio-sobe {
+  from { transform: translateY(14vh); opacity: 0; }
+}
+
+.podio__coroa {
+  height: 4.4vh;
+}
+
+.podio__coroa .icone-pixel {
+  width: auto;
+  height: 100%;
+  filter: drop-shadow(0 0 1.4vh rgba(255, 217, 61, 0.8));
+  animation: coroa-cai 0.6s cubic-bezier(0.3, 1.6, 0.4, 1) 1.6s backwards;
+}
+
+@keyframes coroa-cai {
+  0%   { transform: translateY(-16vh) rotate(-30deg); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+.podio__boneco {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: clamp(56px, 12.5vh, 140px);
+}
+
+.podio__boneco img {
+  max-height: 100%;
+  width: auto;
+  max-width: clamp(56px, 12vh, 120px);
+  image-rendering: pixelated;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 0.6vh 0 rgba(0, 0, 0, 0.4));
+}
+
+.podio__ficha {
+  display: grid;
+  place-items: center;
+  width: clamp(54px, 10vh, 96px);
+  height: clamp(54px, 10vh, 96px);
+  background: var(--cor, var(--roxo));
+  border: 4px solid #0d0418;
+  border-radius: 50%;
+  font-size: clamp(1.4rem, 4vh, 2.3rem);
+}
+
+/* O vencedor comemora sem parar (as `vitoria` e `comemora` do sorteio). */
+.podio__lugar--1 .podio__boneco > * {
+  animation: vitoria 0.36s ease-in-out 1.7s infinite alternate;
+  filter: drop-shadow(0 0.6vh 0 rgba(0, 0, 0, 0.4)) drop-shadow(0 0 1.6vh var(--amarelo));
+}
+
+.podio__lugar--2 .podio__boneco > *,
+.podio__lugar--3 .podio__boneco > * {
+  animation: comemora 0.5s ease-in-out infinite alternate;
+}
+
+.podio__nome {
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--fonte-hud);
+  font-stretch: condensed;
+  font-size: clamp(0.85rem, 2.2vh, 1.2rem);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.podio__patrimonio {
+  color: var(--verde-neon);
+  font-family: var(--fonte-hud);
+  font-size: clamp(0.8rem, 2vh, 1.1rem);
+  font-weight: 800;
+}
+
+.podio__degrau {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  background: var(--cor, var(--roxo));
+  border: 3px solid #0d0418;
+  box-shadow: inset 0 -0.9vh 0 rgba(0, 0, 0, 0.25), inset 0 0.5vh 0 rgba(255, 255, 255, 0.25);
+  color: var(--branco);
+  font-family: var(--fonte-pixel);
+  font-size: clamp(1.3rem, 5vh, 2.6rem);
+  text-shadow: 0 0.4vh 0 rgba(0, 0, 0, 0.5);
+}
+
+.podio__lugar--1 .podio__degrau { height: 10.5vh; }
+.podio__lugar--2 .podio__degrau { height: 7.5vh; }
+.podio__lugar--3 .podio__degrau { height: 5vh; }
+
+/* --- placar ----------------------------------------------------------------- */
+
+.fim__placar-rolagem {
+  overflow-x: auto;
+}
+
+.fim__placar {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--fonte-hud);
+  font-stretch: condensed;
+  font-size: clamp(0.8rem, 1.9vh, 1.05rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.fim__placar th {
+  padding: 0.6vh 0.8vh;
+  color: var(--amarelo);
+  font-size: 0.82em;
+  text-transform: uppercase;
+  border-bottom: 2px solid rgba(155, 61, 255, 0.55);
+}
+
+.fim__placar td {
+  padding: 0.55vh 0.8vh;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.fim__placar td:nth-child(2) {
+  text-align: left;
+  font-weight: 700;
+}
+
+.fim__placar .fim__cor {
+  display: inline-block;
+  width: 1.4vh;
+  height: 1.4vh;
+  margin-right: 0.8vh;
+  vertical-align: -0.1vh;
+  background: var(--cor);
+}
+
+.fim__placar tr.fim__eu td {
+  background: rgba(255, 217, 61, 0.1);
+}
+
+.fim__placar tr.fim__fora td {
+  opacity: 0.55;
+}
+
+.fim__recompensa {
+  margin-top: 1.4vh;
+  color: var(--amarelo);
+  font-size: clamp(0.95rem, 2.6vh, 1.4rem);
+  text-shadow: 0 0.3vh 0 #6b4b00;
+  animation: fim-titulo 0.6s cubic-bezier(0.2, 1.8, 0.4, 1) 2.2s backwards;
+}
+
+.fim__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 1.6vh;
+}
+
+.fim__acoes .jogar__botao {
+  font-size: round(clamp(0.9rem, 2.2vh, 1.35rem), 1px);
+  text-shadow: 0 2px 0 #5c4100;
+}
+
+@media (max-width: 620px) {
+  .podio__lugar { width: 30vw; }
+}

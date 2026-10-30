@@ -1,0 +1,83 @@
+{
+  "_leia_isto": "Catálogo da loja. Mexer aqui muda preço, nome e cores sem tocar em código — é só reiniciar o servidor. 'slug' é a identidade do item e fica gravado no banco de quem comprou: não renomeie um slug que já foi vendido. Item com preço 0 é de todo mundo; o marcado com 'padrao' é o que vale para quem não equipou nada.",
+
+  "recompensas": {
+    "_sobre": "Créditos que cada jogador recebe quando a partida termina. Quem abandona não recebe nada.",
+    "vitoria": 100,
+    "participacao": 20
+  },
+
+  "itens": [
+    {
+      "slug": "dado-classico", "tipo": "dado", "nome": "Clássico", "preco": 0, "padrao": true,
+      "descricao": "O vermelho de pontos brancos da vila.",
+      "visual": { "face": ["#ff4f4f", "#c8141d"], "borda": "#4a060b", "ponto": "#ffffff" }
+    },
+    {
+      "slug": "dado-chiclete", "tipo": "dado", "nome": "Chiclete", "preco": 150,
+      "descricao": "Rosa de bala, gruda na mão de quem ganha.",
+      "visual": { "face": ["#ffc2e6", "#ff5fb0"], "borda": "#7a0f4d", "ponto": "#ffffff" }
+    },
+    {
+      "slug": "dado-meia-noite", "tipo": "dado", "nome": "Meia-noite", "preco": 150,
+      "descricao": "Preto fosco com pontos dourados.",
+      "visual": { "face": ["#3a3550", "#16101f"], "borda": "#000000", "ponto": "#ffd93d" }
+    },
+    {
+      "slug": "dado-gelo", "tipo": "dado", "nome": "Gelo", "preco": 200,
+      "descricao": "Azul-claro, frio como cálculo de aluguel.",
+      "visual": { "face": ["#f4fdff", "#8fe3ff"], "borda": "#1b5d9a", "ponto": "#1740b0" }
+    },
+    {
+      "slug": "dado-esmeralda", "tipo": "dado", "nome": "Esmeralda", "preco": 200,
+      "descricao": "Verde de nota nova.",
+      "visual": { "face": ["#7be07f", "#22822c"], "borda": "#0f3d14", "ponto": "#ffffff" }
+    },
+    {
+      "slug": "dado-neon", "tipo": "dado", "nome": "Neon", "preco": 250,
+      "descricao": "Escuro com pontos que brilham.",
+      "visual": { "face": ["#2a0d5e", "#120726"], "borda": "#39ff14", "ponto": "#39ff14" }
+    },
+    {
+      "slug": "dado-ouro", "tipo": "dado", "nome": "Ouro", "preco": 300,
+      "descricao": "Para quem já ganhou umas e quer que a mesa saiba.",
+      "visual": { "face": ["#ffe27a", "#d99a14"], "borda": "#6b4b00", "ponto": "#3b2a00" }
+    },
+
+    {
+      "slug": "casa-padrao", "tipo": "casa", "nome": "Da vila", "preco": 0, "padrao": true,
+      "descricao": "As cores de cada bairro, do barraco à torre.",
+      "visual": null
+    },
+    {
+      "slug": "casa-tijolinho", "tipo": "casa", "nome": "Tijolinho", "preco": 150,
+      "descricao": "Tijolo à vista e telhado escuro.",
+      "visual": { "paredes": ["#a5452a", "#b9532f", "#8c3a22"], "telhado": "#3c2a20", "janelas": "#ffe79a" }
+    },
+    {
+      "slug": "casa-grafite", "tipo": "casa", "nome": "Grafite", "preco": 200,
+      "descricao": "Cinza de muro com telhado pichado de rosa.",
+      "visual": { "paredes": ["#4a4a58", "#5b5b6b", "#3a3a46"], "telhado": "#ff4fa8", "janelas": "#39ff14" }
+    },
+    {
+      "slug": "casa-iglu", "tipo": "casa", "nome": "Iglu", "preco": 200,
+      "descricao": "Branco-gelo, janela azul.",
+      "visual": { "paredes": ["#f4fdff", "#dff6ff", "#c7ecff"], "telhado": "#8fe3ff", "janelas": "#2f7bff" }
+    },
+    {
+      "slug": "casa-doce", "tipo": "casa", "nome": "Casa de doce", "preco": 250,
+      "descricao": "Rosa de confeitaria, telhado de chiclete.",
+      "visual": { "paredes": ["#ffd1e8", "#ffe6f2", "#fff0c9"], "telhado": "#ff5fb0", "janelas": "#ffffff" }
+    },
+    {
+      "slug": "casa-neon", "tipo": "casa", "nome": "Neon", "preco": 300,
+      "descricao": "Paredes roxas e luz verde a noite inteira.",
+      "visual": { "paredes": ["#2a0d5e", "#1c0b3a", "#3a1680"], "telhado": "#39ff14", "janelas": "#39ff14" }
+    },
+    {
+      "slug": "casa-dourada", "tipo": "casa", "nome": "Dourada", "preco": 400,
+      "descricao": "Ouro do chão ao telhado. Ninguém passa sem ver.",
+      "visual": { "paredes": ["#ffd23d", "#f5c400", "#ffe27a"], "telhado": "#b3127e", "janelas": "#fff4c2" }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "_sobre": "Frases de sátira dos eventos temáticos, na janela que abre quando o evento acontece. A tela escolhe uma pela rodada — a mesa inteira lê a mesma. Só texto: os valores de cada evento ficam em data/balanceamento/padrao.json. Para acrescentar uma frase, é só pôr na lista.",
+
+  "colheita_ruim": [
+    "O tomate subiu mais que o aluguel. Os economistas chamam de choque de oferta; a vila chama de assalto no hortifrúti.",
+    "Choveu demais, depois de menos, depois choveu boleto.",
+    "A culpa é do El Niño, da La Niña e de toda a família deles.",
+    "O agro é tech, o agro é pop. Hoje o agro está em recuperação judicial."
+  ],
+
+  "baile_na_vila": [
+    "O som estava tão alto que até o banco liberou crédito.",
+    "Entrada franca, cerveja quente e dinheiro no bolso de todo mundo. Ninguém perguntou de onde veio.",
+    "Patrocínio: um candidato a vereador em ano de eleição.",
+    "O DJ tocou o hino da vila e choveu dinheiro do céu. A Receita ainda está investigando."
+  ],
+
+  "final_de_ano": [
+    "Boas festas! O dono do imóvel desejou paz, saúde e um reajuste de 20%.",
+    "Papai Noel passou na cadeia e deixou a porta aberta. O nome técnico é saidinha.",
+    "O 13º salário chegou num dia e foi embora no outro, junto com o aluguel.",
+    "Natal é tempo de dar. Principalmente aluguel."
+  ],
+
+  "presidente": [
+    "O Presidente Cor de Mel passou, tirou foto, prometeu uma obra e levou o cofre. Tudo dentro da lei que ele mesmo assinou.",
+    "É para o bem do povo — disse o Presidente, guardando o dinheiro do povo.",
+    "Não é confisco: é antecipação de arrecadação com finalidade patriótica.",
+    "Chegou de helicóptero, discursou por três horas e saiu com o Coletor de Impostos no colo."
+  ],
+
+  "bonus_do_banco": [
+    "O banco está generoso. Desconfie.",
+    "O gerente sorriu. Venda antes que ele se lembre dos juros.",
+    "Promoção relâmpago: o banco paga mais pelo seu imóvel. Não há letras miúdas, por enquanto.",
+    "Até o banco teve um dia de bondade. Os economistas ainda tentam entender."
+  ]
+}

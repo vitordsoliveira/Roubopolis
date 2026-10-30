@@ -173,6 +173,66 @@ const efeitos = {
       tom(audio, t + quando, { freq, duracao: quando === 0.72 ? 0.6 : 0.11, volume: 0.09 });
     }
   },
+
+  /** O pódio subindo: fanfarra comprida, acorde no fim e chuva de moedas. */
+  vitoria(audio, t) {
+    const melodia = [
+      [523.25, 0, 0.12], [523.25, 0.14, 0.12], [523.25, 0.28, 0.12], [698.46, 0.42, 0.36],
+      [880, 0.82, 0.18], [783.99, 1.02, 0.18], [880, 1.22, 0.18], [1046.5, 1.42, 0.7],
+    ];
+    for (const [freq, quando, duracao] of melodia) tom(audio, t + quando, { freq, duracao, volume: 0.09 });
+    [523.25, 659.25, 783.99].forEach((freq) => tom(audio, t + 1.42, { freq, forma: "triangle", duracao: 0.9, volume: 0.06 }));
+    efeitos.moedas(audio, t + 1.5);
+  },
+
+  /** O peão entrando no portal: um zumbido que sobe e some. */
+  portal(audio, t) {
+    tom(audio, t, { freq: 180, ate: 1800, forma: "sine", duracao: 0.5, volume: 0.12 });
+    tom(audio, t + 0.05, { freq: 240, ate: 2400, forma: "triangle", duracao: 0.45, volume: 0.06 });
+    estalo(audio, t, { freq: 400, ate: 5000, q: 0.7, duracao: 0.5, volume: 0.12 });
+  },
+
+  /** A porta da cela batendo, e as chaves. */
+  prisao(audio, t) {
+    estalo(audio, t, { freq: 700, filtro: "lowpass", duracao: 0.18, volume: 0.5 });
+    tom(audio, t, { freq: 98, ate: 60, forma: "square", duracao: 0.2, volume: 0.12 });
+    tom(audio, t + 0.22, { freq: 1400, forma: "triangle", duracao: 0.08, volume: 0.05 });
+    tom(audio, t + 0.3, { freq: 1250, forma: "triangle", duracao: 0.08, volume: 0.05 });
+  },
+
+  /** Evento temático chegando: o sino da praça. */
+  evento(audio, t) {
+    [659.25, 830.61, 987.77, 1318.5].forEach((freq, i) => {
+      tom(audio, t + i * 0.09, { freq, forma: "triangle", duracao: 0.22, volume: 0.1 });
+    });
+    tom(audio, t + 0.4, { freq: 1318.5, forma: "sine", duracao: 0.7, volume: 0.08 });
+  },
+
+  /** Rufar de tambor enquanto a Coringa decide a sorte. */
+  suspense(audio, t) {
+    for (let i = 0; i < 14; i += 1) {
+      estalo(audio, t + i * 0.07, { freq: 220, filtro: "lowpass", duracao: 0.05, volume: 0.18 + i * 0.012 });
+    }
+  },
+
+  /** O martelo do leiloeiro na mesa: o leilão abriu. */
+  martelo(audio, t) {
+    estalo(audio, t, { freq: 900, filtro: "lowpass", duracao: 0.09, volume: 0.55 });
+    tom(audio, t, { freq: 150, ate: 75, forma: "triangle", duracao: 0.12, volume: 0.3 });
+  },
+
+  /** Um lance novo: dois toques subindo. */
+  lance(audio, t) {
+    tom(audio, t, { freq: 987.77, duracao: 0.06, volume: 0.08 });
+    tom(audio, t + 0.07, { freq: 1318.5, duracao: 0.12, volume: 0.08 });
+  },
+
+  /** Dou-lhe uma, dou-lhe duas, dou-lhe três: três marteladas e o sino. */
+  arrematado(audio, t) {
+    [0, 0.3, 0.6].forEach((atraso) => efeitos.martelo(audio, t + atraso));
+    tom(audio, t + 0.78, { freq: 1318.5, forma: "sine", duracao: 0.6, volume: 0.1 });
+    tom(audio, t + 0.84, { freq: 1975.5, forma: "sine", duracao: 0.5, volume: 0.06 });
+  },
 };
 
 export const som = {

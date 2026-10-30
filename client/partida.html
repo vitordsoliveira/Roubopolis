@@ -19,6 +19,9 @@
   <link rel="stylesheet" href="/css/componentes/sorteio.css">
   <link rel="stylesheet" href="/css/componentes/compra.css">
   <link rel="stylesheet" href="/css/componentes/dinheiro.css">
+  <link rel="stylesheet" href="/css/componentes/eventos.css">
+  <link rel="stylesheet" href="/css/componentes/leilao.css">
+  <link rel="stylesheet" href="/css/componentes/fim-de-partida.css">
   <link rel="stylesheet" href="/css/telas/partida.css">
 </head>
 
@@ -36,6 +39,23 @@
       <span class="lema__coroa" data-icone="coroa"></span>
     </p>
 
+    <!-- O essencial da mesa num canto só: o relógio, a rodada, o Coletor e
+         o evento da rodada. O resto mora nas janelas que abrem sob demanda. -->
+    <div class="status-partida" aria-label="Situação da partida">
+      <div class="status-partida__linha">
+        <span class="chip chip--espectador" id="chip-espectador" hidden><span data-icone="olho"></span>Assistindo</span>
+        <span class="chip" id="chip-tempo" title="Tempo da partida"><span data-icone="relogio"></span><span id="chip-tempo-valor">--:--</span></span>
+        <span class="chip" id="chip-rodada">Rodada 1</span>
+        <span class="chip chip--coletor" id="chip-coletor" title="Coletor de Impostos: quem parar na Casa do Imposto leva tudo">
+          <span data-icone="documento"></span><span id="chip-coletor-valor">R$ 0</span>
+        </span>
+      </div>
+      <button class="evento-chip moldura" type="button" id="evento-chip" hidden>
+        <strong id="evento-chip-nome"></strong>
+        <span id="evento-chip-texto"></span>
+      </button>
+    </div>
+
     <!-- Um cartão em cada canto da tela, na ordem de jogada. -->
     <ol class="jogadores" id="jogadores" aria-label="Jogadores"></ol>
 
@@ -47,9 +67,12 @@
       </div>
     </section>
 
-    <aside class="legenda moldura" aria-labelledby="legenda-titulo">
-      <h2 class="legenda__titulo" id="legenda-titulo">Legenda</h2>
-      <ul class="legenda__itens" id="legenda"></ul>
+    <!-- Recolhida por padrão: abre no título. -->
+    <aside class="legenda moldura" aria-label="Legenda">
+      <button class="legenda__titulo recolhivel" type="button" id="legenda-alternar" aria-expanded="false" aria-controls="legenda">
+        Legenda<span class="recolhivel__seta" aria-hidden="true"></span>
+      </button>
+      <ul class="legenda__itens" id="legenda" hidden></ul>
     </aside>
 
     <!-- O mesmo chat do lobby: a conversa da sala continua na partida. -->
@@ -67,20 +90,38 @@
       </form>
     </section>
 
+    <!-- Chat sempre à mão; o resto das opções fica dentro do menu, que abre
+         para cima e lembra se ficou aberto. -->
     <nav class="acoes" aria-label="Opções">
-      <button class="acao moldura" type="button" id="chat-abrir" aria-controls="chat" aria-expanded="false">
-        <span data-icone="balao"></span>Chat<span class="acao__contador" id="chat-contador" hidden></span>
-      </button>
-      <button class="acao moldura" type="button" id="regras"><span data-icone="regras"></span>Regras</button>
-      <button class="acao moldura" type="button" id="ranking"><span data-icone="trofeu"></span>Ranking</button>
-      <button class="acao moldura" type="button" id="config"><span data-icone="engrenagem"></span>Config.</button>
-      <button class="acao moldura" type="button" id="sair"><span data-icone="sair"></span>Sair</button>
+      <div class="acoes__menu" id="acoes-menu" hidden>
+        <button class="acao moldura" type="button" id="regras"><span data-icone="regras"></span>Regras</button>
+        <button class="acao moldura" type="button" id="ranking"><span data-icone="trofeu"></span>Ranking</button>
+        <button class="acao moldura" type="button" id="config"><span data-icone="engrenagem"></span>Config.</button>
+        <button class="acao acao--perigo moldura" type="button" id="sair"><span data-icone="sair"></span>Sair</button>
+      </div>
+      <div class="acoes__fixas">
+        <button class="acao moldura" type="button" id="chat-abrir" aria-controls="chat" aria-expanded="false">
+          <span data-icone="balao"></span>Chat<span class="acao__contador" id="chat-contador" hidden></span>
+        </button>
+        <button class="acao acao--menu moldura" type="button" id="acoes-alternar" aria-controls="acoes-menu" aria-expanded="false" aria-label="Mais opções">
+          <span class="acao__tres-pontos" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
+      </div>
     </nav>
 
     <div class="jogar">
       <span class="jogar__seta jogar__seta--esquerda" data-icone="chevron" aria-hidden="true"></span>
       <button class="jogar__botao moldura" type="button" id="jogar" disabled>Jogar</button>
       <span class="jogar__seta" data-icone="chevron" aria-hidden="true"></span>
+      <button class="jogar__extra moldura" type="button" id="vender-bonus" hidden>Vender ao banco (+bônus)</button>
+      <!-- Só aparece para quem está bem atrás na mesa, antes de rolar. -->
+      <button class="jogar__extra jogar__extra--leilao moldura" type="button" id="leiloar" hidden>
+        <span data-icone="martelo"></span>Leiloar propriedade
+      </button>
+      <!-- O leilão continua quando a janela é escondida: daqui ela volta. -->
+      <button class="jogar__extra jogar__extra--leilao moldura" type="button" id="ver-leilao" hidden>
+        <span data-icone="martelo"></span>Ver o leilão
+      </button>
       <p class="jogar__aviso" id="aviso" role="status"></p>
     </div>
 
@@ -100,6 +141,24 @@
       </div>
       <span class="anuncio-dados__soma" id="anuncio-dados-soma"></span>
     </div>
+  </div>
+
+  <!-- O que acabou de acontecer — casa de evento ou evento temático —, com
+       uma frase de sátira. Fecha sozinha quando a barra acaba
+       (js/ui/anuncios.js). -->
+  <div class="cortina evento-cortina" id="modal-evento" hidden>
+    <section class="compra moldura evento-janela" role="dialog" aria-modal="true" aria-labelledby="evento-titulo" aria-live="polite">
+      <div class="evento-janela__selo" id="evento-selo" aria-hidden="true"></div>
+      <p class="compra__chamada evento-janela__chamada" id="evento-chamada"></p>
+      <h2 class="evento-janela__titulo" id="evento-titulo"></h2>
+      <p class="evento-janela__frase" id="evento-frase"></p>
+      <p class="evento-janela__texto" id="evento-texto"></p>
+      <p class="evento-janela__nota" id="evento-nota" hidden></p>
+      <div class="evento-janela__barra" aria-hidden="true"><span id="evento-barra"></span></div>
+      <div class="compra__acoes">
+        <button class="jogar__botao jogar__botao--pequeno moldura" type="button" id="evento-continuar">Continuar</button>
+      </div>
+    </section>
   </div>
 
   <!-- Abertura: todo mundo junto jogando os dados para ver quem começa -->
@@ -142,6 +201,141 @@
       <p class="compra__tempo" id="liquidacao-tempo" role="timer"></p>
       <p class="liquidacao__instrucao">Escolha uma propriedade para vender ao banco. O valor será usado para pagar o aluguel.</p>
       <ol class="liquidacao__lista" id="liquidacao-lista"></ol>
+    </section>
+  </div>
+
+  <!-- Coringa, Reconstrução, Prejuízo e Bônus do banco: a mesma janela, com
+       o conteúdo montado por js/modais/ (um arquivo por casa). -->
+  <div class="cortina compra-cortina" id="modal-decisao" hidden>
+    <section class="compra moldura decisao" role="dialog" aria-modal="true" aria-labelledby="decisao-titulo">
+      <p class="compra__chamada" id="decisao-chamada"></p>
+      <h2 class="compra__titulo" id="decisao-titulo"></h2>
+      <div class="decisao__corpo" id="decisao-corpo"></div>
+      <ol class="liquidacao__lista decisao__opcoes" id="decisao-opcoes" hidden></ol>
+      <p class="compra__tempo" id="decisao-tempo" role="timer"></p>
+      <div class="compra__acoes" id="decisao-acoes"></div>
+    </section>
+  </div>
+
+  <!-- Leilão em andamento: abre para a mesa inteira (js/modais/leilao.js).
+       Quem vende acompanha, quem assiste vê, os outros dão lance. -->
+  <div class="cortina compra-cortina" id="modal-leilao" hidden>
+    <section class="compra moldura leilao" role="dialog" aria-modal="true" aria-labelledby="leilao-nome">
+      <header class="leilao__topo">
+        <p class="compra__chamada">Leilão em andamento</p>
+        <button class="leilao__esconder" type="button" id="leilao-esconder" aria-label="Esconder o leilão">×</button>
+      </header>
+      <div class="leilao__terreno">
+        <div>
+          <h2 class="leilao__nome" id="leilao-nome"></h2>
+          <p class="leilao__detalhe" id="leilao-vendedor"></p>
+        </div>
+        <span class="leilao__grupo" id="leilao-grupo"></span>
+      </div>
+      <div class="leilao__placas">
+        <div class="leilao__placa">
+          <span class="leilao__rotulo">Lance atual</span>
+          <strong class="leilao__valor" id="leilao-lance"></strong>
+          <span class="leilao__nota" id="leilao-lider"></span>
+        </div>
+        <div class="leilao__placa">
+          <span class="leilao__rotulo">Tempo restante</span>
+          <strong class="leilao__valor" id="leilao-tempo" role="timer"></strong>
+          <span class="leilao__barra" aria-hidden="true"><span id="leilao-barra"></span></span>
+        </div>
+      </div>
+      <div class="leilao__lance" id="leilao-controles">
+        <button class="leilao__passo moldura" type="button" id="leilao-menos" aria-label="Diminuir o lance">−</button>
+        <output class="leilao__campo" id="leilao-valor" aria-live="polite"></output>
+        <button class="leilao__passo moldura" type="button" id="leilao-mais" aria-label="Aumentar o lance">+</button>
+        <button class="jogar__botao jogar__botao--pequeno moldura leilao__dar" type="button" id="leilao-dar">Dar lance</button>
+      </div>
+      <p class="leilao__situacao" id="leilao-situacao"></p>
+      <h3 class="leilao__subtitulo">Histórico de lances</h3>
+      <ol class="leilao__historico" id="leilao-historico"></ol>
+      <p class="leilao__imposto" id="leilao-imposto"></p>
+    </section>
+  </div>
+
+  <!-- Leilão encerrado: quem levou, por quanto e o imposto do Coletor. -->
+  <div class="cortina compra-cortina" id="modal-leilao-fim" hidden>
+    <section class="compra moldura leilao leilao-fim" role="dialog" aria-modal="true" aria-labelledby="leilao-fim-titulo">
+      <div class="leilao-fim__selo" data-icone="martelo" aria-hidden="true"></div>
+      <h2 class="leilao-fim__titulo" id="leilao-fim-titulo">Leilão encerrado</h2>
+      <p class="leilao-fim__quem" id="leilao-fim-quem"></p>
+      <div class="leilao__terreno">
+        <div>
+          <h3 class="leilao__nome" id="leilao-fim-nome"></h3>
+          <p class="leilao__detalhe" id="leilao-fim-dono"></p>
+        </div>
+        <span class="leilao__grupo" id="leilao-fim-grupo"></span>
+      </div>
+      <div class="leilao__placas">
+        <div class="leilao__placa">
+          <span class="leilao__rotulo" id="leilao-fim-valor-rotulo"></span>
+          <strong class="leilao__valor" id="leilao-fim-valor"></strong>
+        </div>
+        <div class="leilao__placa">
+          <span class="leilao__rotulo" id="leilao-fim-lance-rotulo"></span>
+          <strong class="leilao__valor" id="leilao-fim-lance"></strong>
+        </div>
+        <div class="leilao__placa leilao__placa--verde" id="leilao-fim-saldo-placa">
+          <span class="leilao__rotulo" id="leilao-fim-saldo-rotulo"></span>
+          <strong class="leilao__valor" id="leilao-fim-saldo"></strong>
+        </div>
+        <div class="leilao__placa leilao__placa--ambar">
+          <span class="leilao__rotulo" id="leilao-fim-imposto-rotulo"></span>
+          <strong class="leilao__valor" id="leilao-fim-imposto"></strong>
+        </div>
+      </div>
+      <p class="leilao-fim__cofre"><span>Cofre do Coletor de Impostos</span><strong id="leilao-fim-cofre"></strong></p>
+      <div class="compra__acoes">
+        <button class="jogar__botao jogar__botao--pequeno moldura" type="button" id="leilao-fim-continuar">Continuar</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Sair: a mesma moldura das outras janelas da partida, no lugar do
+       confirm() do navegador. -->
+  <div class="cortina compra-cortina" id="modal-sair" hidden>
+    <section class="compra moldura sair-partida" role="dialog" aria-modal="true" aria-labelledby="sair-titulo">
+      <p class="compra__chamada sair-partida__chamada" id="sair-chamada">Sair da partida</p>
+      <h2 class="compra__titulo" id="sair-titulo">Vai largar a mesa?</h2>
+      <p class="compra__saldo" id="sair-explica">Você não volta para esta partida. Seus terrenos voltam para o banco e você não ganha créditos.</p>
+      <div class="compra__acoes">
+        <button class="jogar__botao jogar__botao--pequeno moldura" type="button" id="sair-ficar">Continuar jogando</button>
+        <button class="jogar__botao jogar__botao--pequeno jogar__botao--perigo moldura" type="button" id="sair-confirmar">Sair da partida</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Fim de partida: o pódio, montado por js/modais/fim_de_partida.js. -->
+  <div class="cortina fim" id="modal-fim" hidden>
+    <div class="fim__confete" id="fim-confete" aria-hidden="true"></div>
+    <section class="fim__caixa moldura" role="dialog" aria-modal="true" aria-labelledby="fim-titulo">
+      <p class="fim__chamada" id="fim-chamada"></p>
+      <h2 class="fim__titulo" id="fim-titulo"></h2>
+      <div class="podio" id="fim-podio"></div>
+      <div class="fim__placar-rolagem">
+        <table class="fim__placar">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Jogador</th>
+              <th scope="col">Patrimônio</th>
+              <th scope="col">Arrecadado</th>
+              <th scope="col">Casas compradas</th>
+              <th scope="col">Ganho com aluguéis</th>
+            </tr>
+          </thead>
+          <tbody id="fim-placar"></tbody>
+        </table>
+      </div>
+      <p class="fim__recompensa" id="fim-recompensa" hidden></p>
+      <div class="fim__acoes">
+        <button class="jogar__botao jogar__botao--pequeno moldura" type="button" id="fim-tabuleiro">Ver o tabuleiro</button>
+        <button class="jogar__botao jogar__botao--pequeno moldura" type="button" id="fim-menu">Voltar ao menu</button>
+      </div>
     </section>
   </div>
 

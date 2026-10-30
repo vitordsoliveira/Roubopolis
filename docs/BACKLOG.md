@@ -43,25 +43,26 @@ no patrimônio, venceu ~120/400 quando ninguém comprava de outro jogador.
 ### 3. 🟢 Falência elimina o jogador?
 
 Decisão: quem não consegue pagar aluguel depois de vender propriedades ao banco
-é eliminado; os demais continuam. A duração padrão de 15 minutos limita o
-tempo de espectador.
+é eliminado; os demais continuam. A duração padrão (25 minutos desde
+2026-10-29) limita o tempo de espectador.
 
 ### 4. 🟢 Fim da partida no meio da rodada
 
-Decisão: a partida padrão dura 15 minutos. Quando o cronômetro zera, a rodada
+Decisão: a partida padrão dura 25 minutos (eram 15 até 2026-10-29). Quando o cronômetro zera, a rodada
 em andamento é concluída por todos os jogadores ativos; então vence quem tiver
 maior patrimônio (caixa + valor investido nas propriedades, isto é, tabela +
 melhorias). Empates compartilham a vitória. Implementado no motor em
 `engine/partida.py`.
 
-### 5. 🔴 Coringa pode tomar propriedade?
+### 5. 🟢 Coringa pode tomar propriedade?
 
-Percentual do caixa não elimina ninguém (não dá para ficar negativo), então o
-"talvez eu me ferre" ainda não existe de verdade. Para a ameaça ser real, a
-perda precisaria vender propriedade ao banco a 35% quando o caixa não cobrir
-— podendo quebrar o Bônus do Morro ou levar à falência.
+Decisão (2026-10-29), por enquanto: **não**. A perda da Coringa — e de toda
+casa de evento — para no caixa: o jogador fica com zero, sem liquidação nem
+falência. A Coringa voltou à tabela da especificação original (chance pela
+posição na mesa, ganho e perda fixos: R$ 1.000.000 e R$ 700.000).
 
-**Depende de:** item 3 (se falência elimina, isto fica bem mais pesado).
+Reabrir com partidas reais: o "talvez eu me ferre" só existe de verdade se a
+perda puder vender propriedade ao banco a 35% quando o caixa não cobrir.
 
 ---
 
@@ -81,25 +82,36 @@ simetria de −10%, que só vale se o duelo for 50/50.
 
 Também falta: **quem vence o empate nos dados?**
 
-### 8. 🔴 Leilão sem cooldown
+### 8. 🟢 Leilão sem cooldown
 
-O desafio tem limite de frequência, o leilão não. Como está, o jogador
-atrasado pode leiloar todo turno, e o respiro vira interrupção crônica.
+Decisão (2026-10-30): **um leilão por rodada por jogador**, aberto no começo
+da própria vez, antes de rolar. Como cada um joga uma vez por rodada, é no
+máximo um por vez — e só enquanto o jogador continuar abaixo de 60% da média.
+Para espaçar mais, `leilao.rodadas_entre_leiloes` no balanceamento.
 
-### 9. 🔴 Casa do Prejuízo quando quem pisa é o líder
+### 9. 🟢 Casa do Prejuízo quando quem pisa é o líder
 
-Ele se pune a si mesmo?
+Decisão (2026-10-29): **sim, ele se pune**. A regra fala do maior patrimônio da
+mesa, e é ele mesmo quem escolhe qual propriedade média ou barata perde.
+Empate no patrimônio: o primeiro na ordem de jogada.
 
-### 10. 🔴 Casa Portal pode entrar em laço
+### 10. 🟢 Casa Portal pode entrar em laço
 
-Teleporta e continua os passos restantes — pode cair em outro portal, e
-outro. Falta um limite.
+Decisão (2026-10-29): **um teleporte por jogada**. O peão que pisa de novo
+num portal só passa.
+
+E o portal, por padrão, só vale para quem **para** nele
+(`portal.dispara_ao_passar = false`). Valendo para quem passa — a regra ao pé
+da letra —, em 200 partidas simuladas (4 jogadores, 15 rodadas) foram 14
+teleportes por partida, o salário do Início caiu de 7,7 para 3,6 por partida
+e a Casa Coringa, logo depois do portal, quase não foi visitada (0,3 contra
+1,3). A versão ao pé da letra está pronta: é trocar para `true`.
 
 ---
 
 ## A economia do jogo — medir antes de rebalancear
 
-A duração padrão agora é **15 minutos**, com turnos limitados a **30 segundos**;
+A duração padrão agora é **25 minutos**, com turnos limitados a **30 segundos**;
 ao zerar o cronômetro, os jogadores concluem a rodada atual e vence o maior
 patrimônio. A estimativa anterior de 15–22 turnos por pessoa pressupunha turnos
 de 15 segundos e não era uma medição. Como decisões de compra e liquidação têm

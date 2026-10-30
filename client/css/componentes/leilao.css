@@ -1,0 +1,347 @@
+/* Leilão: a janela do leilão em andamento e a do resultado.
+
+   As duas herdam a moldura e a chamada verde da compra (compra.css); por
+   dentro, o desenho do wireframe — o terreno numa faixa, o lance e o
+   relógio lado a lado, o lance montado com − e +, o histórico e o aviso do
+   imposto em âmbar. */
+
+.leilao {
+  width: min(620px, 100%);
+  text-align: left;
+  font-family: var(--fonte-hud);
+}
+
+.leilao__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.leilao__topo .compra__chamada {
+  margin: 0;
+}
+
+.leilao__esconder {
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: var(--branco);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.leilao__esconder:hover,
+.leilao__esconder:focus-visible {
+  border-color: var(--amarelo);
+  color: var(--amarelo);
+}
+
+/* --- o terreno, as placas e o relógio ------------------------------------ */
+
+.leilao__terreno,
+.leilao__placa {
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.leilao__terreno {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.leilao__nome {
+  color: var(--amarelo);
+  font-family: var(--fonte-pixel);
+  font-size: clamp(1rem, 2.4vh, 1.3rem);
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 #704d00;
+}
+
+.leilao__detalhe {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.95rem;
+}
+
+.leilao__grupo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.leilao__grupo::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: var(--cor, #9b3dff);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.leilao__placas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.leilao__placa {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.leilao__rotulo {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+}
+
+.leilao__valor {
+  color: var(--branco);
+  font-size: clamp(1.3rem, 3.4vh, 1.8rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.leilao__nota {
+  color: #8fc7ff;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.leilao__nota--eu {
+  color: var(--verde-neon);
+}
+
+.leilao__barra {
+  height: 8px;
+  margin-top: 4px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.leilao__barra span {
+  display: block;
+  width: calc(var(--resta, 1) * 100%);
+  height: 100%;
+  background: var(--amarelo);
+}
+
+.leilao__barra--fim span {
+  background: #ff4a4a;
+}
+
+/* --- o lance: − valor + e o botão ----------------------------------------- */
+
+.leilao__lance {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 8px;
+}
+
+.leilao__passo {
+  --moldura-borda: #9b3dff;
+  --moldura-fundo: #120726;
+  width: 48px;
+  min-height: 48px;
+  color: var(--amarelo);
+  font-family: var(--fonte-pixel);
+  font-size: 1.5rem;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.leilao__campo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--branco);
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.leilao__dar {
+  min-width: 0;
+  height: auto;
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: round(clamp(0.85rem, 2vh, 1.15rem), 1px);
+  text-shadow: 0 2px 0 #5c4100;
+}
+
+.leilao__passo:disabled,
+.leilao__dar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.leilao__situacao {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.95rem;
+}
+
+/* --- histórico e imposto --------------------------------------------------- */
+
+.leilao__subtitulo {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.leilao__historico {
+  display: grid;
+  gap: 4px;
+  max-height: min(15vh, 128px);
+  margin-top: 6px;
+  overflow: auto;
+  list-style: none;
+}
+
+.leilao__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.leilao__item--lider {
+  color: var(--branco);
+  font-weight: 800;
+}
+
+.leilao__item--lider strong {
+  color: var(--amarelo);
+}
+
+.leilao__vazio {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.leilao__imposto {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 2px solid rgba(255, 190, 60, 0.45);
+  background: rgba(255, 170, 0, 0.12);
+  color: #ffcf6b;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+/* --- o resultado ------------------------------------------------------------ */
+
+.leilao-fim__selo {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 10px;
+  border: 3px solid var(--verde-neon);
+  border-radius: 50%;
+  background: #12360e;
+  box-shadow: 0 0 22px rgba(57, 255, 20, 0.35);
+  animation: leilao-selo 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.leilao-fim__selo .icone-pixel {
+  height: 40px;
+  width: auto;
+}
+
+.leilao-fim__titulo {
+  color: var(--amarelo);
+  font-family: var(--fonte-pixel);
+  font-size: clamp(1.2rem, 3vh, 1.6rem);
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 3px 0 #704d00;
+}
+
+.leilao-fim__quem {
+  margin: 4px 0 12px;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+}
+
+.leilao__placa--verde {
+  border-color: rgba(57, 255, 20, 0.5);
+  background: rgba(57, 255, 20, 0.1);
+}
+
+.leilao__placa--verde .leilao__valor { color: var(--verde-neon); }
+
+.leilao__placa--vermelha {
+  border-color: rgba(255, 107, 107, 0.6);
+  background: rgba(255, 74, 74, 0.1);
+}
+
+.leilao__placa--vermelha .leilao__valor { color: #ff6b6b; }
+
+.leilao__placa--ambar {
+  border-color: rgba(255, 190, 60, 0.5);
+  background: rgba(255, 170, 0, 0.12);
+}
+
+.leilao__placa--ambar .leilao__valor { color: #ffcf6b; }
+
+.leilao-fim__cofre {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.leilao-fim__cofre strong {
+  color: var(--branco);
+}
+
+.leilao-fim .compra__acoes {
+  margin-top: 16px;
+}
+
+@keyframes leilao-selo {
+  from { transform: scale(0.3) rotate(-30deg); opacity: 0; }
+}
+
+/* --- o botão embaixo do JOGAR ----------------------------------------------- */
+
+.jogar__extra--leilao {
+  --moldura-borda: var(--verde-neon);
+  --moldura-fundo: #0e2408;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8vh;
+  color: var(--verde-neon);
+}
+
+.jogar__extra--leilao .icone-pixel {
+  height: 2.4vh;
+  width: auto;
+}
+
+@media (max-width: 560px) {
+  .leilao__placas { grid-template-columns: 1fr; }
+  .leilao__lance { grid-template-columns: auto 1fr auto; }
+  .leilao__dar { grid-column: 1 / -1; }
+}

@@ -1,0 +1,286 @@
+/* As casas de evento na tela: a janela de decisão (Coringa, Reconstrução,
+   Prejuízo, Bônus do banco) e a janela que conta o que aconteceu.
+
+   A janela herda a moldura e os botões da compra (compra.css): para quem
+   joga, decidir uma casa de evento tem a mesma cara de decidir uma compra. */
+
+/* --- janela de decisão --------------------------------------------------- */
+
+.decisao {
+  width: min(640px, 100%);
+}
+
+.decisao__corpo {
+  display: grid;
+  gap: 12px;
+  font-family: var(--fonte-hud);
+}
+
+.decisao__texto {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+  line-height: 1.4;
+}
+
+.decisao__opcoes:not([hidden]) {
+  margin-top: 16px;
+}
+
+.decisao__opcao {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+
+.decisao__opcao strong {
+  color: var(--branco);
+  font-size: 1rem;
+}
+
+.decisao__opcao span {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #c5ffb9;
+}
+
+.decisao__opcao:disabled {
+  cursor: not-allowed;
+}
+
+/* --- Coringa: a chance e os dois futuros, lado a lado ----------------------- */
+
+.chance {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 6px;
+  text-align: left;
+}
+
+.chance__valor {
+  grid-row: span 2;
+  color: var(--amarelo);
+  font-family: var(--fonte-pixel);
+  font-size: clamp(1.8rem, 5vh, 2.6rem);
+  line-height: 1;
+  text-shadow: 0 3px 0 #704d00;
+}
+
+.chance__rotulo {
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.chance__barra {
+  height: 12px;
+  background: linear-gradient(90deg, var(--verde-neon) var(--chance, 50%), #5a1626 var(--chance, 50%));
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.45);
+}
+
+.futuros {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.futuro {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 2px solid;
+  text-align: center;
+}
+
+.futuro--ganhar {
+  border-color: var(--verde-neon);
+  background: rgba(57, 255, 20, 0.08);
+}
+
+.futuro--perder {
+  border-color: #ff4a4a;
+  background: rgba(255, 74, 74, 0.09);
+}
+
+.futuro__rotulo {
+  font-family: var(--fonte-pixel);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.futuro__valor {
+  font-size: clamp(1.2rem, 3.2vh, 1.6rem);
+  font-weight: 800;
+}
+
+.futuro--ganhar .futuro__valor { color: var(--verde-neon); }
+.futuro--perder .futuro__valor { color: #ff6b6b; }
+
+.futuro__depois {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* --- a janela do que aconteceu (js/ui/anuncios.js) ----------------------------
+
+   Casa de evento ou evento temático: o selo com o desenho, a frase de
+   sátira, o que mudou na mesa e a barra do tempo até fechar sozinha. Fica
+   abaixo das janelas de decisão (compra, leilão...): elas têm prazo, esta
+   só conta. A cor da borda diz se a notícia é boa, ruim ou da vila inteira. */
+
+/* O fundo escurece mas deixa o clique passar: o relógio da vez não para
+   enquanto a janela conta a novidade, e quem tem a vez joga sem esperar. */
+.evento-cortina {
+  z-index: 78;
+  pointer-events: none;
+}
+
+.evento-janela {
+  --tom: #9b3dff;
+  --moldura-borda: var(--tom);
+  width: min(560px, 100%);
+  font-family: var(--fonte-hud);
+  pointer-events: auto;
+}
+
+.evento-janela--bom { --tom: var(--verde-neon); }
+.evento-janela--ruim { --tom: #ff4a4a; }
+
+/* Evento temático: dourado, o da vila inteira. */
+.evento-janela--evento {
+  --tom: var(--amarelo);
+  --moldura-fundo: #22100a;
+}
+
+.evento-janela__selo {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 12px;
+  border: 3px solid var(--tom);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 20px -6px var(--tom);
+  animation: evento-selo-entra 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+.evento-janela__selo .icone-pixel {
+  width: auto;
+  height: 46px;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.45));
+}
+
+.evento-janela--evento .evento-janela__selo .icone-pixel { animation: evento-balanca 0.5s ease-in-out infinite alternate; }
+
+/* A Coringa decidindo: o "?" gira enquanto o tambor rufa. */
+.evento-janela--suspense .evento-janela__selo .icone-pixel { animation: evento-gira 0.35s linear infinite; }
+
+.evento-janela__chamada {
+  color: var(--tom);
+}
+
+.evento-janela--neutro .evento-janela__chamada,
+.evento-janela--suspense .evento-janela__chamada {
+  color: var(--verde-neon);
+}
+
+.evento-janela__titulo {
+  color: var(--amarelo);
+  font-family: var(--fonte-pixel);
+  font-size: clamp(1.3rem, 3.6vh, 2rem);
+  line-height: 1.25;
+  text-transform: uppercase;
+  text-shadow: 0 3px 0 #704d00;
+}
+
+.evento-janela__frase {
+  margin: 12px auto 0;
+  max-width: 44ch;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: clamp(1rem, 2.2vh, 1.15rem);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.evento-janela__texto {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--branco);
+  font-size: clamp(0.95rem, 2vh, 1.05rem);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.evento-janela__nota {
+  margin-top: 8px;
+  color: #ffcf6b;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.evento-janela__barra {
+  height: 6px;
+  margin-top: 14px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.evento-janela__barra span {
+  display: block;
+  height: 100%;
+  background: var(--tom);
+  transform-origin: left;
+}
+
+.evento-janela .compra__acoes {
+  margin-top: 14px;
+}
+
+@keyframes evento-selo-entra {
+  from { transform: scale(0.3) rotate(-30deg); opacity: 0; }
+}
+
+@keyframes evento-balanca {
+  from { transform: rotate(-8deg); }
+  to   { transform: rotate(8deg) scale(1.08); }
+}
+
+@keyframes evento-gira {
+  to { transform: rotateY(360deg); }
+}
+
+/* --- sair da partida ------------------------------------------------------------
+
+   A mesma moldura das outras janelas da partida; só a chamada fica rosa,
+   como o Sair do menu de opções — é a única escolha da mesa sem volta. */
+
+.sair-partida {
+  width: min(540px, 100%);
+}
+
+.sair-partida__chamada {
+  color: var(--rosa);
+}
+
+/* --- o peão atravessando o portal -------------------------------------------- */
+
+.peao--portal .peao__pino {
+  animation: peao-portal var(--ms-portal, 520ms) ease-in forwards;
+}
+
+.peao--saindo-do-portal .peao__pino {
+  animation: peao-portal var(--ms-portal, 520ms) ease-out reverse;
+}
+
+@keyframes peao-portal {
+  0%   { transform: scale(1) rotate(0); filter: none; opacity: 1; }
+  100% { transform: scale(0.1) rotate(540deg); filter: brightness(3) hue-rotate(160deg); opacity: 0; }
+}
+
+@media (max-width: 620px) {
+  .futuros { grid-template-columns: 1fr; }
+}

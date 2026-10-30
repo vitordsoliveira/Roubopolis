@@ -1,4 +1,4 @@
-"""Motor da partida: sorteio, rolagem, movimento e compra básica.
+"""Motor da partida: sorteio, rolagem, movimento, compra e casas de evento.
 
 Regras deste arquivo:
 
@@ -12,9 +12,11 @@ Regras deste arquivo:
 O jogador pode comprar um terreno livre onde parou ou, ao cair numa propriedade
 de outro jogador, comprá-la dele pelo valor investido (tabela + melhorias) ou
 pagar aluguel. Ao cair na própria casa, o dono pode subir um nível, e quem
-passa pelo Início recebe salário. Todos os valores vêm do perfil de
-balanceamento. Os demais efeitos das casas de evento ainda não fazem parte
-desta etapa.
+passa pelo Início recebe salário. As casas de evento (Ganho, Roubo, Coletor,
+Portal, Prisão, Reconstrução, Prejuízo e Coringa), os eventos temáticos,
+sorteados no começo das rodadas, o bônus do Morro e o leilão também moram
+aqui. Todos os valores vêm do perfil de balanceamento. O desafio ainda não
+faz parte do motor.
 """
 
 from __future__ import annotations
@@ -23,11 +25,11 @@ import copy
 import time
 
 from engine.board.tabuleiro import carregar_tabuleiro
-from engine.regras.balanceamento import carregar_balanceamento
+from engine.regras.balanceamento import carregar_balanceamento, grupo_do_morro, multiplicador_do_morro
 from engine.rng.gerador import Gerador
 
-#: v8: melhoria decidida ao cair na própria casa (`melhoria_pendente`).
-VERSAO_DO_ESTADO = 8
+#: v10: leilão (e quem já leiloou em que rodada).
+VERSAO_DO_ESTADO = 10
 
 FASE_SORTEIO = "sorteio_ordem"
 FASE_ROLAR = "aguardando_rolagem"
@@ -35,7 +37,35 @@ FASE_COMPRA = "decidindo_compra"
 FASE_COMPRA_JOGADOR = "decidindo_compra_jogador"
 FASE_LIQUIDACAO_ALUGUEL = "liquidando_para_aluguel"
 FASE_MELHORIA = "decidindo_melhoria"
+FASE_CORINGA = "decidindo_coringa"
+FASE_RECONSTRUCAO = "decidindo_reconstrucao"
+FASE_PREJUIZO = "escolhendo_prejuizo"
+FASE_BONUS_BANCO = "decidindo_bonus_banco"
+FASE_LEILAO = "leiloando"
 FASE_FIM = "encerrada"
+
+#: Decisões em aberto. Passar a vez limpa todas: nenhuma sobrevive ao turno.
+PENDENCIAS = (
+    "compra_pendente",
+    "aluguel_pendente",
+    "melhoria_pendente",
+    "coringa_pendente",
+    "reconstrucao_pendente",
+    "prejuizo_pendente",
+    "leilao",
+)
+
+#: O que o placar do fim de partida conta de cada jogador.
+PLACAR_VAZIO = {"arrecadado": 0, "aluguel_recebido": 0, "aluguel_pago": 0, "compras": 0, "melhorias": 0}
+
+#: Os eventos temáticos, na ordem das regras, com o nome que a mesa lê.
+EVENTOS_TEMATICOS = {
+    "colheita_ruim": "A colheita foi ruim",
+    "baile_na_vila": "Baile na vila",
+    "final_de_ano": "Evento de final de ano",
+    "presidente": "O Presidente passou aqui",
+    "bonus_do_banco": "Bônus do banco",
+}
 
 
 class ErroDeRegra(Exception):
@@ -55,6 +85,14 @@ def _reais(valor: float) -> str:
     return "R$ " + f"{int(round(valor)):,}".replace(",", ".")
 
 
+def _porcento(fracao: float) -> str:
+    return f"{round(fracao * 100)}%"
+
+
+def _vezes(multiplicador: float) -> str:
+    return f"{multiplicador:.1f}".replace(".", ",") + "×"
+
+
 def _gerador(estado: dict) -> Gerador:
     return Gerador(estado["semente"], estado.get("consumidos", 0))
 
@@ -64,7 +102,10 @@ def _guardar_gerador(estado: dict, gerador: Gerador) -> None:
 
 
 def _log(estado: dict, tipo: str, texto: str, jogador_id: int | None = None) -> None:
-    estado["log"].append({"tipo": tipo, "texto": texto, "jogador_id": jogador_id})
+    # O número de cada linha é o que deixa a tela saber o que é novidade: o
+    # log chega cortado, então contar linhas não serve.
+    estado["log_n"] = estado.get("log_n", 0) + 1
+    estado["log"].append({"n": estado["log_n"], "tipo": tipo, "texto": texto, "jogador_id": jogador_id})
     # O log só serve para a tela contar o que aconteceu; manter os últimos
     # basta e evita o estado crescer sem limite dentro do banco.
     del estado["log"][:-80]
@@ -86,6 +127,36 @@ def _exigir_vez(estado: dict, jogador_id: int) -> dict:
     if _jogador_da_vez(estado)["jogador_id"] != jogador_id:
         raise ErroDeRegra(f"Não é sua vez — quem joga é {_jogador_da_vez(estado)['nome']}.", http=409)
     return jogador
+
+
+def _vivos(estado: dict) -> list[dict]:
+    return [j for j in estado["jogadores"] if not j["falido"]]
+
+
+def _placar(jogador: dict) -> dict:
+    return jogador.setdefault("placar", dict(PLACAR_VAZIO))
+
+
+def _creditar(jogador: dict, valor: int, *, aluguel: bool = False) -> None:
+    """Toda entrada de dinheiro passa por aqui: é o que o placar do fim de
+    partida conta como arrecadado."""
+    valor = int(valor)
+    jogador["caixa"] += valor
+    placar = _placar(jogador)
+    placar["arrecadado"] += valor
+    if aluguel:
+        placar["aluguel_recebido"] += valor
+
+
+def _debitar_ate_o_caixa(jogador: dict, valor: int) -> int:
+    """Tira até `valor` do caixa, sem deixar negativo, e devolve quanto saiu.
+
+    Casas e eventos que tiram dinheiro (Roubo, Coringa, colheita) param no
+    que há em caixa: não abrem liquidação nem levam à falência. Só dívida
+    com outro jogador — o aluguel — faz isso."""
+    tirado = max(0, min(int(valor), jogador["caixa"]))
+    jogador["caixa"] -= tirado
+    return tirado
 
 
 def _definir_prazo(estado: dict, agora: float | None = None) -> None:
@@ -123,8 +194,43 @@ def _patrimonio(estado: dict, jogador: dict) -> int:
     return int(jogador["caixa"] + valor_propriedades)
 
 
+def _media_patrimonio(estado: dict) -> float:
+    vivos = _vivos(estado)
+    if not vivos:
+        return 0.0
+    return sum(_patrimonio(estado, j) for j in vivos) / len(vivos)
+
+
+def _classificar(estado: dict) -> list[dict]:
+    """A ordem do pódio: quem ficou de pé por patrimônio, depois quem saiu —
+    quem saiu por último fica na frente. Patrimônio igual divide a posição."""
+    ativos = sorted(_vivos(estado), key=lambda j: -_patrimonio(estado, j))
+    fora = sorted(
+        (j for j in estado["jogadores"] if j["falido"]),
+        key=lambda j: -(j.get("saiu_em") or 0),
+    )
+    classificacao: list[dict] = []
+    for i, jogador in enumerate(ativos):
+        patrimonio = _patrimonio(estado, jogador)
+        empatado = classificacao and classificacao[-1]["patrimonio"] == patrimonio
+        classificacao.append({
+            "jogador_id": jogador["jogador_id"],
+            "posicao": classificacao[-1]["posicao"] if empatado else i + 1,
+            "patrimonio": patrimonio,
+            "fora": False,
+        })
+    for k, jogador in enumerate(fora):
+        classificacao.append({
+            "jogador_id": jogador["jogador_id"],
+            "posicao": len(ativos) + k + 1,
+            "patrimonio": 0,
+            "fora": True,
+        })
+    return classificacao
+
+
 def _encerrar_partida(estado: dict, motivo: str) -> dict:
-    ativos = [j for j in estado["jogadores"] if not j["falido"]]
+    ativos = _vivos(estado)
     patrimonios = {str(j["jogador_id"]): _patrimonio(estado, j) for j in ativos}
     maior = max(patrimonios.values(), default=None)
     vencedores = [int(jogador_id) for jogador_id, valor in patrimonios.items() if valor == maior]
@@ -135,6 +241,9 @@ def _encerrar_partida(estado: dict, motivo: str) -> dict:
     estado["motivo_fim"] = motivo
     estado["patrimonios_finais"] = patrimonios
     estado["vencedores"] = vencedores
+    estado["evento"] = None
+    for chave in PENDENCIAS:
+        estado[chave] = None
     if motivo == "tempo":
         if len(vencedores) == 1:
             vencedor = next(j for j in ativos if j["jogador_id"] == vencedores[0])
@@ -152,14 +261,67 @@ def _encerrar_partida(estado: dict, motivo: str) -> dict:
             _log(estado, "fim", f"{vencedor['nome']} ficou de pé sozinho.", vencedor["jogador_id"])
         else:
             _log(estado, "fim", "A partida acabou sem jogadores ativos.")
+    estado["classificacao"] = _classificar(estado)
     return estado
 
 
+def _evento_ativo(estado: dict) -> dict | None:
+    """O evento temático vale só na rodada em que foi sorteado."""
+    evento = estado.get("evento")
+    if evento and evento.get("rodada") == estado.get("rodada"):
+        return evento
+    return None
+
+
+def _config_evento(estado: dict, tipo: str) -> dict:
+    return carregar_balanceamento(estado["perfil"]).get("eventos", {}).get(tipo, {})
+
+
+def _bonus_do_morro(estado: dict, casa, dono_id: int | None) -> tuple[float, int]:
+    """Multiplicador do aluguel de uma casa do Morro, e quantas o dono tem.
+
+    O Morro são as casas de favela: o grupo de `morro.grupo` no
+    balanceamento (o barato). Quanto mais delas o mesmo dono junta, mais caro
+    fica o aluguel de TODAS — 2 casas 1,2×, 3 casas 1,4×... De 5 para cima
+    vale a última faixa da tabela. Fora do Morro, (1.0, 0).
+    """
+    bal = carregar_balanceamento(estado["perfil"])
+    if dono_id is None or not casa.grupo or casa.grupo != grupo_do_morro(bal):
+        return 1.0, 0
+    tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
+    quantidade = sum(
+        1
+        for indice, propriedade in estado["propriedades"].items()
+        if propriedade["dono"] == dono_id and tabuleiro.casa(int(indice)).grupo == casa.grupo
+    )
+    return multiplicador_do_morro(bal, quantidade), quantidade
+
+
+def _avisar_morro(estado: dict, jogador: dict, casa) -> None:
+    """Conta à mesa quando a compra de uma casa do Morro liga ou aumenta o
+    bônus de quem comprou."""
+    multiplicador, quantidade = _bonus_do_morro(estado, casa, jogador["jogador_id"])
+    if multiplicador > 1:
+        _log(
+            estado,
+            "morro",
+            f"{jogador['nome']} tem {quantidade} casas do Morro: o aluguel de todas elas é multiplicado por {_vezes(multiplicador)}.",
+            jogador["jogador_id"],
+        )
+
+
 def _valor_aluguel(estado: dict, casa, propriedade: dict) -> int:
-    """Aluguel-base sobre a tabela, mais um acréscimo linear por nível de melhoria."""
+    """Aluguel-base sobre a tabela, mais um acréscimo linear por nível de
+    melhoria, vezes o bônus do Morro. No evento de final de ano, a rodada
+    inteira paga mais."""
     aluguel = carregar_balanceamento(estado["perfil"])["aluguel"]
     nivel = max(0, int(propriedade.get("nivel", 0)))
-    return int(round(casa.preco * aluguel["base"] * (1 + aluguel["por_nivel_de_upgrade"] * nivel)))
+    valor = casa.preco * aluguel["base"] * (1 + aluguel["por_nivel_de_upgrade"] * nivel)
+    valor *= _bonus_do_morro(estado, casa, propriedade.get("dono"))[0]
+    evento = _evento_ativo(estado)
+    if evento and evento["tipo"] == "final_de_ano":
+        valor *= 1 + float(_config_evento(estado, "final_de_ano").get("aluguel_extra", 0))
+    return int(round(valor))
 
 
 def _valor_upgrade(estado: dict, casa) -> int:
@@ -245,6 +407,7 @@ def decidir_melhoria(estado: dict, jogador_id: int, melhorar: bool) -> dict:
             raise ErroDeRegra(f"Você precisa de {_reais(pendente['custo'])} para essa melhoria.", http=409)
         jogador["caixa"] -= pendente["custo"]
         propriedade["nivel"] = pendente["nivel"] + 1
+        _placar(jogador)["melhorias"] += 1
         _log(
             estado,
             "melhoria",
@@ -254,7 +417,7 @@ def decidir_melhoria(estado: dict, jogador_id: int, melhorar: bool) -> dict:
     else:
         _log(estado, "melhoria", f"{jogador['nome']} deixou {casa.nome} como está.", jogador_id)
 
-    return passar_turno(estado)
+    return _concluir_jogada(estado, jogador)
 
 
 def _valor_venda_banco(estado: dict, casa, propriedade: dict) -> int:
@@ -266,7 +429,8 @@ def _valor_venda_banco(estado: dict, casa, propriedade: dict) -> int:
 def _cobrar_aluguel(estado: dict, pagador: dict, dono: dict, casa, propriedade: dict) -> int:
     aluguel = _valor_aluguel(estado, casa, propriedade)
     pagador["caixa"] -= aluguel
-    dono["caixa"] += aluguel
+    _placar(pagador)["aluguel_pago"] += aluguel
+    _creditar(dono, aluguel, aluguel=True)
     _log(
         estado,
         "aluguel",
@@ -284,22 +448,39 @@ def _propriedades_de(estado: dict, jogador_id: int) -> list[tuple[int, dict]]:
     ]
 
 
+def _devolver_ao_banco(estado: dict, jogador_id: int) -> int:
+    """Tira do jogador tudo o que é dele no tabuleiro. Devolve quantas eram."""
+    devolvidas = [indice for indice, prop in estado["propriedades"].items() if prop["dono"] == jogador_id]
+    for indice in devolvidas:
+        del estado["propriedades"][indice]
+    return len(devolvidas)
+
+
+def _tirar_da_mesa(estado: dict, jogador: dict) -> None:
+    """Marca quem saiu (falência ou abandono) e em que ordem: o pódio põe na
+    frente quem durou mais."""
+    jogador["falido"] = True
+    jogador["preso"] = 0
+    estado["saidas"] = estado.get("saidas", 0) + 1
+    jogador["saiu_em"] = estado["saidas"]
+
+
 def _falir(estado: dict, jogador: dict, credor: dict, divida: int) -> dict:
     """Aplica o caixa restante à dívida, devolve os imóveis ao banco e elimina."""
     pagamento_parcial = min(max(0, jogador["caixa"]), divida)
     jogador["caixa"] -= pagamento_parcial
-    credor["caixa"] += pagamento_parcial
-    devolvidas = [indice for indice, prop in estado["propriedades"].items() if prop["dono"] == jogador["jogador_id"]]
-    for indice in devolvidas:
-        del estado["propriedades"][indice]
-    jogador["falido"] = True
+    _placar(jogador)["aluguel_pago"] += pagamento_parcial
+    if pagamento_parcial:
+        _creditar(credor, pagamento_parcial, aluguel=True)
+    devolvidas = _devolver_ao_banco(estado, jogador["jogador_id"])
+    _tirar_da_mesa(estado, jogador)
     estado["aluguel_pendente"] = None
     estado["compra_pendente"] = None
     _log(
         estado,
         "falencia",
         f"{jogador['nome']} faliu sem conseguir pagar {_reais(divida)} de aluguel a {credor['nome']}. "
-        f"Pagamento parcial: {_reais(pagamento_parcial)}; {len(devolvidas)} propriedade(s) voltou(aram) ao banco.",
+        f"Pagamento parcial: {_reais(pagamento_parcial)}; {devolvidas} propriedade(s) voltou(aram) ao banco.",
         jogador["jogador_id"],
     )
     return passar_turno(estado)
@@ -340,6 +521,11 @@ def _encerrar_liquidacao(estado: dict) -> dict:
     pendente = estado["aluguel_pendente"]
     pagador = _jogador_por_id(estado, pendente["jogador_id"])
     dono = _jogador_por_id(estado, pendente["dono_id"])
+    if dono["falido"]:
+        # O credor saiu da mesa no meio da cobrança: não há a quem pagar.
+        _log(estado, "liquidacao", f"{dono['nome']} saiu da partida e a dívida de {pagador['nome']} foi perdoada.", pagador["jogador_id"])
+        estado["aluguel_pendente"] = None
+        return _concluir_jogada(estado, pagador)
     if pagador["caixa"] >= pendente["divida"]:
         casa = carregar_tabuleiro(estado["tabuleiro"]).casa(pendente["casa"])
         propriedade = estado["propriedades"].get(str(pendente["casa"]))
@@ -347,7 +533,7 @@ def _encerrar_liquidacao(estado: dict) -> dict:
             raise ErroDeRegra("O dono desta propriedade mudou durante a liquidação.", http=409)
         _cobrar_aluguel(estado, pagador, dono, casa, propriedade)
         estado["aluguel_pendente"] = None
-        return passar_turno(estado)
+        return _concluir_jogada(estado, pagador)
 
     if not _propriedades_de(estado, pagador["jogador_id"]):
         return _falir(estado, pagador, dono, pendente["divida"])
@@ -376,7 +562,7 @@ def vender_propriedade_para_aluguel(estado: dict, jogador_id: int, casa_indice: 
         raise ErroDeRegra("Essa casa não pode ser vendida ao banco.")
 
     valor = _valor_venda_banco(estado, casa, propriedade)
-    jogador["caixa"] += valor
+    _creditar(jogador, valor)
     del estado["propriedades"][indice]
     _log(estado, "venda", f"{jogador['nome']} vendeu {casa.nome} ao banco por {_reais(valor)} para pagar aluguel.", jogador_id)
     return _encerrar_liquidacao(estado)
@@ -450,6 +636,34 @@ def _atualizar(estado: dict) -> dict:
     if versao < 8:
         estado.setdefault("melhoria_pendente", None)
 
+    if versao < 9:
+        # Mesa que começou sem as casas de evento: o Coletor nasce vazio e o
+        # placar conta só daqui para a frente.
+        for chave in PENDENCIAS:
+            estado.setdefault(chave, None)
+        estado.setdefault("coletor", 0)
+        estado.setdefault("evento", None)
+        estado.setdefault("ultimo_coringa", None)
+        estado.setdefault("classificacao", [])
+        estado.setdefault("saidas", 0)
+        estado.setdefault("log_n", 0)
+        for jogador in estado["jogadores"]:
+            jogador.setdefault("preso", 0)
+            jogador.setdefault("reincidente", False)
+            jogador.setdefault("placar", dict(PLACAR_VAZIO))
+            jogador.setdefault("abandonou", False)
+            jogador.setdefault("saiu_em", None)
+            jogador.setdefault("visual", None)
+        if estado.get("fase") == FASE_FIM and not estado["classificacao"]:
+            estado["classificacao"] = _classificar(estado)
+
+    if versao < 10:
+        # Mesa que começou antes do leilão: ninguém leiloou ainda.
+        estado.setdefault("leilao", None)
+        estado.setdefault("ultimo_leilao", None)
+        for jogador in estado["jogadores"]:
+            jogador.setdefault("leiloou_na_rodada", None)
+
     estado["versao"] = VERSAO_DO_ESTADO
     if estava_comprando:
         # Quem decidia a compra já tinha andado: a vez segue adiante.
@@ -467,7 +681,8 @@ def criar_partida(
     tabuleiro: str = "vila_original",
     perfil: str = "padrao",
 ) -> dict:
-    """`jogadores` vem do lobby: jogador_id, nome e personagem.
+    """`jogadores` vem do lobby: jogador_id, nome, personagem e o visual
+    (dado e casa) que cada um equipou na loja.
 
     A ordem de jogada ainda NÃO está definida aqui — a partida nasce na fase
     de sorteio, e é o dado que decide quem começa.
@@ -493,6 +708,7 @@ def criar_partida(
         "motivo_fim": None,
         "vencedores": [],
         "patrimonios_finais": {},
+        "classificacao": [],
         "fase": FASE_SORTEIO,
         "rodada": 1,
         "vez": 0,
@@ -501,20 +717,34 @@ def criar_partida(
                 "jogador_id": j["jogador_id"],
                 "nome": j["nome"],
                 "personagem": j.get("personagem"),
+                "visual": j.get("visual"),
                 "caixa": caixa,
                 "posicao": indice_inicial,
                 "falido": False,
+                "abandonou": False,
+                "saiu_em": None,
+                "preso": 0,
+                "reincidente": False,
+                "placar": dict(PLACAR_VAZIO),
+                "leiloou_na_rodada": None,
             }
             for j in jogadores
         ],
         "sorteio": [],
         "propriedades": {},
-        "compra_pendente": None,
-        "aluguel_pendente": None,
-        "melhoria_pendente": None,
+        **{chave: None for chave in PENDENCIAS},
+        #: O que os impostos da partida juntaram. Quem pisa no Coletor leva.
+        "coletor": 0,
+        #: Evento temático da rodada (ver `_iniciar_rodada`).
+        "evento": None,
+        "ultimo_coringa": None,
+        #: O último leilão que fechou, para a tela mostrar o resultado.
+        "ultimo_leilao": None,
+        "saidas": 0,
         #: Contador de rolagens. A tela usa para saber o que já encenou.
         "lances": 0,
         "ultimo_movimento": None,
+        "log_n": 0,
         "log": [],
     }
 
@@ -617,6 +847,28 @@ def sortear_ordem(estado: dict) -> dict:
 # 2. rolar e andar
 # --------------------------------------------------------------------------
 
+def _percorrer(estado: dict, tabuleiro, de: int, passos: int, gerador: Gerador):
+    """Anda casa por casa e devolve (destino, portal, deu_a_volta).
+
+    A Casa Portal teleporta o peão para uma casa sorteada, de onde ele anda o
+    que faltava. Um teleporte por jogada: é o limite que impede o laço de
+    portal em portal (BACKLOG, item 10). Com `portal.dispara_ao_passar`
+    desligado no balanceamento — o padrão, ver o `_por_que` de lá —, o portal
+    só vale para quem PARA nele, e aí não sobra passo para andar.
+    """
+    ao_passar = bool(carregar_balanceamento(estado["perfil"]).get("portal", {}).get("dispara_ao_passar", False))
+    for andados in range(1, passos + 1):
+        casa = tabuleiro.casa(tabuleiro.avancar(de, andados))
+        if casa.tipo != "portal" or (andados < passos and not ao_passar):
+            continue
+        destino = gerador.escolher([c.indice for c in tabuleiro.casas if c.tipo != "portal"])
+        restante = passos - andados
+        volta = tabuleiro.passou_pelo_inicio(de, andados) or tabuleiro.passou_pelo_inicio(destino, restante)
+        portal = {"casa": casa.indice, "apos": andados, "destino": destino}
+        return tabuleiro.avancar(destino, restante), portal, volta
+    return tabuleiro.avancar(de, passos), None, tabuleiro.passou_pelo_inicio(de, passos)
+
+
 def rolar(estado: dict, jogador_id: int) -> dict:
     estado = atualizar_tempo(estado)
     if estado["fase"] != FASE_ROLAR:
@@ -631,10 +883,13 @@ def rolar(estado: dict, jogador_id: int) -> dict:
 
     dados = gerador.dados(bal["dados"]["quantidade"], bal["dados"]["faces"])
     passos = sum(dados)
+    de = jogador["posicao"]
+    para, portal, deu_a_volta = _percorrer(estado, tabuleiro, de, passos, gerador)
+    casa = tabuleiro.casa(para)
+    casas = bal.get("casas", {})
+    caiu_no_easter_egg = bool(casa.easter_egg) and gerador.sorte() < float(casas.get("chance_easter_egg", 0))
     _guardar_gerador(estado, gerador)
 
-    de = jogador["posicao"]
-    para = tabuleiro.avancar(de, passos)
     jogador["posicao"] = para
 
     # Numerar o lance é o que permite a tela de quem está ASSISTINDO saber
@@ -649,24 +904,31 @@ def rolar(estado: dict, jogador_id: int) -> dict:
         "passos": passos,
         "de": de,
         "para": para,
-        "deu_a_volta": tabuleiro.passou_pelo_inicio(de, passos),
+        "deu_a_volta": deu_a_volta,
+        "portal": portal,
     }
 
-    casa = tabuleiro.casa(para)
-    if estado["ultimo_movimento"]["deu_a_volta"]:
-        bal = carregar_balanceamento(estado["perfil"])
+    if deu_a_volta:
         salario = int(bal.get("dinheiro", {}).get("salario_ao_passar_inicio", 0))
         if salario > 0:
-            jogador["caixa"] += salario
+            _creditar(jogador, salario)
             _log(
                 estado,
                 "salario_inicio",
                 f"{jogador['nome']} passou pelo Início e recebeu {_reais(salario)}.",
                 jogador_id,
             )
+    trajeto = f", entrou na Casa Portal e parou em {casa.nome}" if portal else f" e parou em {casa.nome}"
     _log(estado, "dado",
-         f"{jogador['nome']} tirou {' + '.join(map(str, dados))} = {passos} e parou em {casa.nome}.",
+         f"{jogador['nome']} tirou {' + '.join(map(str, dados))} = {passos}{trajeto}.",
          jogador_id)
+    if portal:
+        destino = tabuleiro.casa(portal["destino"]).nome
+        _log(estado, "portal", f"O Portal teleportou {jogador['nome']} para {destino}.", jogador_id)
+
+    if caiu_no_easter_egg:
+        perdeu = _debitar_ate_o_caixa(jogador, int(casas.get("easter_egg", 0)))
+        _log(estado, "easter_egg", f"{casa.nome}: {casa.easter_egg} {jogador['nome']} perdeu {_reais(perdeu)}.", jogador_id)
 
     propriedade = estado["propriedades"].get(str(para))
     if casa.tipo == "propriedade" and propriedade is None:
@@ -708,11 +970,13 @@ def rolar(estado: dict, jogador_id: int) -> dict:
             estado = _resolver_aluguel(estado, jogador, vendedor, casa, propriedade)
     elif casa.tipo == "propriedade" and _oferecer_melhoria(estado, jogador, casa, propriedade, "visita"):
         return estado
+    elif casa.tipo != "propriedade" and _resolver_casa_de_evento(estado, jogador, casa):
+        return estado
 
     # Aluguel de propriedade alheia é resolvido antes de passar a vez.
     if estado["fase"] == FASE_LIQUIDACAO_ALUGUEL or jogador["falido"]:
         return estado
-    return passar_turno(estado)
+    return _concluir_jogada(estado, jogador)
 
 
 def decidir_compra(estado: dict, jogador_id: int, comprar: bool) -> dict:
@@ -736,9 +1000,11 @@ def decidir_compra(estado: dict, jogador_id: int, comprar: bool) -> dict:
             raise ErroDeRegra("Este terreno já foi comprado.", http=409)
         jogador["caixa"] -= preco
         estado["propriedades"][indice] = {"dono": jogador_id, "nivel": 0}
+        _placar(jogador)["compras"] += 1
         tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
         casa = tabuleiro.casa(pendente["casa"])
         _log(estado, "compra", f"{jogador['nome']} comprou {casa.nome} por {_reais(preco)}.", jogador_id)
+        _avisar_morro(estado, jogador, casa)
         estado["compra_pendente"] = None
         if _oferecer_melhoria(estado, jogador, casa, estado["propriedades"][indice], "compra"):
             return estado
@@ -746,7 +1012,7 @@ def decidir_compra(estado: dict, jogador_id: int, comprar: bool) -> dict:
         _log(estado, "compra", f"{jogador['nome']} recusou a compra.", jogador_id)
 
     estado["compra_pendente"] = None
-    return passar_turno(estado)
+    return _concluir_jogada(estado, jogador)
 
 
 def decidir_compra_jogador(estado: dict, jogador_id: int, comprar: bool) -> dict:
@@ -764,21 +1030,22 @@ def decidir_compra_jogador(estado: dict, jogador_id: int, comprar: bool) -> dict
 
     indice = str(pendente["casa"])
     propriedade = estado["propriedades"].get(indice)
-    if propriedade is None or propriedade["dono"] != pendente["vendedor_id"]:
-        raise ErroDeRegra("A propriedade não pertence mais ao mesmo jogador.", http=409)
     vendedor = _jogador_por_id(estado, pendente["vendedor_id"])
-    if vendedor["falido"]:
+    if vendedor["falido"] or propriedade is None or propriedade["dono"] != vendedor["jogador_id"]:
+        # Quem vendia saiu da mesa (e a casa voltou ao banco) enquanto o
+        # comprador pensava: não há mais negócio nem aluguel a pagar.
         estado["compra_pendente"] = None
         _log(estado, "compra_jogador", f"A compra foi cancelada porque {vendedor['nome']} saiu da partida.", jogador_id)
-        return passar_turno(estado)
+        return _concluir_jogada(estado, comprador)
 
     if comprar:
         preco = pendente["preco"]
         if comprador["caixa"] < preco:
             raise ErroDeRegra("Você não tem dinheiro suficiente para comprar essa propriedade.", http=409)
         comprador["caixa"] -= preco
-        vendedor["caixa"] += preco
+        _creditar(vendedor, preco)
         propriedade["dono"] = jogador_id
+        _placar(comprador)["compras"] += 1
         casa = carregar_tabuleiro(estado["tabuleiro"]).casa(pendente["casa"])
         _log(
             estado,
@@ -786,6 +1053,7 @@ def decidir_compra_jogador(estado: dict, jogador_id: int, comprar: bool) -> dict
             f"{comprador['nome']} comprou {casa.nome} de {vendedor['nome']} por {_reais(preco)}.",
             jogador_id,
         )
+        _avisar_morro(estado, comprador, casa)
         estado["compra_pendente"] = None
         if _oferecer_melhoria(estado, comprador, casa, propriedade, "compra"):
             return estado
@@ -794,11 +1062,747 @@ def decidir_compra_jogador(estado: dict, jogador_id: int, comprar: bool) -> dict
         _log(estado, "compra_jogador", f"{comprador['nome']} recusou comprar {casa.nome} de {vendedor['nome']}.", jogador_id)
         estado["compra_pendente"] = None
         estado = _resolver_aluguel(estado, comprador, vendedor, casa, propriedade)
-        if estado["fase"] == FASE_LIQUIDACAO_ALUGUEL or estado["fase"] == FASE_FIM:
+        if estado["fase"] == FASE_LIQUIDACAO_ALUGUEL or estado["fase"] == FASE_FIM or comprador["falido"]:
             return estado
 
     estado["compra_pendente"] = None
-    return passar_turno(estado)
+    return _concluir_jogada(estado, comprador)
+
+
+# --------------------------------------------------------------------------
+# 3. casas de evento
+# --------------------------------------------------------------------------
+
+def _resolver_casa_de_evento(estado: dict, jogador: dict, casa) -> bool:
+    """Aplica a casa onde o peão parou, quando ela não é propriedade.
+
+    Devolve True quando a casa abriu uma decisão (Coringa, Reconstrução ou
+    Prejuízo com mais de uma escolha): aí a vez espera o jogador. Nas outras,
+    o efeito já aconteceu e a jogada termina. A Portal age no caminho, em
+    `_percorrer`; a neutra e os cantos não fazem nada.
+    """
+    bal = carregar_balanceamento(estado["perfil"])
+    jid = jogador["jogador_id"]
+    nome = jogador["nome"]
+
+    if casa.tipo == "ganho":
+        valor = int(bal["casas"]["ganho"])
+        _creditar(jogador, valor)
+        _log(estado, "ganho", f"{nome} roubou na {casa.nome} e ganhou {_reais(valor)} na hora.", jid)
+    elif casa.tipo == "roubo":
+        valor = _debitar_ate_o_caixa(jogador, int(bal["casas"]["roubo"]))
+        if valor:
+            _log(estado, "roubo", f"{nome} sofreu um roubo na {casa.nome} e perdeu {_reais(valor)}.", jid)
+        else:
+            _log(estado, "roubo", f"{nome} sofreu um roubo na {casa.nome}, mas não tinha nada em caixa.", jid)
+    elif casa.tipo == "coletor":
+        valor = int(estado.get("coletor", 0))
+        if valor > 0:
+            estado["coletor"] = 0
+            _creditar(jogador, valor)
+            _log(estado, "coletor", f"{nome} parou na {casa.nome} e levou os {_reais(valor)} do Coletor de Impostos.", jid)
+        else:
+            _log(estado, "coletor_vazio", f"{nome} parou na {casa.nome}, mas o Coletor de Impostos está vazio.", jid)
+    elif casa.tipo == "prisao":
+        _prender(estado, jogador, bal)
+    elif casa.tipo == "coringa":
+        return _oferecer_coringa(estado, jogador, casa, bal)
+    elif casa.tipo == "reconstrucao":
+        return _oferecer_reconstrucao(estado, jogador, casa, bal)
+    elif casa.tipo == "prejuizo":
+        return _resolver_prejuizo(estado, jogador, casa, bal)
+    return False
+
+
+def _prender(estado: dict, jogador: dict, bal: dict) -> None:
+    """Preso perde as próximas vezes — uma por rodada. Quem já saiu da cadeia
+    pelo evento de final de ano volta para uma pena maior."""
+    prisao = bal.get("prisao", {})
+    reincidente = bool(jogador.get("reincidente"))
+    rodadas = int(prisao.get("rodadas_presas_reincidente" if reincidente else "rodadas_presas", 1))
+    jogador["preso"] = rodadas
+    pena = "a próxima vez" if rodadas == 1 else f"as próximas {rodadas} vezes"
+    motivo = " Reincidência: a pena é maior." if reincidente else ""
+    _log(estado, "prisao", f"{jogador['nome']} foi para a prisão e perde {pena}.{motivo}", jogador["jogador_id"])
+
+
+# --- Casa Coringa ---------------------------------------------------------
+
+def _chance_do_coringa(estado: dict, jogador: dict, cfg: dict) -> tuple[float, str]:
+    """A chance de ganhar acompanha a posição na mesa: patrimônio do jogador
+    dividido pela média dos que ainda jogam. Quem está atrás tem mais chance."""
+    media = _media_patrimonio(estado)
+    razao = _patrimonio(estado, jogador) / media if media > 0 else 1.0
+    if razao < float(cfg["atras_abaixo_de"]):
+        return float(cfg["chance_atras"]), "atras"
+    if razao > float(cfg["frente_acima_de"]):
+        return float(cfg["chance_frente"]), "frente"
+    return float(cfg["chance_na_media"]), "na_media"
+
+
+def _oferecer_coringa(estado: dict, jogador: dict, casa, bal: dict) -> bool:
+    cfg = bal["coringa"]
+    chance, faixa = _chance_do_coringa(estado, jogador, cfg)
+    ganho = int(cfg["ganho"])
+    # A perda para no caixa: o Coringa nunca deixa ninguém negativo.
+    perda = min(int(cfg["perda"]), max(0, jogador["caixa"]))
+    estado["fase"] = FASE_CORINGA
+    _definir_prazo(estado)
+    estado["coringa_pendente"] = {
+        "casa": casa.indice,
+        "jogador_id": jogador["jogador_id"],
+        "chance": chance,
+        "faixa": faixa,
+        "ganho": ganho,
+        "perda": perda,
+        "caixa": jogador["caixa"],
+    }
+    _log(
+        estado,
+        "coringa_oferta",
+        f"{jogador['nome']} parou na {casa.nome}: {_porcento(chance)} de chance de ganhar {_reais(ganho)} se arriscar.",
+        jogador["jogador_id"],
+    )
+    return True
+
+
+def decidir_coringa(estado: dict, jogador_id: int, arriscar: bool) -> dict:
+    """Arrisca ou deixa quieto na Casa Coringa."""
+    estado = atualizar_tempo(estado)
+    if estado["fase"] != FASE_CORINGA or not estado.get("coringa_pendente"):
+        raise ErroDeRegra("Não há uma aposta da Casa Coringa para decidir agora.", http=409)
+
+    estado = copy.deepcopy(estado)
+    jogador = _exigir_vez(estado, jogador_id)
+    pendente = estado["coringa_pendente"]
+    if pendente["jogador_id"] != jogador_id:
+        raise ErroDeRegra("Essa aposta pertence a outro jogador.", http=403)
+
+    if not arriscar:
+        _log(estado, "coringa", f"{jogador['nome']} preferiu não arriscar na Casa Coringa.", jogador_id)
+        estado["ultimo_coringa"] = {"n": estado["log_n"], "jogador_id": jogador_id, "arriscou": False}
+        return _concluir_jogada(estado, jogador)
+
+    gerador = _gerador(estado)
+    ganhou = gerador.sorte() < pendente["chance"]
+    _guardar_gerador(estado, gerador)
+    if ganhou:
+        valor = pendente["ganho"]
+        _creditar(jogador, valor)
+        _log(estado, "coringa", f"{jogador['nome']} arriscou na Casa Coringa e ganhou {_reais(valor)}!", jogador_id)
+    else:
+        valor = _debitar_ate_o_caixa(jogador, pendente["perda"])
+        _log(estado, "coringa", f"{jogador['nome']} arriscou na Casa Coringa e perdeu {_reais(valor)}.", jogador_id)
+    estado["ultimo_coringa"] = {
+        "n": estado["log_n"],
+        "jogador_id": jogador_id,
+        "arriscou": True,
+        "ganhou": ganhou,
+        "valor": valor,
+        "chance": pendente["chance"],
+    }
+    return _concluir_jogada(estado, jogador)
+
+
+# --- Casa da Reconstrução ---------------------------------------------------
+
+def _opcoes_de_reconstrucao(estado: dict, jogador: dict, desconto: float) -> list[dict]:
+    """Cada propriedade do jogador que ainda sobe de nível, com o custo já
+    descontado e o aluguel de antes e depois — a tela só mostra."""
+    tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
+    maximo = _niveis_maximos(estado)
+    opcoes = []
+    for indice, propriedade in sorted(_propriedades_de(estado, jogador["jogador_id"])):
+        casa = tabuleiro.casa(indice)
+        nivel = int(propriedade.get("nivel", 0))
+        cheio = _valor_upgrade(estado, casa)
+        if nivel >= maximo or cheio <= 0:
+            continue
+        custo = int(round(cheio * (1 - desconto)))
+        opcoes.append({
+            "casa": indice,
+            "nivel": nivel,
+            "custo": custo,
+            "custo_cheio": cheio,
+            "aluguel_atual": _valor_aluguel(estado, casa, propriedade),
+            "aluguel_novo": _valor_aluguel(estado, casa, {**propriedade, "nivel": nivel + 1}),
+        })
+    return opcoes
+
+
+def _oferecer_reconstrucao(estado: dict, jogador: dict, casa, bal: dict) -> bool:
+    desconto = float(bal.get("reconstrucao", {}).get("desconto", 0))
+    opcoes = _opcoes_de_reconstrucao(estado, jogador, desconto)
+    jid = jogador["jogador_id"]
+    if not opcoes:
+        motivo = "já está com tudo no nível máximo" if _propriedades_de(estado, jid) else "não tem propriedade para reformar"
+        _log(estado, "reconstrucao", f"{jogador['nome']} parou na {casa.nome}, mas {motivo}.", jid)
+        return False
+    if not any(opcao["custo"] <= jogador["caixa"] for opcao in opcoes):
+        _log(estado, "reconstrucao", f"{jogador['nome']} parou na {casa.nome}, mas não tem caixa para nenhuma reforma.", jid)
+        return False
+
+    estado["fase"] = FASE_RECONSTRUCAO
+    _definir_prazo(estado)
+    estado["reconstrucao_pendente"] = {"casa": casa.indice, "jogador_id": jid, "desconto": desconto, "opcoes": opcoes}
+    _log(
+        estado,
+        "reconstrucao_oferta",
+        f"{jogador['nome']} pode melhorar uma propriedade com {_porcento(desconto)} de desconto.",
+        jid,
+    )
+    return True
+
+
+def decidir_reconstrucao(estado: dict, jogador_id: int, casa_indice: int | None) -> dict:
+    """Melhora a propriedade escolhida com desconto, ou recusa (`None`)."""
+    estado = atualizar_tempo(estado)
+    if estado["fase"] != FASE_RECONSTRUCAO or not estado.get("reconstrucao_pendente"):
+        raise ErroDeRegra("Não há uma reforma para decidir agora.", http=409)
+
+    estado = copy.deepcopy(estado)
+    jogador = _exigir_vez(estado, jogador_id)
+    pendente = estado["reconstrucao_pendente"]
+    if pendente["jogador_id"] != jogador_id:
+        raise ErroDeRegra("Essa reforma pertence a outro jogador.", http=403)
+
+    if casa_indice is None:
+        _log(estado, "reconstrucao", f"{jogador['nome']} não quis reformar nada.", jogador_id)
+        return _concluir_jogada(estado, jogador)
+
+    opcao = next((o for o in pendente["opcoes"] if o["casa"] == casa_indice), None)
+    if opcao is None:
+        raise ErroDeRegra("Escolha uma das suas propriedades da lista.")
+    propriedade = estado["propriedades"].get(str(casa_indice))
+    if propriedade is None or propriedade["dono"] != jogador_id:
+        raise ErroDeRegra("Essa propriedade não é mais sua.", http=409)
+    if int(propriedade.get("nivel", 0)) != opcao["nivel"]:
+        raise ErroDeRegra("Essa propriedade já mudou de nível.", http=409)
+    if jogador["caixa"] < opcao["custo"]:
+        raise ErroDeRegra(f"Você precisa de {_reais(opcao['custo'])} para essa reforma.", http=409)
+
+    jogador["caixa"] -= opcao["custo"]
+    propriedade["nivel"] = opcao["nivel"] + 1
+    _placar(jogador)["melhorias"] += 1
+    casa = carregar_tabuleiro(estado["tabuleiro"]).casa(casa_indice)
+    _log(
+        estado,
+        "reconstrucao",
+        f"{jogador['nome']} reformou {casa.nome} para o nível {propriedade['nivel']} por {_reais(opcao['custo'])}, com desconto.",
+        jogador_id,
+    )
+    return _concluir_jogada(estado, jogador)
+
+
+# --- Casa do Prejuízo --------------------------------------------------------
+
+def _lider(estado: dict) -> dict | None:
+    """Maior patrimônio entre quem joga. Empate: o primeiro na ordem de jogada."""
+    vivos = _vivos(estado)
+    return max(vivos, key=lambda j: _patrimonio(estado, j)) if vivos else None
+
+
+def _opcoes_de_prejuizo(estado: dict, alvo: dict, cfg: dict) -> list[dict]:
+    """Propriedades do líder que o golpe pode tirar, da mais valiosa à menos."""
+    tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
+    grupos = set(cfg.get("grupos_atingidos", ["media", "barata"]))
+    opcoes = []
+    for indice, propriedade in _propriedades_de(estado, alvo["jogador_id"]):
+        casa = tabuleiro.casa(indice)
+        if casa.grupo not in grupos:
+            continue
+        valor = _valor_investido(estado, casa, propriedade)
+        opcoes.append({"casa": indice, "valor": valor, "ao_coletor": int(round(valor * float(cfg["ao_coletor"])))})
+    return sorted(opcoes, key=lambda o: (-o["valor"], o["casa"]))
+
+
+def _resolver_prejuizo(estado: dict, jogador: dict, casa, bal: dict) -> bool:
+    """O líder da mesa toma o golpe — mesmo quando é ele quem pisa. Quem
+    pisou escolhe qual propriedade média ou barata do líder volta ao banco."""
+    cfg = bal["prejuizo"]
+    lider = _lider(estado)
+    jid = jogador["jogador_id"]
+    if lider is None:
+        return False
+    opcoes = _opcoes_de_prejuizo(estado, lider, cfg)
+    if not opcoes:
+        perda = _debitar_ate_o_caixa(lider, int(round(lider["caixa"] * float(cfg["sem_propriedade_perde_do_caixa"]))))
+        estado["coletor"] = estado.get("coletor", 0) + perda
+        _log(
+            estado,
+            "prejuizo",
+            f"Casa do Prejuízo: {lider['nome']}, que lidera a mesa, não tem propriedade média ou barata "
+            f"e perdeu {_reais(perda)} do caixa para o Coletor de Impostos.",
+            lider["jogador_id"],
+        )
+        return False
+    if len(opcoes) == 1:
+        # Uma só possibilidade: não há o que escolher.
+        _aplicar_prejuizo(estado, lider, opcoes[0])
+        return False
+
+    estado["fase"] = FASE_PREJUIZO
+    _definir_prazo(estado)
+    estado["prejuizo_pendente"] = {"casa": casa.indice, "jogador_id": jid, "alvo_id": lider["jogador_id"], "opcoes": opcoes}
+    if lider is jogador:
+        texto = f"{jogador['nome']} lidera a mesa, parou na {casa.nome} e escolhe qual propriedade sua volta para o banco."
+    else:
+        texto = f"{jogador['nome']} parou na {casa.nome} e escolhe qual propriedade de {lider['nome']}, que lidera a mesa, volta para o banco."
+    _log(estado, "prejuizo_oferta", texto, jid)
+    return True
+
+
+def _aplicar_prejuizo(estado: dict, alvo: dict, opcao: dict) -> None:
+    casa = carregar_tabuleiro(estado["tabuleiro"]).casa(opcao["casa"])
+    del estado["propriedades"][str(opcao["casa"])]
+    estado["coletor"] = estado.get("coletor", 0) + opcao["ao_coletor"]
+    _log(
+        estado,
+        "prejuizo",
+        f"{alvo['nome']} perdeu {casa.nome}, que voltou para o banco. "
+        f"{_reais(opcao['ao_coletor'])} foram para o Coletor de Impostos.",
+        alvo["jogador_id"],
+    )
+
+
+def _prejuizo_ainda_valido(estado: dict, pendente: dict) -> list[dict]:
+    """As opções cuja casa ainda é do alvo — ele pode ter saído da mesa."""
+    return [
+        opcao for opcao in pendente["opcoes"]
+        if estado["propriedades"].get(str(opcao["casa"]), {}).get("dono") == pendente["alvo_id"]
+    ]
+
+
+def escolher_prejuizo(estado: dict, jogador_id: int, casa_indice: int) -> dict:
+    """Quem pisou na Casa do Prejuízo escolhe a propriedade que o líder perde."""
+    estado = atualizar_tempo(estado)
+    if estado["fase"] != FASE_PREJUIZO or not estado.get("prejuizo_pendente"):
+        raise ErroDeRegra("Não há um prejuízo para escolher agora.", http=409)
+
+    estado = copy.deepcopy(estado)
+    jogador = _exigir_vez(estado, jogador_id)
+    pendente = estado["prejuizo_pendente"]
+    if pendente["jogador_id"] != jogador_id:
+        raise ErroDeRegra("Essa escolha pertence a outro jogador.", http=403)
+
+    validas = _prejuizo_ainda_valido(estado, pendente)
+    opcao = next((o for o in validas if o["casa"] == casa_indice), None)
+    if opcao is None:
+        if validas:
+            raise ErroDeRegra("Escolha uma das propriedades da lista.")
+        _log(estado, "prejuizo", "O líder já não tem a propriedade escolhida. O Prejuízo não tirou nada.", jogador_id)
+        return _concluir_jogada(estado, jogador)
+    _aplicar_prejuizo(estado, _jogador_por_id(estado, pendente["alvo_id"]), opcao)
+    return _concluir_jogada(estado, jogador)
+
+
+# --- Bônus do banco (evento temático) ------------------------------------------
+
+def _bonus_disponivel(estado: dict, jogador: dict) -> bool:
+    evento = _evento_ativo(estado)
+    return bool(
+        evento
+        and evento["tipo"] == "bonus_do_banco"
+        and not jogador["falido"]
+        and jogador["posicao"] in evento.get("regiao", [])
+        and jogador["jogador_id"] not in evento.get("usaram", [])
+        and _propriedades_de(estado, jogador["jogador_id"])
+    )
+
+
+def _valor_no_bonus(estado: dict, casa, propriedade: dict) -> int:
+    """Valor investido (tabela + melhorias) mais o bônus. Sem melhorias, é
+    exatamente "35% acima do valor de tabela"."""
+    acima = float(_config_evento(estado, "bonus_do_banco").get("acima_da_tabela", 0))
+    return int(round(_valor_investido(estado, casa, propriedade) * (1 + acima)))
+
+
+def vender_no_bonus(estado: dict, jogador_id: int, casa_indice: int | None) -> dict:
+    """Bônus do banco: quem está na região sorteada vende uma propriedade ao
+    banco acima da tabela, uma vez por evento.
+
+    Vale de dois jeitos. Antes de rolar, para quem começou a vez dentro da
+    região — aí a vez continua. E como decisão ao terminar o movimento na
+    região (`FASE_BONUS_BANCO`) — aí `None` recusa e a vez passa.
+    """
+    estado = atualizar_tempo(estado)
+    if estado["fase"] not in (FASE_ROLAR, FASE_BONUS_BANCO):
+        raise ErroDeRegra("O bônus do banco não está disponível agora.", http=409)
+
+    estado = copy.deepcopy(estado)
+    jogador = _exigir_vez(estado, jogador_id)
+    na_decisao = estado["fase"] == FASE_BONUS_BANCO
+    if casa_indice is None:
+        if not na_decisao:
+            raise ErroDeRegra("Escolha uma propriedade para vender.")
+        _log(estado, "bonus_banco", f"{jogador['nome']} preferiu não vender nada ao banco.", jogador_id)
+        return passar_turno(estado)
+    if not _bonus_disponivel(estado, jogador):
+        raise ErroDeRegra("Você não está na região do Bônus do banco, ou já usou o bônus.", http=409)
+    propriedade = estado["propriedades"].get(str(casa_indice))
+    if propriedade is None or propriedade["dono"] != jogador_id:
+        raise ErroDeRegra("Essa propriedade não é sua.", http=409)
+
+    casa = carregar_tabuleiro(estado["tabuleiro"]).casa(casa_indice)
+    valor = _valor_no_bonus(estado, casa, propriedade)
+    _creditar(jogador, valor)
+    del estado["propriedades"][str(casa_indice)]
+    _evento_ativo(estado)["usaram"].append(jogador_id)
+    _log(estado, "bonus_banco", f"{jogador['nome']} vendeu {casa.nome} ao banco por {_reais(valor)} no Bônus do banco.", jogador_id)
+    return passar_turno(estado) if na_decisao else estado
+
+
+# --------------------------------------------------------------------------
+# 4. eventos temáticos
+# --------------------------------------------------------------------------
+
+def _evento_faz_sentido(estado: dict, tipo: str) -> bool:
+    """Evento que não mudaria nada não é sorteado: o Presidente com o Coletor
+    vazio, ou o Bônus do banco sem ninguém com propriedade."""
+    if tipo == "presidente":
+        return estado.get("coletor", 0) > 0
+    if tipo == "bonus_do_banco":
+        return bool(estado["propriedades"])
+    return True
+
+
+def _iniciar_rodada(estado: dict) -> None:
+    """Começo de rodada: o evento da anterior acaba e outro pode ser sorteado."""
+    estado["evento"] = None
+    cfg = carregar_balanceamento(estado["perfil"]).get("eventos", {})
+    if estado["rodada"] < int(cfg.get("a_partir_da_rodada", 2)):
+        return
+    gerador = _gerador(estado)
+    sorteado = gerador.sorte() < float(cfg.get("chance_por_rodada", 0))
+    candidatos = [
+        (tipo, float(cfg.get(tipo, {}).get("peso", 0)))
+        for tipo in EVENTOS_TEMATICOS
+        if float(cfg.get(tipo, {}).get("peso", 0)) > 0 and _evento_faz_sentido(estado, tipo)
+    ]
+    if sorteado and candidatos:
+        alvo = gerador.sorte() * sum(peso for _, peso in candidatos)
+        escolhido = candidatos[-1][0]
+        for tipo, peso in candidatos:
+            if alvo < peso:
+                escolhido = tipo
+                break
+            alvo -= peso
+        _aplicar_evento(estado, escolhido, gerador)
+    _guardar_gerador(estado, gerador)
+
+
+def _aplicar_evento(estado: dict, tipo: str, gerador: Gerador) -> None:
+    cfg = _config_evento(estado, tipo)
+    vivos = _vivos(estado)
+    evento = {"tipo": tipo, "nome": EVENTOS_TEMATICOS[tipo], "rodada": estado["rodada"]}
+
+    if tipo == "colheita_ruim":
+        fracao = float(cfg.get("perde_do_caixa", 0))
+        for jogador in vivos:
+            _debitar_ate_o_caixa(jogador, int(round(jogador["caixa"] * fracao)))
+        texto = f"Todos perderam {_porcento(fracao)} do caixa."
+        resumo = texto[:-1]
+    elif tipo == "baile_na_vila":
+        ganho = int(cfg.get("ganho", 0))
+        for jogador in vivos:
+            _creditar(jogador, ganho)
+        texto = f"Todos ganharam {_reais(ganho)}."
+        resumo = texto[:-1]
+    elif tipo == "final_de_ano":
+        extra = float(cfg.get("aluguel_extra", 0))
+        soltos = [j for j in vivos if j.get("preso", 0) > 0]
+        for jogador in soltos:
+            jogador["preso"] = 0
+            jogador["reincidente"] = True
+        texto = f"Nesta rodada, todos os aluguéis ficam {_porcento(extra)} mais caros."
+        resumo = f"Aluguéis {_porcento(extra)} mais caros nesta rodada"
+        if soltos:
+            pena = carregar_balanceamento(estado["perfil"]).get("prisao", {}).get("rodadas_presas_reincidente", 3)
+            nomes = ", ".join(j["nome"] for j in soltos)
+            texto += f" Saíram da prisão: {nomes}. Quem voltar para lá perde {pena} rodadas."
+    elif tipo == "presidente":
+        valor = int(estado.get("coletor", 0))
+        estado["coletor"] = 0
+        texto = f"O Presidente Cor de Mel confiscou os {_reais(valor)} do Coletor de Impostos."
+        resumo = f"Coletor confiscado ({_reais(valor)})"
+    else:  # bonus_do_banco
+        tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
+        tamanho = max(1, min(len(tabuleiro), int(cfg.get("casas_na_regiao", 4))))
+        inicio = gerador.inteiro(0, len(tabuleiro) - 1)
+        # Casas seguidas, na ordem em que o peão anda.
+        evento["regiao"] = [tabuleiro.avancar(inicio, k) for k in range(tamanho)]
+        evento["usaram"] = []
+        primeira = tabuleiro.casa(evento["regiao"][0]).nome
+        ultima = tabuleiro.casa(evento["regiao"][-1]).nome
+        acima = float(cfg.get("acima_da_tabela", 0))
+        texto = (
+            f"Nesta rodada, quem estiver entre {primeira} e {ultima} pode vender uma propriedade "
+            f"ao banco por {_porcento(acima)} acima do valor."
+        )
+        resumo = f"Venda ao banco +{_porcento(acima)} na região dourada"
+
+    evento["texto"] = texto
+    # Uma linha para o chip do alto da tela; o texto inteiro vai no anúncio.
+    evento["resumo"] = resumo
+    estado["evento"] = evento
+    _log(estado, "evento_tematico", f"{evento['nome']}! {texto}")
+
+
+# --------------------------------------------------------------------------
+# 5. leilão
+# --------------------------------------------------------------------------
+#
+# Ferramenta de recuperação: quem está bem atrás na mesa põe uma propriedade
+# sua em leilão e os outros dão lances contra o relógio. Abre no começo da
+# vez, antes de rolar — no fim da vez, todo turno de todo mundo precisaria de
+# um "passar a vez" a mais só para dar a chance de leiloar. Durante o leilão,
+# `prazo_vez` é o relógio dos lances; quando ele zera, `atualizar_tempo`
+# fecha o leilão e a vez volta para quem vendeu rolar os dados.
+
+def _config_leilao(estado: dict) -> dict:
+    return carregar_balanceamento(estado["perfil"]).get("leilao", {})
+
+
+def _por_que_nao_leiloa(estado: dict, jogador: dict) -> str | None:
+    """O motivo de o jogador não poder abrir um leilão agora, ou None.
+
+    A tela mostra o motivo no painel da casa a qualquer hora; por isso o que
+    é da pessoa (não ter casa, não estar atrás, já ter leiloado) vem antes do
+    que é do momento (não ser a vez dela).
+    """
+    cfg = _config_leilao(estado)
+    if jogador["falido"] or estado["fase"] == FASE_FIM:
+        return "A partida acabou para você."
+    if not _propriedades_de(estado, jogador["jogador_id"]):
+        return "Você não tem propriedade para leiloar."
+    limite = cfg.get("so_abaixo_de_percentual_da_media")
+    if limite is not None:
+        media = _media_patrimonio(estado)
+        razao = _patrimonio(estado, jogador) / media if media > 0 else 1.0
+        if razao >= float(limite):
+            return (
+                f"O leilão é só para quem está abaixo de {_porcento(float(limite))} da média da mesa "
+                f"— você está em {_porcento(razao)}."
+            )
+    ultima = jogador.get("leiloou_na_rodada")
+    proxima = None if ultima is None else ultima + max(1, int(cfg.get("rodadas_entre_leiloes", 1)))
+    if proxima is not None and estado["rodada"] < proxima:
+        if proxima == estado["rodada"] + 1:
+            return "Você já leiloou nesta rodada."
+        return f"Seu próximo leilão fica para a rodada {proxima}."
+    if _jogador_da_vez(estado)["jogador_id"] != jogador["jogador_id"] or estado["fase"] != FASE_ROLAR:
+        return "O leilão abre na sua vez, antes de rolar os dados."
+    return None
+
+
+def _passo_do_lance(casa, cfg: dict) -> int:
+    """De quanto em quanto o lance sobe: uma fração da tabela, redonda."""
+    redondo = max(1, int(cfg.get("arredondar_para", 10_000)))
+    bruto = (casa.preco or 0) * float(cfg.get("passo_do_lance", 0.05))
+    return max(redondo, int(round(bruto / redondo)) * redondo)
+
+
+def _oferta_do_banco_no_leilao(estado: dict, casa, propriedade: dict) -> int:
+    """O que o banco paga se ninguém der lance: a mesma fração do valor
+    investido da venda para pagar dívida. Sem melhoria, é a fração da tabela
+    que a regra cita."""
+    fracao = float(_config_leilao(estado).get("compra_do_banco_sem_lance", 0))
+    return int(round(_valor_investido(estado, casa, propriedade) * fracao))
+
+
+def _lider_do_leilao(leilao: dict) -> dict | None:
+    # Cada lance passa do anterior: o último é o maior.
+    return leilao["lances"][-1] if leilao["lances"] else None
+
+
+def _lance_minimo(leilao: dict) -> int:
+    """O próximo lance aceito: um passo acima do maior. O primeiro precisa
+    passar da oferta do banco — senão seria pior para quem vende do que
+    ninguém dar lance — e começa no primeiro número redondo acima dela."""
+    lider = _lider_do_leilao(leilao)
+    if lider:
+        return lider["valor"] + leilao["passo"]
+    return (leilao["oferta_do_banco"] // leilao["passo"] + 1) * leilao["passo"]
+
+
+def abrir_leilao(estado: dict, jogador_id: int, casa_indice: int, agora: float | None = None) -> dict:
+    """Põe uma propriedade do jogador da vez em leilão, antes de ele rolar."""
+    instante = time.time() if agora is None else agora
+    estado = copy.deepcopy(atualizar_tempo(estado, instante))
+    jogador = _exigir_vez(estado, jogador_id)
+    motivo = _por_que_nao_leiloa(estado, jogador)
+    if motivo:
+        raise ErroDeRegra(motivo, http=409)
+    if isinstance(casa_indice, bool) or not isinstance(casa_indice, int):
+        raise ErroDeRegra("Escolha uma propriedade válida.")
+    propriedade = estado["propriedades"].get(str(casa_indice))
+    if propriedade is None or propriedade["dono"] != jogador_id:
+        raise ErroDeRegra("Essa propriedade não é sua.", http=409)
+
+    bal = carregar_balanceamento(estado["perfil"])
+    cfg = bal.get("leilao", {})
+    casa = carregar_tabuleiro(estado["tabuleiro"]).casa(casa_indice)
+    duracao = int(bal["tempo"].get("segundos_de_leilao", 12))
+    estado["leilao"] = {
+        "casa": casa_indice,
+        "vendedor_id": jogador_id,
+        "nivel": int(propriedade.get("nivel", 0)),
+        "valor_tabela": casa.preco,
+        "valor_investido": _valor_investido(estado, casa, propriedade),
+        "oferta_do_banco": _oferta_do_banco_no_leilao(estado, casa, propriedade),
+        # A regra: 2% do valor de TABELA, não do lance — o imposto não muda
+        # com a disputa, e quem arremata sabe desde o começo quanto paga.
+        "imposto": int(round((casa.preco or 0) * float(cfg.get("imposto_sobre_tabela", 0)))),
+        "passo": _passo_do_lance(casa, cfg),
+        "duracao": duracao,
+        "lances": [],
+    }
+    estado["fase"] = FASE_LEILAO
+    estado["prazo_vez"] = instante + duracao
+    jogador["leiloou_na_rodada"] = estado["rodada"]
+    _log(
+        estado,
+        "leilao_aberto",
+        f"{jogador['nome']} pôs {casa.nome} em leilão. Lance mínimo: {_reais(_lance_minimo(estado['leilao']))}.",
+        jogador_id,
+    )
+    estado["leilao"]["n"] = estado["log_n"]
+    return estado
+
+
+def dar_lance(estado: dict, jogador_id: int, valor: int, agora: float | None = None) -> dict:
+    """Um lance no leilão aberto: qualquer um da mesa, menos quem vende.
+
+    O lance precisa caber no caixa junto com o imposto — o dinheiro só sai
+    quando o leilão fecha, mas nada mais acontece na mesa enquanto ele
+    corre, então quem dá o lance continua podendo pagá-lo. Lance nos últimos
+    segundos estica o relógio: com a tela consultando o servidor de tempos em
+    tempos, sem isso o último a clicar levava sem ninguém ter visto o lance.
+    """
+    instante = time.time() if agora is None else agora
+    estado = atualizar_tempo(estado, instante)
+    if estado["fase"] != FASE_LEILAO or not estado.get("leilao"):
+        raise ErroDeRegra("Não há leilão aberto agora.", http=409)
+
+    estado = copy.deepcopy(estado)
+    leilao = estado["leilao"]
+    jogador = _jogador_por_id(estado, jogador_id)
+    if jogador["falido"]:
+        raise ErroDeRegra("Você já saiu da partida.", http=403)
+    if jogador_id == leilao["vendedor_id"]:
+        raise ErroDeRegra("Você não pode dar lance no seu próprio leilão.", http=403)
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        raise ErroDeRegra("Informe o valor do lance.")
+    lider = _lider_do_leilao(leilao)
+    if lider and lider["jogador_id"] == jogador_id:
+        raise ErroDeRegra("Seu lance já é o maior.", http=409)
+    minimo = _lance_minimo(leilao)
+    if valor < minimo:
+        raise ErroDeRegra(f"O lance mínimo agora é {_reais(minimo)}.", http=409)
+    if valor + leilao["imposto"] > jogador["caixa"]:
+        raise ErroDeRegra(
+            f"Seu caixa não cobre {_reais(valor)} mais {_reais(leilao['imposto'])} de imposto.", http=409
+        )
+
+    leilao["lances"].append({"jogador_id": jogador_id, "valor": valor})
+    esticar = float(_config_leilao(estado).get("segundos_apos_lance", 0))
+    if esticar > 0:
+        estado["prazo_vez"] = max(estado["prazo_vez"] or instante, instante + esticar)
+    return estado
+
+
+def _vencedor_do_leilao(estado: dict, leilao: dict) -> dict | None:
+    """O maior lance de quem ainda está na mesa e ainda pode pagar."""
+    for lance in reversed(leilao["lances"]):
+        jogador = next((j for j in estado["jogadores"] if j["jogador_id"] == lance["jogador_id"]), None)
+        if jogador and not jogador["falido"] and jogador["caixa"] >= lance["valor"] + leilao["imposto"]:
+            return lance
+    return None
+
+
+def _fechar_leilao(estado: dict, instante: float) -> dict:
+    """O relógio dos lances zerou: o maior lance leva a propriedade, com as
+    melhorias; sem lance, o banco compra. A vez volta para quem vendeu."""
+    leilao = estado["leilao"]
+    estado["leilao"] = None
+    estado["fase"] = FASE_ROLAR
+    # Quem vendeu ainda vai rolar: o prazo da vez recomeça.
+    _definir_prazo(estado, instante)
+    casa = carregar_tabuleiro(estado["tabuleiro"]).casa(leilao["casa"])
+    vendedor = _jogador_por_id(estado, leilao["vendedor_id"])
+    propriedade = estado["propriedades"].get(str(leilao["casa"]))
+    if propriedade is None or propriedade["dono"] != vendedor["jogador_id"]:
+        # Nada na mesa tira a casa de quem vende durante o leilão; se um dia
+        # tirar, o leilão acaba sem negócio em vez de travar a partida.
+        _log(estado, "leilao_cancelado", f"O leilão de {casa.nome} foi cancelado.", vendedor["jogador_id"])
+        return estado
+    resultado = {
+        "casa": leilao["casa"],
+        "vendedor_id": vendedor["jogador_id"],
+        "nivel": leilao["nivel"],
+        "valor_tabela": leilao["valor_tabela"],
+        "valor_investido": leilao["valor_investido"],
+        "lances": len(leilao["lances"]),
+        "comprador_id": None,
+        "lance": None,
+        "imposto": 0,
+        "banco": None,
+    }
+
+    vencedor = _vencedor_do_leilao(estado, leilao)
+    if vencedor:
+        comprador = _jogador_por_id(estado, vencedor["jogador_id"])
+        lance = vencedor["valor"]
+        comprador["caixa"] -= lance + leilao["imposto"]
+        _creditar(vendedor, lance)
+        estado["coletor"] = estado.get("coletor", 0) + leilao["imposto"]
+        propriedade["dono"] = comprador["jogador_id"]
+        _placar(comprador)["compras"] += 1
+        _log(
+            estado,
+            "leilao",
+            f"{comprador['nome']} arrematou {casa.nome} de {vendedor['nome']} por {_reais(lance)}. "
+            f"{_reais(leilao['imposto'])} de imposto foram para o Coletor.",
+            comprador["jogador_id"],
+        )
+        _avisar_morro(estado, comprador, casa)
+        resultado.update(comprador_id=comprador["jogador_id"], lance=lance, imposto=leilao["imposto"])
+    else:
+        valor = leilao["oferta_do_banco"]
+        _creditar(vendedor, valor)
+        del estado["propriedades"][str(leilao["casa"])]
+        _log(
+            estado,
+            "leilao",
+            f"Ninguém deu lance em {casa.nome}: o banco comprou de {vendedor['nome']} por {_reais(valor)}.",
+            vendedor["jogador_id"],
+        )
+        resultado["banco"] = valor
+
+    resultado["coletor"] = estado.get("coletor", 0)
+    resultado["n"] = estado["log_n"]
+    estado["ultimo_leilao"] = resultado
+    return estado
+
+
+def _cancelar_leilao_de_quem_saiu(estado: dict, jogador: dict) -> None:
+    """Saiu da mesa no meio do leilão: se era quem vendia, o leilão acaba
+    (a casa volta ao banco com as outras); se dava lance, os lances dele
+    saem e o maior dos que sobraram volta a liderar."""
+    leilao = estado.get("leilao")
+    if not leilao:
+        return
+    if leilao["vendedor_id"] != jogador["jogador_id"]:
+        leilao["lances"] = [lance for lance in leilao["lances"] if lance["jogador_id"] != jogador["jogador_id"]]
+        return
+    casa = carregar_tabuleiro(estado["tabuleiro"]).casa(leilao["casa"])
+    estado["leilao"] = None
+    _log(
+        estado,
+        "leilao_cancelado",
+        f"O leilão de {casa.nome} foi cancelado: {jogador['nome']} saiu da partida.",
+        jogador["jogador_id"],
+    )
 
 
 # --------------------------------------------------------------------------
@@ -808,49 +1812,85 @@ def decidir_compra_jogador(estado: dict, jogador_id: int, comprar: bool) -> dict
 def abandonar(estado: dict, jogador_id: int) -> dict:
     """Jogador saiu no meio da partida.
 
-    Ele é marcado como fora e sai da roda. Sem isto o turno dele travava a
-    mesa, porque a vez ficava esperando alguém que não está mais ali.
+    Ele é marcado como fora e sai da roda, e os terrenos dele voltam para o
+    banco, como na falência — senão ficavam mortos no tabuleiro, sem aluguel
+    nem venda. Sem isto o turno dele travava a mesa, porque a vez ficava
+    esperando alguém que não está mais ali.
     """
     estado = copy.deepcopy(_atualizar(estado))
     jogador = _jogador_por_id(estado, jogador_id)
 
-    if jogador["falido"]:
+    if jogador["falido"] or estado["fase"] == FASE_FIM:
         return estado
 
-    jogador["falido"] = True
-    _log(estado, "saida", f"{jogador['nome']} abandonou a partida.", jogador_id)
+    _cancelar_leilao_de_quem_saiu(estado, jogador)
+    devolvidas = _devolver_ao_banco(estado, jogador_id)
+    _tirar_da_mesa(estado, jogador)
+    jogador["abandonou"] = True
+    terrenos = f" {devolvidas} propriedade(s) voltou(aram) ao banco." if devolvidas else ""
+    _log(estado, "saida", f"{jogador['nome']} abandonou a partida.{terrenos}", jogador_id)
 
     if _jogador_da_vez(estado)["jogador_id"] == jogador_id:
         return passar_turno(estado)
+    if len(_vivos(estado)) <= 1:
+        return _encerrar_partida(estado, "ultimo_sobrevivente")
     return estado
+
+
+def _concluir_jogada(estado: dict, jogador: dict) -> dict:
+    """Fim da jogada de quem está na vez. Antes de passar, o Bônus do banco:
+    quem terminou o movimento dentro da região sorteada pode vender."""
+    if _bonus_disponivel(estado, jogador):
+        for chave in PENDENCIAS:
+            estado[chave] = None
+        estado["fase"] = FASE_BONUS_BANCO
+        _definir_prazo(estado)
+        _log(
+            estado,
+            "bonus_banco_oferta",
+            f"{jogador['nome']} está na região do Bônus do banco e pode vender uma propriedade acima do valor.",
+            jogador["jogador_id"],
+        )
+        return estado
+    return passar_turno(estado)
 
 
 def passar_turno(estado: dict, agora: float | None = None) -> dict:
     instante = time.time() if agora is None else agora
     _observar_prazo_partida(estado, instante)
-    estado["compra_pendente"] = None
-    estado["aluguel_pendente"] = None
-    estado["melhoria_pendente"] = None
+    for chave in PENDENCIAS:
+        estado[chave] = None
     vivos = [i for i, j in enumerate(estado["jogadores"]) if not j["falido"]]
     if len(vivos) <= 1:
         return _encerrar_partida(estado, "ultimo_sobrevivente")
 
-    inicio = estado["vez"]
     total = len(estado["jogadores"])
-    proximo = (inicio + 1) % total
-    while estado["jogadores"][proximo]["falido"]:
-        proximo = (proximo + 1) % total
+    atual = estado["vez"]
+    while True:
+        proximo = (atual + 1) % total
+        while estado["jogadores"][proximo]["falido"]:
+            proximo = (proximo + 1) % total
 
-    # Voltar para alguém antes de quem acabou de jogar significa rodada nova.
-    encerra_rodada = proximo <= inicio
-    if encerra_rodada and estado.get("encerrar_apos_rodada") is not None:
-        if estado["rodada"] >= estado["encerrar_apos_rodada"]:
-            estado["vez"] = proximo
-            return _encerrar_partida(estado, "tempo")
+        # Voltar para alguém antes de quem acabou de jogar significa rodada nova.
+        if proximo <= atual:
+            if estado.get("encerrar_apos_rodada") is not None and estado["rodada"] >= estado["encerrar_apos_rodada"]:
+                estado["vez"] = proximo
+                return _encerrar_partida(estado, "tempo")
+            estado["rodada"] += 1
+            _log(estado, "rodada", f"Rodada {estado['rodada']}.")
+            _iniciar_rodada(estado)
 
-    if encerra_rodada:
-        estado["rodada"] += 1
-        _log(estado, "rodada", f"Rodada {estado['rodada']}.")
+        # Preso perde a vez e a pena anda. Cada volta desconta uma vez de
+        # alguém, então o laço termina mesmo com a mesa inteira presa.
+        candidato = estado["jogadores"][proximo]
+        if candidato.get("preso", 0) > 0:
+            candidato["preso"] -= 1
+            resto = candidato["preso"]
+            depois = f" Ainda faltam {resto} rodada(s)." if resto else " Na próxima rodada, volta a jogar."
+            _log(estado, "prisao", f"{candidato['nome']} está na prisão e perde a vez.{depois}", candidato["jogador_id"])
+            atual = proximo
+            continue
+        break
 
     estado["vez"] = proximo
     estado["fase"] = FASE_ROLAR
@@ -882,6 +1922,9 @@ def atualizar_tempo(estado: dict, agora: float | None = None) -> dict:
         return estado
 
     estado = copy.deepcopy(estado)
+    if estado["fase"] == FASE_LEILAO and estado.get("leilao"):
+        # O fim do leilão não passa a vez: quem vendeu ainda rola.
+        return _fechar_leilao(estado, instante)
     jogador = _jogador_da_vez(estado)
     if estado["fase"] == FASE_COMPRA and estado.get("compra_pendente"):
         _log(estado, "tempo", f"Tempo esgotado: {jogador['nome']} não comprou o terreno.", jogador["jogador_id"])
@@ -894,15 +1937,32 @@ def atualizar_tempo(estado: dict, agora: float | None = None) -> dict:
         if propriedade and vendedor and propriedade["dono"] == vendedor["jogador_id"] and not vendedor["falido"]:
             estado["compra_pendente"] = None
             estado = _resolver_aluguel(estado, jogador, vendedor, casa, propriedade)
-            if estado["fase"] in (FASE_LIQUIDACAO_ALUGUEL, FASE_FIM):
+            if estado["fase"] in (FASE_LIQUIDACAO_ALUGUEL, FASE_FIM) or jogador["falido"]:
                 return estado
     elif estado["fase"] == FASE_MELHORIA and estado.get("melhoria_pendente"):
         _log(estado, "tempo", f"Tempo esgotado: {jogador['nome']} não melhorou a propriedade.", jogador["jogador_id"])
     elif estado["fase"] == FASE_LIQUIDACAO_ALUGUEL and estado.get("aluguel_pendente"):
         pendente = estado["aluguel_pendente"]
         dono = _jogador_por_id(estado, pendente["dono_id"])
+        if dono["falido"]:
+            # O credor saiu da mesa: `_encerrar_liquidacao` perdoa a dívida.
+            return _encerrar_liquidacao(estado)
         estado = _falir(estado, jogador, dono, pendente["divida"])
         return estado
+    elif estado["fase"] == FASE_CORINGA and estado.get("coringa_pendente"):
+        _log(estado, "tempo", f"Tempo esgotado: {jogador['nome']} não arriscou na Casa Coringa.", jogador["jogador_id"])
+        estado["ultimo_coringa"] = {"n": estado["log_n"], "jogador_id": jogador["jogador_id"], "arriscou": False}
+    elif estado["fase"] == FASE_RECONSTRUCAO and estado.get("reconstrucao_pendente"):
+        _log(estado, "tempo", f"Tempo esgotado: {jogador['nome']} não reformou nada.", jogador["jogador_id"])
+    elif estado["fase"] == FASE_PREJUIZO and estado.get("prejuizo_pendente"):
+        # A ação padrão é a mais dura: a propriedade mais valiosa da lista.
+        pendente = estado["prejuizo_pendente"]
+        _log(estado, "tempo", "Tempo esgotado: o Prejuízo tirou a propriedade mais valiosa da lista.", jogador["jogador_id"])
+        validas = _prejuizo_ainda_valido(estado, pendente)
+        if validas:
+            _aplicar_prejuizo(estado, _jogador_por_id(estado, pendente["alvo_id"]), validas[0])
+    elif estado["fase"] == FASE_BONUS_BANCO:
+        _log(estado, "tempo", f"Tempo esgotado: {jogador['nome']} não vendeu nada ao banco.", jogador["jogador_id"])
     else:
         _log(estado, "tempo", f"Tempo esgotado: a vez de {jogador['nome']} passou.", jogador["jogador_id"])
 
@@ -923,10 +1983,13 @@ def _propriedades_publicas(estado: dict) -> dict:
     """
     tabuleiro = carregar_tabuleiro(estado["tabuleiro"])
     maximo = _niveis_maximos(estado)
+    evento = _evento_ativo(estado)
+    bonus = bool(evento and evento["tipo"] == "bonus_do_banco")
     publicas = {}
     for indice, propriedade in estado.get("propriedades", {}).items():
         casa = tabuleiro.casa(int(indice))
         nivel = int(propriedade.get("nivel", 0))
+        multiplicador, no_morro = _bonus_do_morro(estado, casa, propriedade["dono"])
         publicas[indice] = {
             **propriedade,
             "nivel_maximo": maximo,
@@ -937,8 +2000,30 @@ def _propriedades_publicas(estado: dict) -> dict:
             "custo_melhoria": _valor_upgrade(estado, casa) if nivel < maximo else None,
             "preco_compra": _valor_investido(estado, casa, propriedade),
             "valor_banco": _valor_venda_banco(estado, casa, propriedade),
+            "valor_bonus": _valor_no_bonus(estado, casa, propriedade) if bonus else None,
+            "valor_leilao_banco": _oferta_do_banco_no_leilao(estado, casa, propriedade),
+            # Casas do Morro do mesmo dono e o multiplicador que elas dão.
+            "morro": {"casas": no_morro, "multiplicador": multiplicador} if no_morro else None,
         }
     return publicas
+
+
+def _leilao_publico(estado: dict) -> dict | None:
+    """O leilão aberto, com o que a tela precisa já calculado: quem lidera,
+    o próximo lance aceito e quanto falta, em milissegundos — a barra do
+    relógio anda mais lisa que os segundos inteiros da vez."""
+    leilao = estado.get("leilao")
+    if not leilao:
+        return None
+    lider = _lider_do_leilao(leilao)
+    prazo = estado.get("prazo_vez")
+    return {
+        **leilao,
+        "lance_atual": lider["valor"] if lider else None,
+        "lider_id": lider["jogador_id"] if lider else None,
+        "minimo": _lance_minimo(leilao),
+        "ms_restantes": None if prazo is None else max(0, int((prazo - time.time()) * 1000)),
+    }
 
 
 def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
@@ -951,16 +2036,24 @@ def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
     restante = None if prazo is None else max(0, int(prazo - time.time() + 0.999))
     prazo_partida = estado.get("prazo_partida")
     restante_partida = None if prazo_partida is None else max(0, int(prazo_partida - time.time() + 0.999))
+    eu = next((j for j in estado["jogadores"] if j["jogador_id"] == jogador_id), None)
+    # Se EU posso leiloar agora e, se não, por quê: a tela mostra o motivo.
+    leilao_disponivel = None
+    if eu is not None and not eu["falido"] and estado["fase"] not in (FASE_SORTEIO, FASE_FIM):
+        motivo = _por_que_nao_leiloa(estado, eu)
+        leilao_disponivel = {"pode": motivo is None, "motivo": motivo}
     return {
         "fase": estado["fase"],
         "prazo_vez": estado.get("prazo_vez"),
         "segundos_restantes": restante,
         "prazo_partida": prazo_partida,
         "segundos_partida_restantes": restante_partida,
+        "minutos_de_partida": estado.get("minutos_de_partida"),
         "encerrar_apos_rodada": estado.get("encerrar_apos_rodada"),
         "motivo_fim": estado.get("motivo_fim"),
         "vencedores": estado.get("vencedores", []),
         "patrimonios_finais": estado.get("patrimonios_finais", {}),
+        "classificacao": estado.get("classificacao", []),
         "rodada": estado["rodada"],
         "vez": {
             "jogador_id": da_vez["jogador_id"],
@@ -972,18 +2065,38 @@ def estado_publico(estado: dict, jogador_id: int | None = None) -> dict:
                 "jogador_id": j["jogador_id"],
                 "nome": j["nome"],
                 "personagem": j["personagem"],
+                "visual": j.get("visual"),
                 "caixa": j["caixa"],
+                "patrimonio": 0 if j["falido"] else _patrimonio(estado, j),
                 "posicao": j["posicao"],
                 "falido": j["falido"],
+                "abandonou": j.get("abandonou", False),
+                "preso": j.get("preso", 0),
+                "placar": j.get("placar", PLACAR_VAZIO),
                 "sou_eu": j["jogador_id"] == jogador_id,
             }
             for j in estado["jogadores"]
         ],
         "sorteio": estado["sorteio"],
         "propriedades": _propriedades_publicas(estado),
+        "coletor": estado.get("coletor", 0),
+        "evento": _evento_ativo(estado),
+        "pode_vender_no_bonus": bool(
+            eu
+            and da_vez is eu
+            and estado["fase"] in (FASE_ROLAR, FASE_BONUS_BANCO)
+            and _bonus_disponivel(estado, eu)
+        ),
         "compra_pendente": estado.get("compra_pendente"),
         "aluguel_pendente": estado.get("aluguel_pendente"),
         "melhoria_pendente": estado.get("melhoria_pendente"),
+        "coringa_pendente": estado.get("coringa_pendente"),
+        "reconstrucao_pendente": estado.get("reconstrucao_pendente"),
+        "prejuizo_pendente": estado.get("prejuizo_pendente"),
+        "leilao": _leilao_publico(estado),
+        "ultimo_leilao": estado.get("ultimo_leilao"),
+        "leilao_disponivel": leilao_disponivel,
+        "ultimo_coringa": estado.get("ultimo_coringa"),
         "ultimo_movimento": estado["ultimo_movimento"],
         "log": estado["log"][-25:],
     }

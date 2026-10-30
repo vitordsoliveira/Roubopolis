@@ -35,9 +35,9 @@ def carregar_balanceamento(perfil: str = "padrao") -> dict:
 
 
 def multiplicador_do_morro(bal: dict, quantidade: int) -> float:
-    """1,0 até ter 2 becos; daí em diante segue a tabela, e o maior degrau
-    vale para tudo acima dele."""
-    # As chaves do morro são a quantidade de becos; `grupo` é texto e fica
+    """1,0 até ter 2 casas do Morro; daí em diante segue a tabela, e o maior
+    degrau vale para tudo acima dele."""
+    # As chaves do morro são a quantidade de casas; `grupo` é texto e fica
     # de fora da tabela numérica.
     tabela = {
         int(k): float(v)

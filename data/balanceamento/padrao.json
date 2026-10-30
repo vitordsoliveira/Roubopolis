@@ -2,7 +2,9 @@
   "_leia_isto": "TODOS os números do jogo ficam aqui. Mexer neste arquivo muda o jogo sem tocar em uma linha de código — é só reiniciar o servidor. Os preços das propriedades ficam no tabuleiro (data/tabuleiros/vila_original.json), junto de cada casa.",
 
   "nome": "padrao",
-  "descricao": "Perfil principal — partida de 15 minutos, com 30 segundos por turno. Economia com capital inicial de R$ 2 milhões.",
+  "descricao": "Perfil principal — partida de 25 minutos, com 30 segundos por turno. Economia com capital inicial de R$ 2 milhões.",
+
+  "_escala": "As regras originais foram escritas com valores pequenos (Ganho de R$ 1.000, Roubo de R$ 500). Na economia de R$ 2 milhões, todo valor fixo das regras foi multiplicado por 200 — o mesmo fator do Ganho (R$ 200.000) e do Roubo (R$ 100.000). Percentuais não mudam.",
 
   "dinheiro": {
     "_sobre": "Quanto cada jogador tem ao começar.",
@@ -17,18 +19,41 @@
   },
 
   "tempo": {
-    "_sobre": "Segundos. 0 desliga o limite.",
+    "_sobre": "Segundos. 0 desliga o limite. 'minutos_de_partida' só vale para partidas que começarem depois da mudança.",
     "segundos_por_turno": 30,
     "segundos_de_leilao": 12,
-    "minutos_de_partida": 15
+    "minutos_de_partida": 25
   },
 
   "casas": {
-    "_sobre": "Valores em reais que cada casa de evento movimenta.",
+    "_sobre": "Valores em reais que cada casa de evento movimenta. Perda nunca passa do caixa: Roubo e easter egg levam no máximo o que o jogador tem.",
     "ganho": 200000,
     "roubo": 100000,
     "easter_egg": 90000,
     "chance_easter_egg": 0.05
+  },
+
+  "coringa": {
+    "_sobre": "Casa Coringa: o jogador escolhe entre não fazer nada ou arriscar. Ganha 'ganho' ou perde 'perda' (no máximo o que tem em caixa).",
+    "_faixas": "A chance de ganhar depende do patrimônio do jogador dividido pela média da mesa: abaixo de 'atras_abaixo_de' usa 'chance_atras'; acima de 'frente_acima_de' usa 'chance_frente'; no meio, 'chance_na_media'.",
+    "ganho": 1000000,
+    "perda": 700000,
+    "atras_abaixo_de": 0.60,
+    "frente_acima_de": 1.50,
+    "chance_atras": 0.60,
+    "chance_na_media": 0.50,
+    "chance_frente": 0.20
+  },
+
+  "portal": {
+    "_sobre": "Casa Portal: teleporta para uma casa sorteada e o peão anda dali os passos que faltavam. Com 'dispara_ao_passar' true, vale para quem passa pelo portal; com false, só para quem para nele. Um teleporte por jogada, para não entrar em laço.",
+    "_por_que": "Desligado de propósito. Disparando ao passar, o portal pega todo mundo a cada volta: em 200 partidas simuladas (4 jogadores, 15 rodadas) foram 14 teleportes por partida, o salário do Início caiu de 7,7 para 3,6 por partida e a Casa Coringa, logo depois do portal, quase não recebeu visita (0,3 contra 1,3). Outubro/2026.",
+    "dispara_ao_passar": false
+  },
+
+  "reconstrucao": {
+    "_sobre": "Casa da Reconstrução: uma melhoria numa propriedade própria com este desconto sobre o custo do nível.",
+    "desconto": 0.30
   },
 
   "aluguel": {
@@ -45,8 +70,8 @@
   },
 
   "morro": {
-    "_sobre": "Multiplicador do aluguel conforme quantos becos o jogador controla. A chave é a quantidade.",
-    "_grupo": "Qual grupo de propriedades é o Morro. Mudar aqui muda quais casas ganham o multiplicador.",
+    "_sobre": "Bônus do Morro: as casas de favela. Quem junta várias cobra mais aluguel em TODAS elas. Cada chave numérica é quantas casas do Morro o dono tem; acima da última, vale a última.",
+    "_grupo": "Qual grupo de propriedades é o Morro (o barato: Capão Redondo, Itaquera, Brasilândia, Parelheiros e Cidade Tiradentes). Mudar aqui muda quais casas ganham o multiplicador.",
     "grupo": "barata",
     "2": 1.2,
     "3": 1.4,
@@ -55,10 +80,17 @@
   },
 
   "leilao": {
-    "_sobre": "O imposto é calculado sobre o VALOR DE TABELA, não sobre o lance — ver docs/REGRAS-DO-JOGO.md.",
+    "_sobre": "Quem tem patrimônio abaixo de 'so_abaixo_de_percentual_da_media' da média da mesa põe uma propriedade sua em leilão no começo da vez, antes de rolar. Os outros dão lances por tempo.segundos_de_leilao segundos e o maior leva, com as melhorias. null em 'so_abaixo_de_percentual_da_media' libera para todo mundo (bom para testar).",
+    "_imposto": "Quem arremata paga o lance a quem vendeu e mais 'imposto_sobre_tabela' do VALOR DE TABELA (não do lance) para o Coletor de Impostos — ver docs/REGRAS-DO-JOGO.md.",
+    "_sem_lance": "Ninguém deu lance: o banco compra por 'compra_do_banco_sem_lance' do valor investido (tabela + melhorias), como na venda para pagar dívida. Todo lance precisa passar desse valor.",
+    "_relogio": "Lance dado com menos de 'segundos_apos_lance' no relógio estica o leilão até esse tanto, para a mesa ver o lance e poder responder. 0 desliga.",
     "imposto_sobre_tabela": 0.02,
     "compra_do_banco_sem_lance": 0.35,
-    "so_abaixo_de_percentual_da_media": 0.60
+    "so_abaixo_de_percentual_da_media": 0.60,
+    "rodadas_entre_leiloes": 1,
+    "passo_do_lance": 0.05,
+    "arredondar_para": 10000,
+    "segundos_apos_lance": 5
   },
 
   "desafio": {
@@ -69,19 +101,31 @@
   },
 
   "prejuizo": {
-    "_sobre": "Casa do Prejuízo: quanto do valor da propriedade tomada vai para o Coletor, e a punição alternativa em caixa.",
+    "_sobre": "Casa do Prejuízo: o líder da mesa perde uma propriedade dos 'grupos_atingidos' (quem pisou escolhe qual); 'ao_coletor' do valor investido dela vai para o Coletor. Sem propriedade desses grupos, perde 'sem_propriedade_perde_do_caixa' do caixa, todo para o Coletor.",
     "ao_coletor": 0.50,
-    "sem_propriedade_perde_do_caixa": 0.15
+    "sem_propriedade_perde_do_caixa": 0.15,
+    "grupos_atingidos": ["media", "barata"]
   },
 
   "banco": {
-    "_sobre": "'venda_ao_banco': fração do valor investido (tabela + melhorias) que o banco paga quando o jogador vende para cobrir dívida. 'bonus_de_venda': evento Bônus do banco, venda acima da tabela.",
-    "venda_ao_banco": 0.35,
-    "bonus_de_venda": 0.35
+    "_sobre": "'venda_ao_banco': fração do valor investido (tabela + melhorias) que o banco paga quando o jogador vende para cobrir dívida. O bônus do evento 'Bônus do banco' fica em eventos.bonus_do_banco.",
+    "venda_ao_banco": 0.35
   },
 
   "prisao": {
+    "_sobre": "Quantas vezes o preso perde (uma por rodada). Reincidente é quem saiu da prisão pelo evento de final de ano e caiu lá de novo.",
     "rodadas_presas": 1,
     "rodadas_presas_reincidente": 3
+  },
+
+  "eventos": {
+    "_sobre": "Eventos temáticos: no começo de cada rodada, a partir de 'a_partir_da_rodada', há 'chance_por_rodada' de um acontecer. 'peso' é a frequência de cada um em relação aos outros (0 desliga). Valem para a rodada inteira.",
+    "chance_por_rodada": 0.25,
+    "a_partir_da_rodada": 2,
+    "colheita_ruim": { "peso": 1, "perde_do_caixa": 0.10 },
+    "baile_na_vila": { "peso": 1, "ganho": 160000 },
+    "final_de_ano": { "peso": 1, "aluguel_extra": 0.20 },
+    "presidente": { "peso": 1 },
+    "bonus_do_banco": { "peso": 1, "acima_da_tabela": 0.35, "casas_na_regiao": 4 }
   }
 }

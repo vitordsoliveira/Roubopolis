@@ -10,10 +10,11 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 from sqlalchemy import select
 
-from server.db.models import Personagem
+from server.db.models import Personagem, StatusSala
 from server.db.session import Sessao
 from server.rotas.auth import token_da_requisicao
 from server.salas import gerenciador as g
+from server.social import amigos
 from server.sockets import chat
 
 bp = Blueprint("salas", __name__, url_prefix="/api")
@@ -53,6 +54,9 @@ def estado(codigo: str):
     sessao = Sessao()
     token = token_da_requisicao() or request.args.get("token")
     sala = g.buscar_sala(sessao, codigo)
+    eu = g.jogador_por_token(sessao, token)
+    if eu is not None:
+        g.marcar_visto(sessao, eu)
     return jsonify(g.estado_do_lobby(sessao, sala, token)), 200
 
 
@@ -91,20 +95,24 @@ def sair(codigo: str):
 # --- chat do lobby ---------------------------------------------------------
 
 
-def _jogador_da_sala(sessao, codigo: str):
-    """Só quem está sentado na sala lê e escreve no chat dela."""
+def _jogador_da_sala(sessao, codigo: str, *, espectador_le: bool = False):
+    """Só quem está sentado na sala escreve no chat dela. Ler, também pode o
+    amigo que assiste à partida — ele acompanha a conversa, mas não fala."""
     token = token_da_requisicao()
     jogador = g.exigir_jogador(sessao, token)
     sala = g.buscar_sala(sessao, codigo)
-    if not any(p.jogador_id == jogador.id for p in sala.participantes):
-        raise g.ErroDeSala("Você não está nessa sala.", http=403)
-    return jogador, sala
+    ids = [p.jogador_id for p in sala.participantes]
+    if jogador.id in ids:
+        return jogador, sala
+    if espectador_le and sala.status is StatusSala.EM_PARTIDA and amigos.pode_assistir(sessao, jogador.id, ids):
+        return jogador, sala
+    raise g.ErroDeSala("Você não está nessa sala.", http=403)
 
 
 @bp.get("/salas/<codigo>/chat")
 def listar_chat(codigo: str):
     sessao = Sessao()
-    _jogador, sala = _jogador_da_sala(sessao, codigo)
+    _jogador, sala = _jogador_da_sala(sessao, codigo, espectador_le=True)
     return jsonify(chat.listar(sessao, sala.id)), 200
 
 

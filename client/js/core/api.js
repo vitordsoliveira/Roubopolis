@@ -14,6 +14,8 @@ const CHAVE_VOLUME_MUSICA = "roubopolis.volume-musica";
 const CHAVE_ANIMACOES = "roubopolis.animacoes";
 const CHAVE_ABA = "roubopolis.aba-propria";
 const CHAVE_CHAT = "roubopolis.chat-aberto";
+const CHAVE_LEGENDA = "roubopolis.legenda-aberta";
+const CHAVE_OPCOES = "roubopolis.opcoes-abertas";
 
 /* Abas do mesmo navegador dividem o localStorage — duas abas seriam sempre o
    MESMO jogador, o que impede testar uma sala sozinho. Abrir /?novo=1 marca a
@@ -72,6 +74,12 @@ export const guardado = {
       abrir de novo a cada partida. */
   chatAberto: () => ler(CHAVE_CHAT, "0") === "1",
   salvarChatAberto: (aberto) => gravar(CHAVE_CHAT, aberto ? "1" : "0"),
+  /** Legenda e menu de opções da partida começam recolhidos: a mesa limpa
+      é o padrão, e quem abre uma vez não precisa abrir de novo. */
+  legendaAberta: () => ler(CHAVE_LEGENDA, "0") === "1",
+  salvarLegendaAberta: (aberta) => gravar(CHAVE_LEGENDA, aberta ? "1" : "0"),
+  opcoesAbertas: () => ler(CHAVE_OPCOES, "0") === "1",
+  salvarOpcoesAbertas: (abertas) => gravar(CHAVE_OPCOES, abertas ? "1" : "0"),
 
   /** Guarda tudo que o menu precisa para se desenhar sem consultar a rede. */
   salvarSessao(jogador) {
@@ -177,6 +185,8 @@ export const api = {
   /** Só o dono da sala, e só com todo mundo pronto. */
   iniciarPartida: (codigo) => pedir(`/api/salas/${codigo}/iniciar`, { metodo: "POST", corpo: {} }),
   verPartida: (codigo) => pedir(`/api/partidas/${codigo}`),
+  /** As frases de sátira das janelas de evento (data/eventos/). */
+  frasesDosEventos: () => pedir("/api/eventos/frases"),
   rolarDados: (codigo) => pedir(`/api/partidas/${codigo}/rolar`, { metodo: "POST", corpo: {} }),
   decidirCompra: (codigo, comprar) =>
     pedir(`/api/partidas/${codigo}/comprar`, { metodo: "POST", corpo: { comprar } }),
@@ -195,6 +205,33 @@ export const api = {
       metodo: "POST",
       corpo: { casa },
     }),
+  decidirCoringa: (codigo, arriscar) =>
+    pedir(`/api/partidas/${codigo}/coringa`, { metodo: "POST", corpo: { arriscar } }),
+  /** `casa: null` recusa a reforma. */
+  decidirReconstrucao: (codigo, casa) =>
+    pedir(`/api/partidas/${codigo}/reconstrucao`, { metodo: "POST", corpo: { casa } }),
+  escolherPrejuizo: (codigo, casa) =>
+    pedir(`/api/partidas/${codigo}/prejuizo`, { metodo: "POST", corpo: { casa } }),
+  /** `casa: null` recusa a oferta do Bônus do banco. */
+  venderNoBonus: (codigo, casa) =>
+    pedir(`/api/partidas/${codigo}/bonus-banco`, { metodo: "POST", corpo: { casa } }),
+  /** Põe uma propriedade própria em leilão, antes de rolar. */
+  abrirLeilao: (codigo, casa) =>
+    pedir(`/api/partidas/${codigo}/leilao`, { metodo: "POST", corpo: { casa } }),
+  darLance: (codigo, valor) =>
+    pedir(`/api/partidas/${codigo}/leilao/lance`, { metodo: "POST", corpo: { valor } }),
   /** Abandona a partida: o jogador sai da roda e a vez passa. */
   sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
+
+  // --- amigos ------------------------------------------------------------
+  amigos: () => pedir("/api/amigos"),
+  pedirAmizade: (login) => pedir("/api/amigos", { metodo: "POST", corpo: { login } }),
+  aceitarAmizade: (id) => pedir(`/api/amigos/${id}/aceitar`, { metodo: "POST", corpo: {} }),
+  /** Recusa pedido recebido, cancela pedido enviado ou desfaz a amizade. */
+  desfazerAmizade: (id) => pedir(`/api/amigos/${id}`, { metodo: "DELETE" }),
+
+  // --- loja --------------------------------------------------------------
+  loja: () => pedir("/api/loja"),
+  comprarItem: (item) => pedir("/api/loja/comprar", { metodo: "POST", corpo: { item } }),
+  equiparItem: (item) => pedir("/api/loja/equipar", { metodo: "POST", corpo: { item } }),
 };

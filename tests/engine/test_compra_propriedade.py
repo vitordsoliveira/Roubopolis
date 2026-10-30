@@ -10,6 +10,10 @@ class DadosFixos:
     def dados(self, quantidade, faces):
         return [1, 1]
 
+    def sorte(self):
+        # Alto de propósito: nenhum easter egg nem evento temático acontece.
+        return 0.99
+
 
 class CompraPropriedadeTestes(unittest.TestCase):
     def criar_estado(self, caixa=2_000_000):
@@ -358,7 +362,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
             atualizado = partida._atualizar(estado)
 
         self.assertEqual(atualizado["versao"], partida.VERSAO_DO_ESTADO)
-        self.assertEqual(atualizado["prazo_partida"], 1_900)
+        self.assertEqual(atualizado["prazo_partida"], 2_500)
         self.assertIsNone(atualizado["encerrar_apos_rodada"])
         self.assertEqual(atualizado["fase"], partida.FASE_ROLAR)
 
@@ -469,7 +473,7 @@ class CompraPropriedadeTestes(unittest.TestCase):
 
         self.assertEqual(estado["prazo_vez"], 1_030)
 
-    def test_sorteio_inicia_cronometro_total_de_quinze_minutos(self):
+    def test_sorteio_inicia_cronometro_total_de_vinte_e_cinco_minutos(self):
         estado = partida.criar_partida(
             [
                 {"jogador_id": 1, "nome": "Ana"},
@@ -481,8 +485,8 @@ class CompraPropriedadeTestes(unittest.TestCase):
         with patch("engine.partida.time.time", return_value=1_000):
             estado = partida.sortear_ordem(estado)
 
-        self.assertEqual(estado["minutos_de_partida"], 15)
-        self.assertEqual(estado["prazo_partida"], 1_900)
+        self.assertEqual(estado["minutos_de_partida"], 25)
+        self.assertEqual(estado["prazo_partida"], 2_500)
 
     def test_prazo_total_marca_rodada_final_mas_deixa_todos_jogarem(self):
         estado = partida.criar_partida(

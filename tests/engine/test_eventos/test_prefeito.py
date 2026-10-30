@@ -2,8 +2,10 @@
 Presidente Cor de Mel."""
 
 import unittest
+from collections import defaultdict
 
 from engine import partida
+from sim.simulador import decidir
 from tests.engine import apoio
 
 
@@ -26,9 +28,10 @@ class PresidentePassouAquiTestes(unittest.TestCase):
         estado = apoio.criar_estado()
         estado["coletor"] = 47_600
         estado["vez"] = 1  # o último da ordem: passar a vez abre a rodada 2
-        # 0,1 < 25%: tem evento. Sem propriedades na mesa, os candidatos são
-        # colheita, baile, final de ano e presidente; 0,8 × 4 = 3,2 cai no quarto.
-        with apoio.sorteio(apoio.GeradorFalso(sortes=(0.1, 0.8))):
+        estado["rodada_do_evento"] = 2
+        # Sem propriedades na mesa, os candidatos são colheita, baile, final
+        # de ano e presidente; 0,8 × 4 = 3,2 cai no quarto.
+        with apoio.sorteio(apoio.GeradorFalso(sortes=(0.8,))):
             estado = partida.passar_turno(estado)
 
         self.assertEqual(estado["rodada"], 2)
@@ -42,41 +45,62 @@ class PresidentePassouAquiTestes(unittest.TestCase):
         self.assertEqual(publico["coletor"], 0)
 
 
-class SorteioDeEventosTestes(unittest.TestCase):
-    def test_primeira_rodada_nunca_tem_evento(self):
+class UmEventoPorPartidaTestes(unittest.TestCase):
+    """A partida tem um evento temático só, numa rodada sorteada quando ela
+    começa — antes, cada rodada tinha 25% de chance, e uma partida de 30
+    rodadas via uns 7 eventos."""
+
+    def test_a_rodada_do_evento_sai_quando_a_partida_comeca(self):
+        estado = partida.criar_partida([{"jogador_id": 1, "nome": "Ana"}, {"jogador_id": 2, "nome": "Bia"}], semente=7)
+        self.assertIsNone(estado["rodada_do_evento"])
+
+        estado = partida.sortear_ordem(estado)
+
+        self.assertIn(estado["rodada_do_evento"], range(2, 11))
+        # Ninguém vê quando ele vem.
+        self.assertNotIn("rodada_do_evento", partida.estado_publico(estado, 1))
+
+    def test_a_rodada_sorteada_vai_da_segunda_a_decima(self):
         estado = apoio.criar_estado()
-        with apoio.sorteio(apoio.GeradorFalso(sortes=(0.0,))):
-            partida._iniciar_rodada(estado)
+        self.assertEqual(partida._sortear_rodada_do_evento(estado, apoio.GeradorFalso(sortes=(0.0,))), 2)
+        self.assertEqual(partida._sortear_rodada_do_evento(estado, apoio.GeradorFalso(sortes=(0.999,))), 10)
 
-        self.assertIsNone(estado["evento"])
-
-    def test_rodada_nova_pode_sortear_evento_pelo_peso(self):
+    def test_o_evento_cai_so_na_rodada_sorteada(self):
         estado = apoio.criar_estado()
-        estado["rodada"] = 2
-        # 0.1 < 25%: acontece. Depois, 0.0 escolhe o primeiro com peso.
-        with apoio.sorteio(apoio.GeradorFalso(sortes=(0.1, 0.0))):
-            partida._iniciar_rodada(estado)
+        estado["rodada_do_evento"] = 3
+        tipos = []
+        for rodada in (2, 3, 4, 5):
+            estado["rodada"] = rodada
+            # 0.0 escolhe o primeiro com peso: a colheita ruim.
+            with apoio.sorteio(apoio.GeradorFalso(sortes=(0.0,))):
+                partida._iniciar_rodada(estado)
+            tipos.append(estado["evento"] and estado["evento"]["tipo"])
 
-        self.assertEqual(estado["evento"]["tipo"], "colheita_ruim")
+        # Na rodada seguinte o evento acaba, e não vem outro.
+        self.assertEqual(tipos, [None, "colheita_ruim", None, None])
 
-    def test_acima_da_chance_nao_acontece_nada(self):
-        estado = apoio.criar_estado()
-        estado["rodada"] = 2
-        with apoio.sorteio(apoio.GeradorFalso(sortes=(0.9,))):
-            partida._iniciar_rodada(estado)
+    def test_partida_inteira_tem_um_evento_so(self):
+        for semente in range(8):
+            estado = partida.criar_partida(
+                [{"jogador_id": i, "nome": f"Robô {i}"} for i in range(1, 5)], semente=semente
+            )
+            estado = partida.sortear_ordem(estado)
+            rodadas_com_evento = set()
+            while estado["fase"] != partida.FASE_FIM and estado["rodada"] <= 12:
+                estado = decidir(estado, set(), True, defaultdict(int))
+                if estado.get("evento"):
+                    rodadas_com_evento.add(estado["evento"]["rodada"])
+            self.assertEqual(rodadas_com_evento, {estado["rodada_do_evento"]}, f"semente {semente}")
 
-        self.assertIsNone(estado["evento"])
+    def test_mesa_de_antes_da_regra_nao_ganha_mais_evento(self):
+        antigo = apoio.criar_estado()
+        antigo["versao"] = 10
+        antigo["rodada"] = 4
+        del antigo["rodada_do_evento"]
 
-    def test_evento_some_na_rodada_seguinte(self):
-        estado = apoio.criar_estado()
-        estado["rodada"] = 2
-        with apoio.sorteio(apoio.GeradorFalso(sortes=(0.1, 0.0))):
-            partida._iniciar_rodada(estado)
-        estado["rodada"] = 3
-        with apoio.sorteio(apoio.GeradorFalso(sortes=(0.9,))):
-            partida._iniciar_rodada(estado)
+        atualizado = partida._atualizar(antigo)
 
-        self.assertIsNone(estado["evento"])
+        self.assertIsNone(atualizado["rodada_do_evento"])
 
 
 if __name__ == "__main__":

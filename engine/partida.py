@@ -29,7 +29,9 @@ from engine.regras.balanceamento import carregar_balanceamento, grupo_do_morro, 
 from engine.rng.gerador import Gerador
 
 #: v10: leilão (e quem já leiloou em que rodada).
-VERSAO_DO_ESTADO = 10
+#: v11: um evento temático só por partida, numa rodada sorteada quando ela
+#: começa (`rodada_do_evento`).
+VERSAO_DO_ESTADO = 11
 
 FASE_SORTEIO = "sorteio_ordem"
 FASE_ROLAR = "aguardando_rolagem"
@@ -683,6 +685,12 @@ def _atualizar(estado: dict) -> dict:
         for jogador in estado["jogadores"]:
             jogador.setdefault("leiloou_na_rodada", None)
 
+    if versao < 11:
+        # Mesa que começou com o sorteio a cada rodada já teve os eventos
+        # dela: daqui em diante, nenhum. A que nem começou sorteia a rodada
+        # do seu ao sortear a ordem.
+        estado.setdefault("rodada_do_evento", None)
+
     estado["versao"] = VERSAO_DO_ESTADO
     if estava_comprando:
         # Quem decidia a compra já tinha andado: a vez segue adiante.
@@ -756,6 +764,9 @@ def criar_partida(
         "coletor": 0,
         #: Evento temático da rodada (ver `_iniciar_rodada`).
         "evento": None,
+        #: A rodada do único evento temático da partida, sorteada quando ela
+        #: começa (`sortear_ordem`). None: ainda não sorteada, ou sem evento.
+        "rodada_do_evento": None,
         "ultimo_coringa": None,
         #: O último leilão que fechou, para a tela mostrar o resultado.
         "ultimo_leilao": None,
@@ -849,6 +860,7 @@ def sortear_ordem(estado: dict) -> dict:
     estado["sorteio"] = ordenadas
     estado["vez"] = 0
     estado["fase"] = FASE_ROLAR
+    estado["rodada_do_evento"] = _sortear_rodada_do_evento(estado, gerador)
     _guardar_gerador(estado, gerador)
     agora = time.time()
     _definir_prazo(estado, agora)
@@ -1528,28 +1540,41 @@ def _evento_faz_sentido(estado: dict, tipo: str) -> bool:
     return True
 
 
-def _iniciar_rodada(estado: dict) -> None:
-    """Começo de rodada: o evento da anterior acaba e outro pode ser sorteado."""
-    estado["evento"] = None
+def _sortear_rodada_do_evento(estado: dict, gerador: Gerador) -> int | None:
+    """A partida tem um evento temático só, numa rodada sorteada entre
+    `a_partir_da_rodada` e `ate_a_rodada`, todas com a mesma chance. Nunca a
+    primeira: ela começa junto com a partida, antes de qualquer sorteio."""
     cfg = carregar_balanceamento(estado["perfil"]).get("eventos", {})
-    if estado["rodada"] < int(cfg.get("a_partir_da_rodada", 2)):
+    primeira = max(2, int(cfg.get("a_partir_da_rodada", 2)))
+    ultima = int(cfg.get("ate_a_rodada", primeira))
+    if ultima < primeira:
+        return None
+    return gerador.inteiro(primeira, ultima)
+
+
+def _iniciar_rodada(estado: dict) -> None:
+    """Começo de rodada: o evento da anterior acaba e, se esta é a rodada
+    sorteada para o evento da partida, ele cai — qual deles, pelo peso."""
+    estado["evento"] = None
+    if estado["rodada"] != estado.get("rodada_do_evento"):
         return
-    gerador = _gerador(estado)
-    sorteado = gerador.sorte() < float(cfg.get("chance_por_rodada", 0))
+    cfg = carregar_balanceamento(estado["perfil"]).get("eventos", {})
     candidatos = [
         (tipo, float(cfg.get(tipo, {}).get("peso", 0)))
         for tipo in EVENTOS_TEMATICOS
         if float(cfg.get(tipo, {}).get("peso", 0)) > 0 and _evento_faz_sentido(estado, tipo)
     ]
-    if sorteado and candidatos:
-        alvo = gerador.sorte() * sum(peso for _, peso in candidatos)
-        escolhido = candidatos[-1][0]
-        for tipo, peso in candidatos:
-            if alvo < peso:
-                escolhido = tipo
-                break
-            alvo -= peso
-        _aplicar_evento(estado, escolhido, gerador)
+    if not candidatos:
+        return
+    gerador = _gerador(estado)
+    alvo = gerador.sorte() * sum(peso for _, peso in candidatos)
+    escolhido = candidatos[-1][0]
+    for tipo, peso in candidatos:
+        if alvo < peso:
+            escolhido = tipo
+            break
+        alvo -= peso
+    _aplicar_evento(estado, escolhido, gerador)
     _guardar_gerador(estado, gerador)
 
 

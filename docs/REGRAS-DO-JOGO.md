@@ -267,11 +267,17 @@ jogador perde R$ 90.000 (no máximo o que tiver em caixa).
 
 ## 9. Eventos temáticos
 
-Disparam aleatoriamente e afetam todos ao mesmo tempo. No começo de cada
-rodada, a partir da 2ª, há **25%** de chance de um acontecer; o evento vale
-para a rodada inteira e aparece no alto da tela. Evento que não mudaria nada
-não é sorteado (o Presidente com o Coletor vazio, o Bônus do banco sem
-ninguém com propriedade).
+Afetam todos ao mesmo tempo, e cada partida tem **um só**. Quando a partida
+começa, ela sorteia em que rodada ele cai, da **2ª à 10ª**, todas com a mesma
+chance — ninguém sabe qual. Ao começar essa rodada, sorteia qual dos cinco
+acontece; o evento vale para a rodada inteira e aparece no alto da tela.
+Evento que não mudaria nada não é sorteado (o Presidente com o Coletor
+vazio, o Bônus do banco sem ninguém com propriedade).
+
+A janela acaba na 10ª rodada para caber em qualquer partida de tempo cheio:
+25 minutos dão umas 12 rodadas mesmo com quatro jogadores usando os 30
+segundos inteiros. Antes, cada rodada tinha 25% de chance de evento, e uma
+partida longa via uns 7 — às vezes em rodadas seguidas.
 
 - **A colheita foi ruim** — todos perdem 10% do caixa.
 - **Baile na vila** — todos ganham R$ 160.000.
@@ -292,8 +298,8 @@ fechar), com uma **frase de sátira** (`data/eventos/tematicos.json`) e o
 efeito em números; o selo do evento no alto da tela reabre a janela durante
 a rodada.
 
-A frequência (`eventos.chance_por_rodada`) e o peso de cada evento ficam no
-balanceamento. As divergências antigas com o README foram resolvidas a favor
+A janela de rodadas (`eventos.a_partir_da_rodada` e `eventos.ate_a_rodada`)
+e o peso de cada evento ficam no balanceamento. As divergências antigas com o README foram resolvidas a favor
 da especificação: os eventos são aleatórios (não "a cada 3 rodadas"), é o
 Presidente Cor de Mel, o bônus é de 35% e a reconstrução dá 30% de desconto.
 

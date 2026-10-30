@@ -19,8 +19,10 @@ class GeradorFalso:
     """Faz as vezes do `Gerador`: dados fixos e sortes na ordem pedida.
 
     `sortes` é consumida da esquerda para a direita; a última se repete.
-    O padrão (0.99) não dispara nada: nem easter egg, nem evento temático,
-    nem vitória no Coringa. `escolhas` responde aos `escolher()` do portal.
+    O padrão (0.99) não dispara nada: nem easter egg, nem vitória no
+    Coringa. Evento temático não depende da sorte, e sim da rodada sorteada
+    (`rodada_do_evento`), que a mesa de teste não tem.
+    `escolhas` responde aos `escolher()` do portal.
     """
 
     def __init__(self, dados=(1, 1), sortes=(0.99,), escolhas=()):

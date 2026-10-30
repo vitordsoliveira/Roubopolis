@@ -120,9 +120,9 @@
   },
 
   "eventos": {
-    "_sobre": "Eventos temáticos: no começo de cada rodada, a partir de 'a_partir_da_rodada', há 'chance_por_rodada' de um acontecer. 'peso' é a frequência de cada um em relação aos outros (0 desliga). Valem para a rodada inteira.",
-    "chance_por_rodada": 0.25,
+    "_sobre": "Eventos temáticos: a partida tem UM só, numa rodada sorteada quando ela começa, entre 'a_partir_da_rodada' e 'ate_a_rodada', todas com a mesma chance. A janela acaba cedo para caber em qualquer partida de tempo cheio: 25 minutos dão umas 12 rodadas mesmo com quatro jogadores usando os 30 segundos inteiros. 'peso' é a frequência de cada um em relação aos outros (0 desliga). O evento vale para a rodada inteira.",
     "a_partir_da_rodada": 2,
+    "ate_a_rodada": 10,
     "colheita_ruim": { "peso": 1, "perde_do_caixa": 0.10 },
     "baile_na_vila": { "peso": 1, "ganho": 160000 },
     "final_de_ano": { "peso": 1, "aluguel_extra": 0.20 },

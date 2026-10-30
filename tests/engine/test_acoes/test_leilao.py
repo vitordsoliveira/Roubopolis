@@ -1,7 +1,7 @@
-"""Leilão: quem está bem atrás põe uma propriedade em leilão no começo da
-vez; os outros dão lances contra o relógio; o maior leva, pagando 2% da
-TABELA de imposto ao Coletor. Sem lance, o banco compra por 35% do valor
-investido.
+"""Leilão: quem tem a vez põe uma propriedade em leilão a qualquer momento
+dela, uma vez a cada 5 rodadas; os outros dão lances contra o relógio; o
+maior leva, pagando 2% da TABELA de imposto ao Coletor. Sem lance, o banco
+compra por 35% do valor investido.
 
 Itaquera (índice 2) vale 140.000: o banco paga 49.000 sem lance, o imposto
 é 2.800, o lance sobe de 10.000 em 10.000 e o primeiro é 50.000.
@@ -48,22 +48,82 @@ class AbrirLeilaoTestes(unittest.TestCase):
         self.assertEqual(estado["jogadores"][0]["leiloou_na_rodada"], 1)
         self.assertIn("leilao_aberto", apoio.tipos_do_log(estado))
 
-    def test_quem_nao_esta_atras_nao_leiloa(self):
+    def test_por_padrao_qualquer_um_leiloa(self):
+        estado = mesa_com_alguem_atras()
+        estado["jogadores"][0]["caixa"] = 5_000_000  # bem à frente da mesa
+
+        estado = partida.abrir_leilao(estado, 1, ITAQUERA, agora=T0)
+
+        self.assertEqual(estado["fase"], partida.FASE_LEILAO)
+
+    def test_limite_de_patrimonio_quando_configurado(self):
         estado = mesa_com_alguem_atras()
         estado["jogadores"][0]["caixa"] = 2_000_000
 
-        with self.assertRaisesRegex(partida.ErroDeRegra, "abaixo de 60% da média"):
-            partida.abrir_leilao(estado, 1, ITAQUERA, agora=T0)
+        with apoio.balanceamento(leilao={"so_abaixo_de_percentual_da_media": 0.60}):
+            with self.assertRaisesRegex(partida.ErroDeRegra, "abaixo de 60% da média"):
+                partida.abrir_leilao(estado, 1, ITAQUERA, agora=T0)
 
-    def test_so_na_propria_vez_e_antes_de_rolar(self):
+    def test_so_na_propria_vez(self):
         estado = mesa_com_alguem_atras()
         estado["propriedades"]["20"] = {"dono": 2, "nivel": 0}
+
         with self.assertRaisesRegex(partida.ErroDeRegra, "Não é sua vez"):
             partida.abrir_leilao(estado, 2, 20, agora=T0)
 
+    def test_no_meio_da_compra_e_a_compra_volta_depois(self):
+        estado = mesa_com_alguem_atras()
         estado["fase"] = partida.FASE_COMPRA
-        with self.assertRaisesRegex(partida.ErroDeRegra, "antes de rolar"):
+        estado["compra_pendente"] = {"casa": 20, "preco": 160_000, "jogador_id": 1}
+
+        estado = partida.abrir_leilao(estado, 1, ITAQUERA, agora=T0)
+        estado = fechar(partida.dar_lance(estado, 2, 90_000, agora=T0 + 1))
+
+        # Com o dinheiro do leilão, a compra que esperava já cabe no caixa.
+        self.assertEqual(estado["fase"], partida.FASE_COMPRA)
+        self.assertEqual(estado["compra_pendente"]["casa"], 20)
+        estado["prazo_vez"] = 4_000_000_000  # `decidir_compra` confere com a hora de verdade
+        estado = partida.decidir_compra(estado, 1, True)
+        self.assertEqual(estado["propriedades"]["20"]["dono"], 1)
+        self.assertEqual(estado["jogadores"][0]["caixa"], 100_000 + 90_000 - 160_000)
+
+    def test_no_meio_da_liquidacao_o_leilao_paga_o_aluguel(self):
+        estado = mesa_com_alguem_atras()
+        estado["jogadores"][0]["caixa"] = 10_000
+        estado["propriedades"]["6"] = {"dono": 2, "nivel": 0}  # Mooca: aluguel de 56.000
+        estado["fase"] = partida.FASE_LIQUIDACAO_ALUGUEL
+        estado["aluguel_pendente"] = {"casa": 6, "jogador_id": 1, "dono_id": 2, "aluguel": 56_000, "divida": 56_000}
+
+        estado = partida.abrir_leilao(estado, 1, ITAQUERA, agora=T0)
+        estado = fechar(partida.dar_lance(estado, 3, 80_000, agora=T0 + 1))
+
+        # 10.000 + 80.000 do lance pagam os 56.000, e a vez passa.
+        self.assertIsNone(estado["aluguel_pendente"])
+        self.assertEqual(estado["jogadores"][0]["caixa"], 10_000 + 80_000 - 56_000)
+        self.assertEqual(estado["jogadores"][1]["caixa"], 2_000_000 + 56_000)
+        self.assertEqual(apoio.vez_de(estado), 2)
+
+    def test_nao_leiloa_a_casa_que_espera_a_melhoria(self):
+        estado = mesa_com_alguem_atras()
+        estado["fase"] = partida.FASE_MELHORIA
+        estado["melhoria_pendente"] = {"casa": ITAQUERA, "jogador_id": 1, "origem": "visita", "nivel": 0, "custo": 35_000}
+
+        with self.assertRaisesRegex(partida.ErroDeRegra, "melhoria"):
             partida.abrir_leilao(estado, 1, ITAQUERA, agora=T0)
+
+    def test_coringa_recalcula_a_perda_com_o_caixa_novo(self):
+        estado = mesa_com_alguem_atras()
+        estado["jogadores"][0]["caixa"] = 0
+        estado["fase"] = partida.FASE_CORINGA
+        estado["coringa_pendente"] = {"casa": 11, "jogador_id": 1, "chance": 0.6, "faixa": "atras",
+                                      "ganho": 1_000_000, "perda": 0, "caixa": 0}
+
+        estado = partida.abrir_leilao(estado, 1, ITAQUERA, agora=T0)
+        estado = fechar(partida.dar_lance(estado, 2, 90_000, agora=T0 + 1))
+
+        self.assertEqual(estado["fase"], partida.FASE_CORINGA)
+        self.assertEqual(estado["coringa_pendente"]["perda"], 90_000)
+        self.assertEqual(estado["coringa_pendente"]["caixa"], 90_000)
 
     def test_so_propriedade_propria(self):
         estado = mesa_com_alguem_atras()
@@ -72,12 +132,16 @@ class AbrirLeilaoTestes(unittest.TestCase):
         with self.assertRaisesRegex(partida.ErroDeRegra, "não é sua"):
             partida.abrir_leilao(estado, 1, 20, agora=T0)
 
-    def test_um_leilao_por_rodada(self):
-        estado = fechar(aberto())
+    def test_um_leilao_a_cada_cinco_rodadas(self):
+        estado = fechar(aberto())  # leiloou na rodada 1
         estado["propriedades"]["1"] = {"dono": 1, "nivel": 0}
 
-        with self.assertRaisesRegex(partida.ErroDeRegra, "já leiloou nesta rodada"):
+        with self.assertRaisesRegex(partida.ErroDeRegra, "rodada 6"):
             partida.abrir_leilao(estado, 1, 1, agora=T0 + 20)
+
+        estado["rodada"] = 6
+        estado = partida.abrir_leilao(estado, 1, 1, agora=T0 + 20)
+        self.assertEqual(estado["fase"], partida.FASE_LEILAO)
 
     def test_nao_da_para_rolar_com_o_leilao_aberto(self):
         # Relógio de verdade: `rolar` confere o prazo com a hora atual.
@@ -123,6 +187,18 @@ class LanceTestes(unittest.TestCase):
 
         estado = partida.dar_lance(estado, 3, 60_000, agora=T0 + 11)
         self.assertEqual(estado["prazo_vez"], T0 + 16)
+
+    def test_guerra_de_lances_para_no_teto(self):
+        estado = aberto()
+        valor, quem = 50_000, 2
+        for segundo in range(11, 60, 4):  # um lance sempre perto do fim
+            estado = partida.dar_lance(estado, quem, valor, agora=T0 + min(segundo, 44.5))
+            valor, quem = valor + 10_000, 5 - quem
+            if segundo >= 44:
+                break
+
+        # Esticou a cada lance, mas nunca passa de 45 segundos desde a abertura.
+        self.assertEqual(estado["prazo_vez"], T0 + 45)
 
     def test_lance_depois_do_fim_nao_entra(self):
         estado = aberto()

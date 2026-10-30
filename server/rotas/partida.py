@@ -169,6 +169,41 @@ def lance(codigo: str):
     return jsonify(p.dar_lance(sessao, sala, jogador, valor)), 200
 
 
+def _inteiro(campo: str):
+    """Um inteiro obrigatório do corpo; `None` quando veio outra coisa."""
+    valor = (request.get_json(silent=True) or {}).get(campo)
+    return valor if isinstance(valor, int) and not isinstance(valor, bool) else None
+
+
+# --- modo dev: trapaças de teste, só com MODO_DEV ligado (server/config.py) ---
+
+@bp.post("/partidas/<codigo>/dev/caixa")
+def dev_caixa(codigo: str):
+    sessao, sala, jogador = _sala_e_jogador(codigo)
+    valor = _inteiro("valor")
+    if valor is None:
+        return jsonify({"erro": "Informe o valor do caixa."}), 400
+    return jsonify(p.dev_definir_caixa(sessao, sala, jogador, valor)), 200
+
+
+@bp.post("/partidas/<codigo>/dev/andar")
+def dev_andar(codigo: str):
+    sessao, sala, jogador = _sala_e_jogador(codigo)
+    passos = _inteiro("passos")
+    if passos is None:
+        return jsonify({"erro": "Informe quantas casas andar."}), 400
+    return jsonify(p.dev_andar(sessao, sala, jogador, passos)), 200
+
+
+@bp.post("/partidas/<codigo>/dev/ir")
+def dev_ir(codigo: str):
+    sessao, sala, jogador = _sala_e_jogador(codigo)
+    casa, valido = _casa_ou_nada(obrigatoria=True)
+    if not valido:
+        return jsonify({"erro": "Escolha uma casa do tabuleiro."}), 400
+    return jsonify(p.dev_ir(sessao, sala, jogador, casa)), 200
+
+
 @bp.post("/partidas/<codigo>/sair")
 def sair(codigo: str):
     """Abandona a partida em andamento. Avisa os outros pelo log."""

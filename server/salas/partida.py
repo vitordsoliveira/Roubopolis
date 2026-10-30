@@ -257,6 +257,30 @@ def dar_lance(sessao: Session, sala: Sala, jogador, valor: int) -> dict:
                  lambda e: motor.dar_lance(e, jogador.id, valor))
 
 
+def _exigir_modo_dev() -> None:
+    if not Config.MODO_DEV:
+        raise ErroDeSala("O modo dev está desligado neste servidor (MODO_DEV em server/config.py).", http=403)
+
+
+def dev_definir_caixa(sessao: Session, sala: Sala, jogador, valor: int) -> dict:
+    """Trapaça de teste: o caixa vira `valor`, a qualquer momento da partida."""
+    _exigir_modo_dev()
+    fases = motor.FASES_QUE_ACEITAM_LEILAO + (motor.FASE_LEILAO,)
+    return _agir(sessao, sala, jogador, fases, lambda e: motor.definir_caixa(e, jogador.id, valor))
+
+
+def dev_andar(sessao: Session, sala: Sala, jogador, passos: int) -> dict:
+    """Trapaça de teste: anda `passos` casas no lugar dos dados."""
+    _exigir_modo_dev()
+    return _agir(sessao, sala, jogador, (motor.FASE_ROLAR,), lambda e: motor.rolar(e, jogador.id, passos=passos))
+
+
+def dev_ir(sessao: Session, sala: Sala, jogador, casa_indice: int) -> dict:
+    """Trapaça de teste: vai direto à casa, que se resolve como numa parada."""
+    _exigir_modo_dev()
+    return _agir(sessao, sala, jogador, (motor.FASE_ROLAR,), lambda e: motor.rolar(e, jogador.id, destino=casa_indice))
+
+
 def abandonar(sessao: Session, sala: Sala, jogador) -> dict:
     """Sair no meio da partida. Os outros ficam sabendo pelo log."""
     linha = buscar_partida(sessao, sala, bloquear=True)
@@ -313,6 +337,8 @@ def _envelope(estado: dict, jogador, sala: Sala, *, espectador: bool = False) ->
             },
         },
         "cosmeticos": loja.visuais_da_partida(estado),
+        # Se o /dev on do chat vale neste servidor (MODO_DEV em server/config.py).
+        "modo_dev": Config.MODO_DEV,
         # Os créditos que esta pessoa ganhou — a comemoração mostra.
         "recompensa": loja.recompensa(estado, jogador.id) if acabou and not espectador else None,
     }

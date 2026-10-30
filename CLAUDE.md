@@ -105,6 +105,12 @@ Mudou só `client/`? O `git pull` basta. Mudou Python? Precisa de
 `touch tmp/restart.txt` — o Passenger mantém o código em memória. Mudou
 `electron/`? Aí sim precisa de `npm run build` e reinstalar.
 
+**Modo dev (trapaças de teste):** `/dev on` no chat da partida abre um painel
+para definir o caixa, ir direto a uma casa e andar quantas casas quiser. Liga
+e desliga em `MODO_DEV`, `server/config.py`. Publicar com `True` leva as
+trapaças para qualquer jogador do servidor — desligue antes de abrir o jogo
+para quem não é da equipe.
+
 **Nunca edite o root de documento pela tela do cPanel.** O campo tem prefixo
 fixo `/public_html/` e concatena o que você digita, produzindo lixo como
 `/home/gtel/public_html/home/gtel/Roubodopolis`. O Passenger exige

@@ -75,6 +75,8 @@ export function escolhaDoLeilao({ estado, tabuleiro, eu, codigo, regras }) {
     .map(([indice, posse]) => ({ casa: tabuleiro.casas[Number(indice)], posse }))
     .sort((a, b) => b.posse.preco_compra - a.posse.preco_compra);
   const segundos = regras?.leilao?.segundos ?? 12;
+  const intervalo = regras?.leilao?.rodadas_entre ?? 1;
+  const proximo = intervalo > 1 ? `Depois deste, o próximo só daqui a ${intervalo} rodadas.` : "Um leilão por rodada.";
 
   return {
     chave: `leilao:${minhas.map(({ casa }) => casa.i).join(",")}`,
@@ -84,7 +86,7 @@ export function escolhaDoLeilao({ estado, tabuleiro, eu, codigo, regras }) {
       elemento(
         "p",
         "decisao__texto",
-        `A mesa dá lances por ${segundos} segundos e o maior leva. Se ninguém der lance, o banco compra pelo valor ao lado. Um leilão por rodada.`,
+        `A mesa dá lances por ${segundos} segundos e o maior leva. Se ninguém der lance, o banco compra pelo valor ao lado. ${proximo}`,
       ),
     ],
     opcoes: minhas.map(({ casa, posse }) => ({

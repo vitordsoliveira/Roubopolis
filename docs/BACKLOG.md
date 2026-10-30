@@ -84,10 +84,10 @@ Também falta: **quem vence o empate nos dados?**
 
 ### 8. 🟢 Leilão sem cooldown
 
-Decisão (2026-10-30): **um leilão por rodada por jogador**, aberto no começo
-da própria vez, antes de rolar. Como cada um joga uma vez por rodada, é no
-máximo um por vez — e só enquanto o jogador continuar abaixo de 60% da média.
-Para espaçar mais, `leilao.rodadas_entre_leiloes` no balanceamento.
+Decisão (2026-10-30): **um leilão a cada 5 rodadas por jogador**, aberto a
+qualquer momento da própria vez — e por qualquer jogador, não só por quem
+está atrás. Os dois números ficam no balanceamento
+(`leilao.rodadas_entre_leiloes` e `leilao.so_abaixo_de_percentual_da_media`).
 
 ### 9. 🟢 Casa do Prejuízo quando quem pisa é o líder
 

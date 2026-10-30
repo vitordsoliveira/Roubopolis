@@ -34,6 +34,9 @@ class BonusDoMorroTestes(unittest.TestCase):
 
         self.assertEqual(estado["jogadores"][0]["caixa"], 100_000 - 39_200)
         self.assertEqual(estado["jogadores"][1]["caixa"], 2_000_000 + 39_200)
+        # A janela do aluguel conta que o Morro encareceu a conta.
+        linha = next(l for l in estado["log"] if l["tipo"] == "aluguel")
+        self.assertEqual(linha["dados"]["morro"], 1.4)
 
     def test_casa_fora_do_morro_nao_ganha_bonus(self):
         estado = com_morro(5)

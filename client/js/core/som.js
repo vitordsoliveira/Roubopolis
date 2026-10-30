@@ -192,6 +192,13 @@ const efeitos = {
     estalo(audio, t, { freq: 400, ate: 5000, q: 0.7, duracao: 0.5, volume: 0.12 });
   },
 
+  /** Chegando pela luz do portal: o zumbido desce e um brilho estala. */
+  teleporte(audio, t) {
+    tom(audio, t, { freq: 2200, ate: 260, forma: "sine", duracao: 0.42, volume: 0.1 });
+    estalo(audio, t, { freq: 5000, ate: 600, q: 0.7, duracao: 0.4, volume: 0.1 });
+    tom(audio, t + 0.4, { freq: 1568, forma: "triangle", duracao: 0.18, volume: 0.06 });
+  },
+
   /** A porta da cela batendo, e as chaves. */
   prisao(audio, t) {
     estalo(audio, t, { freq: 700, filtro: "lowpass", duracao: 0.18, volume: 0.5 });

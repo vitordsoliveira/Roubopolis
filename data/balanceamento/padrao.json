@@ -80,17 +80,18 @@
   },
 
   "leilao": {
-    "_sobre": "Quem tem patrimônio abaixo de 'so_abaixo_de_percentual_da_media' da média da mesa põe uma propriedade sua em leilão no começo da vez, antes de rolar. Os outros dão lances por tempo.segundos_de_leilao segundos e o maior leva, com as melhorias. null em 'so_abaixo_de_percentual_da_media' libera para todo mundo (bom para testar).",
+    "_sobre": "Qualquer jogador põe uma propriedade sua em leilão a qualquer momento da própria vez — antes de rolar ou no meio de uma decisão, que volta quando o leilão fecha —, uma vez a cada 'rodadas_entre_leiloes' rodadas. Os outros dão lances por tempo.segundos_de_leilao segundos e o maior leva, com as melhorias. 'so_abaixo_de_percentual_da_media' (ex.: 0.60) limita o leilão a quem está abaixo dessa fração da média da mesa; null libera para todo mundo.",
     "_imposto": "Quem arremata paga o lance a quem vendeu e mais 'imposto_sobre_tabela' do VALOR DE TABELA (não do lance) para o Coletor de Impostos — ver docs/REGRAS-DO-JOGO.md.",
     "_sem_lance": "Ninguém deu lance: o banco compra por 'compra_do_banco_sem_lance' do valor investido (tabela + melhorias), como na venda para pagar dívida. Todo lance precisa passar desse valor.",
-    "_relogio": "Lance dado com menos de 'segundos_apos_lance' no relógio estica o leilão até esse tanto, para a mesa ver o lance e poder responder. 0 desliga.",
+    "_relogio": "Lance dado com menos de 'segundos_apos_lance' no relógio estica o leilão até esse tanto, para a mesa ver o lance e poder responder (0 desliga). Mas o leilão nunca passa de 'segundos_no_maximo' desde que abriu: guerra de lances não come o relógio da partida.",
     "imposto_sobre_tabela": 0.02,
     "compra_do_banco_sem_lance": 0.35,
-    "so_abaixo_de_percentual_da_media": 0.60,
-    "rodadas_entre_leiloes": 1,
+    "so_abaixo_de_percentual_da_media": null,
+    "rodadas_entre_leiloes": 5,
     "passo_do_lance": 0.05,
     "arredondar_para": 10000,
-    "segundos_apos_lance": 5
+    "segundos_apos_lance": 5,
+    "segundos_no_maximo": 45
   },
 
   "desafio": {

@@ -46,6 +46,16 @@ class Config:
     NOME_MIN: int = 3
     NOME_MAX: int = 16
 
+    # --- modo dev (trapaças de teste) --------------------------------------
+    # LIGA/DESLIGA AQUI. Ligado, quem digita /dev on no chat da partida ganha
+    # um painel para definir o próprio caixa, ir direto a uma casa e andar
+    # quantas casas quiser (rotas /dev em server/rotas/partida.py). Toda
+    # trapaça aparece para a mesa como [dev].
+    # ATENÇÃO: ligado, vale para QUALQUER jogador de QUALQUER partida deste
+    # servidor. Desligue (False) antes de abrir o jogo para quem não é da
+    # equipe — publicar com True leva as trapaças junto.
+    MODO_DEV: bool = True
+
 
 def url_do_banco() -> str:
     """Onde o jogo grava: o arquivo SQLite local ou o MySQL da hospedagem."""

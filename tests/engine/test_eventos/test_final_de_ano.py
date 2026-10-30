@@ -17,6 +17,17 @@ class FinalDeAnoTestes(unittest.TestCase):
 
         self.assertEqual((antes, durante, depois), (28_000, 33_600, 28_000))
 
+    def test_aluguel_pago_na_rodada_avisa_o_acrescimo(self):
+        estado = apoio.criar_estado(caixa=100_000)  # sem caixa para comprar Itaquera
+        estado["propriedades"]["2"] = {"dono": 2, "nivel": 0}
+        partida._aplicar_evento(estado, "final_de_ano", apoio.GeradorFalso())
+
+        estado = apoio.rolar(estado)  # Praça (4) -> Itaquera (2)
+
+        linha = next(l for l in estado["log"] if l["tipo"] == "aluguel")
+        self.assertEqual(linha["dados"]["valor"], 33_600)
+        self.assertEqual(linha["dados"]["final_de_ano"], 0.2)
+
     def test_solta_os_presos_que_voltam_reincidentes(self):
         estado = apoio.criar_estado()
         estado["jogadores"][1]["preso"] = 1

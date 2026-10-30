@@ -129,16 +129,23 @@ multiplicador atual. Na legenda, o grupo aparece como "Barata · Morro".
 
 ## 6. Leilão
 
-Ferramenta de recuperação para quem está ficando para trás.
+Um jeito de transformar propriedade em dinheiro na hora, pelo preço que a
+mesa pagar.
 
-**Quem pode:** apenas jogadores com patrimônio **abaixo de 60% da média** dos
-jogadores vivos, com alguma propriedade.
+**Quem pode (decidido em 2026-10-30):** **qualquer jogador** com alguma
+propriedade. As regras originais limitavam a quem estivesse abaixo de 60% da
+média da mesa; o limite continua no balanceamento
+(`leilao.so_abaixo_de_percentual_da_media`), desligado (`null`).
 
-**Quando:** no começo da própria vez, antes de rolar (botão "Leiloar
-propriedade", embaixo do JOGAR). As regras originais punham as ações livres
-depois da jogada; lá, todo turno de todo mundo precisaria de um "passar a
-vez" a mais só para dar a chance de leiloar. Depois do leilão, quem vendeu
-rola normalmente, com o prazo da vez recomeçado.
+**Quando:** **a qualquer momento da própria vez**, uma vez a cada **5
+rodadas** (`leilao.rodadas_entre_leiloes`). Antes de rolar, pelo botão
+"Leiloar propriedade" embaixo do JOGAR; no meio de uma decisão (comprar,
+pagar um aluguel sem caixa, Coringa, Reconstrução, Prejuízo, melhoria, Bônus
+do banco), pelo botão "Leiloar uma propriedade" dentro da janela dela. A
+decisão espera o leilão e volta depois, com o prazo recomeçado e o que o
+leilão mudou: o caixa novo, a dívida de aluguel quitada se o dinheiro já
+der, a perda da Coringa recalculada, as casas vendidas fora das listas. A
+casa que espera a decisão de melhoria não pode ir a leilão.
 
 **Como:** o jogador escolhe uma propriedade sua e a mesa inteira vê a janela
 do leilão (wireframe "Modais do Leilão"). Os demais dão lances por **12
@@ -152,7 +159,9 @@ wireframe mostrava 2% do lance; vale a regra escrita.)
 - O lance mais o imposto precisam caber no caixa de quem dá o lance.
 - Lance dado com menos de 5 segundos no relógio estica o leilão até 5
   segundos (`segundos_apos_lance`): com a tela consultando o servidor de
-  tempos em tempos, sem isso o último a clicar levava sem ninguém ver.
+  tempos em tempos, sem isso o último a clicar levava sem ninguém ver. Mas
+  um leilão nunca passa de **45 segundos** desde que abriu
+  (`segundos_no_maximo`): guerra de lances não come o relógio da partida.
 - Quem vende sai da partida: o leilão é cancelado e a casa volta ao banco.
   Quem dá lance sai: os lances dele caem e o maior dos outros volta a valer.
 
@@ -160,10 +169,9 @@ Se ninguém der lance, o banco compra por **35% do valor investido** — a mesma
 conta da venda para pagar dívida. Sem melhoria, é exatamente os 35% do valor
 de tabela da regra; com melhoria, quem vende recebe também por ela.
 
-**Decidido (2026-10-30): um leilão por rodada por jogador**
-(`leilao.rodadas_entre_leiloes`). Ao fechar, todos veem a janela "Leilão
-encerrado": quem arrematou, o valor, o lance, quanto economizou (ou recebeu,
-para quem vendeu), o imposto e o cofre do Coletor.
+Ao fechar, todos veem a janela "Leilão encerrado": quem arrematou, o valor, o
+lance, quanto economizou (ou recebeu, para quem vendeu), o imposto e o cofre
+do Coletor.
 
 ## 7. Desafio
 
@@ -207,7 +215,10 @@ de aluguel faz isso.
 
 **Na tela:** cada casa de evento abre, para a mesa inteira, uma janela com o
 que aconteceu e uma **frase de sátira** (`data/eventos/mensagens_casas.json`,
-uma lista por casa; a mesa toda lê a mesma frase). A janela fecha sozinha em
+uma lista por casa; a mesa toda lê a mesma frase). O aluguel pago a outro
+jogador também abre a janela, contada do ponto de vista de quem olha: quem
+pagou vê em vermelho, quem recebeu em verde, o resto da mesa em roxo — e,
+quando foi mais caro, por quê (bônus do Morro, final de ano). A janela fecha sozinha em
 uns 5 segundos, no Continuar, no Esc ou quando quem tem a vez aperta JOGAR:
 ela não segura o relógio de ninguém.
 
@@ -216,7 +227,7 @@ ela não segura o relógio de ninguém.
 | **Ganho** | "Você roubou." Ganha R$ 200.000 na hora. |
 | **Roubo** | "Você foi roubado." Perde R$ 100.000 na hora (no máximo o que tiver em caixa). |
 | **Coletor de Impostos** | Acumula todo imposto recolhido na partida: a Casa do Prejuízo e o imposto do leilão. Quem pisa leva o valor inteiro e o contador zera. O valor fica visível no alto da tela o tempo todo. |
-| **Portal** | Teleporta para uma casa sorteada (qualquer uma, menos o próprio portal); de lá o peão anda os passos que faltavam, se houver. Um teleporte por jogada. |
+| **Portal** | Teleporta para uma casa sorteada (qualquer uma, menos o próprio portal); de lá o peão anda os passos que faltavam, se houver. Um teleporte por jogada. O salto conta como andar para a frente: se a casa sorteada fica depois do Início, o jogador recebe o salário de R$ 300.000. Na tela, um feixe de luz leva o peão para cima no portal e o traz de volta na casa sorteada. |
 | **Prisão** | Perde a próxima vez (uma rodada). Quem saiu pelo evento de final de ano e volta perde 3. |
 | **Reconstrução** | Um nível a mais numa propriedade sua, com 30% de desconto no custo do nível. O nível conta no patrimônio pelo valor cheio. |
 | **Neutra** | Nada acontece. Serve para dar ritmo. |

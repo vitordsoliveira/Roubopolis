@@ -126,7 +126,14 @@ class CompraPropriedadeTestes(unittest.TestCase):
         self.assertEqual(estado["jogadores"][0]["caixa"], 1_958_000)
         self.assertEqual(estado["jogadores"][1]["caixa"], 2_042_000)
         self.assertIsNone(estado["compra_pendente"])
-        self.assertTrue(any(log["tipo"] == "aluguel" for log in estado["log"]))
+        # A linha diz à tela quem recebeu, onde e quanto: é o que abre a
+        # janela do aluguel para quem pagou, quem recebeu e quem viu.
+        linha = next(log for log in estado["log"] if log["tipo"] == "aluguel")
+        self.assertEqual(linha["jogador_id"], 1)
+        self.assertEqual(
+            linha["dados"],
+            {"dono_id": 2, "casa": 2, "valor": 42_000, "morro": None, "final_de_ano": None},
+        )
 
     def test_tempo_esgotado_na_oferta_de_propriedade_alheia_cobra_aluguel(self):
         estado = self.criar_estado()

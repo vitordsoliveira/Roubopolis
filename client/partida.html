@@ -90,6 +90,31 @@
       </form>
     </section>
 
+    <!-- Modo dev: abre com /dev on no chat, só se o servidor deixar
+         (MODO_DEV em server/config.py). Ir e Andar valem na sua vez. -->
+    <section class="painel-dev moldura" id="painel-dev" aria-label="Modo dev" hidden>
+      <header class="painel-dev__topo">
+        <strong>Modo dev</strong>
+        <button class="painel-dev__fechar" type="button" id="dev-fechar" aria-label="Fechar o modo dev">×</button>
+      </header>
+      <form class="painel-dev__linha" id="dev-form-caixa">
+        <label for="dev-caixa">Caixa</label>
+        <input id="dev-caixa" type="number" min="0" step="1" inputmode="numeric" required>
+        <button type="submit">Definir</button>
+      </form>
+      <form class="painel-dev__linha" id="dev-form-ir">
+        <label for="dev-casa">Ir para</label>
+        <select id="dev-casa"></select>
+        <button type="submit">Ir</button>
+      </form>
+      <form class="painel-dev__linha" id="dev-form-andar">
+        <label for="dev-passos">Andar</label>
+        <input id="dev-passos" type="number" min="1" max="120" value="7" inputmode="numeric" required>
+        <button type="submit">Andar</button>
+      </form>
+      <p class="painel-dev__nota">Ir e Andar valem na sua vez, no lugar dos dados. A mesa vê tudo como [dev]. /dev off fecha.</p>
+    </section>
+
     <!-- Chat sempre à mão; o resto das opções fica dentro do menu, que abre
          para cima e lembra se ficou aberto. -->
     <nav class="acoes" aria-label="Opções">
@@ -188,6 +213,8 @@
         <button class="jogar__botao jogar__botao--pequeno compra__recusar moldura" type="button" id="compra-nao">Deixar passar</button>
         <button class="jogar__botao jogar__botao--pequeno compra__aceitar moldura" type="button" id="compra-sim">Comprar</button>
       </div>
+      <!-- Leiloar no meio da decisão: a decisão espera e volta depois. -->
+      <button class="leiloar-na-decisao" type="button" data-leiloar hidden><span data-icone="martelo"></span>Leiloar uma propriedade</button>
     </section>
   </div>
 
@@ -201,6 +228,7 @@
       <p class="compra__tempo" id="liquidacao-tempo" role="timer"></p>
       <p class="liquidacao__instrucao">Escolha uma propriedade para vender ao banco. O valor será usado para pagar o aluguel.</p>
       <ol class="liquidacao__lista" id="liquidacao-lista"></ol>
+      <button class="leiloar-na-decisao" type="button" data-leiloar hidden><span data-icone="martelo"></span>Ou leiloe uma — o lance pode pagar mais que o banco</button>
     </section>
   </div>
 
@@ -214,6 +242,7 @@
       <ol class="liquidacao__lista decisao__opcoes" id="decisao-opcoes" hidden></ol>
       <p class="compra__tempo" id="decisao-tempo" role="timer"></p>
       <div class="compra__acoes" id="decisao-acoes"></div>
+      <button class="leiloar-na-decisao" type="button" data-leiloar hidden><span data-icone="martelo"></span>Leiloar uma propriedade</button>
     </section>
   </div>
 

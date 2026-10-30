@@ -11,7 +11,7 @@
    peão pula casa por casa, e só então o estado novo entra. Aplicar o estado
    antes disso é o que fazia a partida parecer uma planilha se atualizando. */
 
-import { api, guardado } from "../core/api.js";
+import { api, ErroDaApi, guardado } from "../core/api.js";
 import { musica } from "../core/musica.js";
 import { som } from "../core/som.js";
 import { anunciar, anuncioAberto, fecharAnuncio, limparAnuncios } from "../ui/anuncios.js";
@@ -70,6 +70,7 @@ const cubosGrandes = [document.querySelector("#cubo-grande-a"), document.querySe
 const botaoJogar = document.querySelector("#jogar");
 const botaoVenderBonus = document.querySelector("#vender-bonus");
 const botaoLeiloar = document.querySelector("#leiloar");
+const botoesLeiloarNaDecisao = document.querySelectorAll("[data-leiloar]");
 const botaoVerLeilao = document.querySelector("#ver-leilao");
 const modalOrdem = document.querySelector("#modal-ordem");
 const modalCompra = document.querySelector("#modal-compra");
@@ -98,6 +99,13 @@ const contadorChat = document.querySelector("#chat-contador");
 const formularioChat = document.querySelector("#chat-formulario");
 const campoChat = document.querySelector("#chat-texto");
 const listaChat = document.querySelector("#chat-mensagens");
+const painelDev = document.querySelector("#painel-dev");
+const formCaixaDev = document.querySelector("#dev-form-caixa");
+const formIrDev = document.querySelector("#dev-form-ir");
+const formAndarDev = document.querySelector("#dev-form-andar");
+const campoCaixaDev = document.querySelector("#dev-caixa");
+const seletorCasaDev = document.querySelector("#dev-casa");
+const campoPassosDev = document.querySelector("#dev-passos");
 
 const CORES_RESERVA = ["#e94f37", "#7cb342", "#a855f7", "#ffd83d", "#2563c9", "#c9a227"];
 
@@ -143,8 +151,10 @@ const MS_DESLIZE_FAIXA = ms(320);
 const MS_LER_RESULTADO = ms(1200);
 /** Pausa depois que o peão pousa, antes do estado novo entrar. */
 const MS_APOS_CHEGAR = ms(650);
-/** O peão sumindo no portal — e de novo, reaparecendo na casa sorteada. */
-const MS_PORTAL = ms(520);
+/** O peão subindo pelo feixe do portal — e de novo, descendo na casa sorteada. */
+const MS_PORTAL = ms(560);
+/** O feixe de luz acendendo (e apagando) numa casa. */
+const MS_FEIXE = ms(260);
 /** O "?" da Coringa girando antes do resultado. */
 const MS_SUSPENSE = ms(1500);
 /** Quanto a frase "fulano tirou 7 e parou em Moema" fica embaixo do JOGAR. */
@@ -197,6 +207,8 @@ let ultimoLeilaoVisto = 0;
 /** Sobe a cada lance que esta tela manda: a consulta que saiu antes dele
     volta com o estado sem o lance e precisa ser descartada. */
 let geracao = 0;
+/** Se o servidor aceita o modo dev (MODO_DEV em server/config.py). */
+let devDisponivel = false;
 let ritmoDaConsulta = null;
 /** Quem está no tabuleiro agora — usado para saber quando remontar os peões. */
 let assinaturaDosPeoes = "";
@@ -220,6 +232,7 @@ const chat = montarChat({
   status: document.querySelector("#chat-status"),
   corDe: corPeloId,
   aoChegar: avisarMensagens,
+  aoComando: tratarComando,
 });
 
 preencherIcones();
@@ -455,6 +468,7 @@ function faixasDoMorro() {
 function aplicarRitmo() {
   elTabuleiro.style.setProperty("--ms-passo", `${MS_POR_CASA}ms`);
   elTabuleiro.style.setProperty("--ms-portal", `${MS_PORTAL}ms`);
+  elTabuleiro.style.setProperty("--ms-feixe", `${MS_FEIXE}ms`);
   elAnuncioDados.style.setProperty("--ms-giro", `${MS_GIRO_GRANDE}ms`);
   elAnuncioDados.style.setProperty("--ms-deslize", `${MS_DESLIZE_FAIXA}ms`);
 }
@@ -541,17 +555,53 @@ async function pular(peao, de, passos, total) {
   }
 }
 
-/** O peão some girando no portal e reaparece na casa sorteada. */
-async function atravessarPortal(peao, destino) {
+/** Um feixe de luz em pé na casa, no lugar dos pés do peão: a coluna, o
+    miolo branco, o anel no chão e as faíscas subindo. */
+function acenderFeixe(indice, assento) {
+  const { x, y } = desenho.ponto(indice, assento);
+  const feixe = elemento("div", "feixe");
+  feixe.style.setProperty("--px", `${x}%`);
+  feixe.style.setProperty("--py", `${y}%`);
+  // Logo atrás do peão daquele ponto: a luz o envolve sem apagar o boneco.
+  feixe.style.zIndex = String(Math.round(y * 10) - 1);
+  feixe.appendChild(elemento("span", "feixe__nucleo"));
+  for (let i = 0; i < 7; i += 1) {
+    const faisca = elemento("i", "feixe__faisca");
+    faisca.style.setProperty("--x", `${18 + Math.random() * 64}%`);
+    faisca.style.setProperty("--atraso", `${(Math.random() * 0.7).toFixed(2)}s`);
+    feixe.appendChild(faisca);
+  }
+  elPeoes.appendChild(feixe);
+  return feixe;
+}
+
+function apagarFeixe(feixe) {
+  feixe.classList.add("feixe--apagando");
+  setTimeout(() => feixe.remove(), MS_FEIXE + 40);
+}
+
+/** O feixe de luz desce no portal e leva o peão para cima; na casa
+    sorteada, outro feixe o traz de volta para o chão. */
+async function atravessarPortal(peao, casaDoPortal, destino) {
+  const assento = Number(peao.dataset.assento || 0);
   peao.classList.remove("peao--andando");
-  peao.classList.add("peao--portal");
+
+  const entrada = acenderFeixe(casaDoPortal, assento);
   som.tocar("portal");
+  await espera(MS_FEIXE);
+  peao.classList.add("peao--portal");
   await espera(MS_PORTAL);
+  apagarFeixe(entrada);
+
   teleportarPeao(peao, destino);
+  const saida = acenderFeixe(destino, assento);
+  som.tocar("teleporte");
+  await espera(MS_FEIXE);
   peao.classList.replace("peao--portal", "peao--saindo-do-portal");
-  desenho.destacar(destino);
   await espera(MS_PORTAL);
   peao.classList.remove("peao--saindo-do-portal");
+  desenho.destacar(destino);
+  apagarFeixe(saida);
 }
 
 /** Pula de casa em casa até o destino — com o portal, em dois trechos. */
@@ -570,7 +620,7 @@ async function andarPeao({ jogador_id, de, passos, para, portal }) {
 
   if (portal) {
     await pular(peao, de, portal.apos, total);
-    await atravessarPortal(peao, portal.destino);
+    await atravessarPortal(peao, portal.casa, portal.destino);
     await pular(peao, portal.destino, passos - portal.apos, total);
   } else {
     await pular(peao, de, passos, total);
@@ -691,6 +741,15 @@ function pintarJogar() {
   botaoVenderBonus.hidden = !(podeRolar && estado.pode_vender_no_bonus);
   botaoVenderBonus.disabled = ocupado;
   botaoLeiloar.hidden = !(podeRolar && estado.leilao_disponivel?.pode);
+  // No meio de uma decisão a janela dela cobre o botão de baixo: o leilão
+  // aparece dentro da própria janela.
+  const leiloarNaDecisao = minha && !encerrada && !podeRolar && estado.fase !== "leiloando"
+    && Boolean(estado.leilao_disponivel?.pode) && !leilaoNaMao;
+  for (const botao of botoesLeiloarNaDecisao) {
+    botao.hidden = !leiloarNaDecisao;
+    botao.disabled = ocupado;
+  }
+  pintarModoDev(podeRolar);
   botaoLeiloar.disabled = ocupado;
   botaoVerLeilao.hidden = !(estado.fase === "leiloando" && leilaoEscondido());
 
@@ -899,6 +958,33 @@ function anunciarEvento(evento) {
   });
 }
 
+/** Aluguel pago: a janela conta do ponto de vista de quem olha — quem pagou
+    vê em vermelho, quem recebeu em verde, o resto da mesa em roxo. */
+function anunciarAluguel(linha) {
+  const dados = linha.dados || {};
+  const pagador = estado.jogadores.find((j) => j.jogador_id === linha.jogador_id);
+  const dono = estado.jogadores.find((j) => j.jogador_id === dados.dono_id);
+  const casa = tabuleiro.casas[dados.casa];
+  const paguei = Boolean(pagador?.sou_eu);
+  const recebi = Boolean(dono?.sou_eu);
+  // Linha antiga, sem os dados: o texto do motor serve como está.
+  const texto = pagador && dono && dados.valor != null
+    ? `${paguei ? "Você" : pagador.nome} pagou ${reais(dados.valor)} de aluguel a ${recebi ? "você" : dono.nome}${casa ? ` por ${casa.nome}` : ""}.`
+    : linha.texto;
+  const motivos = [];
+  if (dados.morro) motivos.push(`bônus do Morro de ${dono?.nome || "quem cobrou"} (${vezes(dados.morro)})`);
+  if (dados.final_de_ano) motivos.push(`final de ano (+${porcento(dados.final_de_ano)})`);
+  anunciar({
+    chamada: casa ? `Aluguel · ${casa.nome}` : "Aluguel",
+    titulo: paguei ? "Você pagou aluguel" : recebi ? "Aluguel no bolso!" : "Aluguel pago",
+    frase: fraseDe(frases.casas.aluguel, linha.n ?? 0),
+    texto,
+    nota: motivos.length ? `Mais caro por causa do ${motivos.join(" e do ")}.` : undefined,
+    icone: recebi ? "saco" : "documento",
+    tom: paguei ? "ruim" : recebi ? "bom" : "neutro",
+  });
+}
+
 function anunciarNovidades(primeiraVez) {
   const novas = estado.log.filter((linha) => (linha.n ?? 0) > ultimoLogVisto);
   ultimoLogVisto = Math.max(ultimoLogVisto, ...estado.log.map((linha) => linha.n ?? 0));
@@ -913,6 +999,15 @@ function anunciarNovidades(primeiraVez) {
         ? estado.evento
         : { nome: "Evento na vila", texto: linha.texto };
       anunciarEvento(evento);
+      continue;
+    }
+    if (linha.tipo === "aluguel") {
+      anunciarAluguel(linha);
+      continue;
+    }
+    if (linha.tipo === "dev") {
+      // Trapaça às claras: a mesa inteira fica sabendo.
+      toast(linha.texto, "ok");
       continue;
     }
     const modelo = ANUNCIO_DO_LOG[linha.tipo];
@@ -997,6 +1092,7 @@ function aplicar(resposta) {
   espectador = Boolean(resposta.espectador);
   regras = resposta.regras || regras;
   valores = regras.casas || valores;
+  devDisponivel = Boolean(resposta.modo_dev);
   cosmeticos = resposta.cosmeticos || cosmeticos;
   if (resposta.recompensa != null) ultimaRecompensa = resposta.recompensa;
   prazoLocalMs = estado.segundos_restantes == null
@@ -1158,7 +1254,11 @@ function atualizarModalDecisao() {
   const minha = Boolean(estado?.vez.sou_eu && !espectador);
   const contexto = { estado, tabuleiro, eu: euNaMesa(), codigo };
   let decisao = null;
-  if (minha && estado.fase === "decidindo_coringa" && estado.coringa_pendente) {
+  // A escolha do leilão passa na frente: aberta no meio de uma decisão, ela
+  // cobre a decisão, que volta quando a escolha fecha ou o leilão acaba.
+  if (minha && leilaoNaMao && estado.fase !== "leiloando" && estado.leilao_disponivel?.pode) {
+    decisao = escolhaDoLeilao({ ...contexto, regras });
+  } else if (minha && estado.fase === "decidindo_coringa" && estado.coringa_pendente) {
     decisao = decisaoDoCoringa(estado.coringa_pendente, codigo);
   } else if (minha && estado.fase === "decidindo_reconstrucao" && estado.reconstrucao_pendente) {
     decisao = decisaoDaReconstrucao(estado.reconstrucao_pendente, contexto);
@@ -1168,12 +1268,11 @@ function atualizarModalDecisao() {
     decisao = decisaoDoBonus({ ...contexto, naDecisao: true });
   } else if (minha && bonusNaMao && estado.fase === "aguardando_rolagem" && estado.pode_vender_no_bonus) {
     decisao = decisaoDoBonus({ ...contexto, naDecisao: false });
-  } else if (minha && leilaoNaMao && estado.fase === "aguardando_rolagem" && estado.leilao_disponivel?.pode) {
-    decisao = escolhaDoLeilao({ ...contexto, regras });
   } else {
     bonusNaMao = false;
-    leilaoNaMao = false;
   }
+  // A escolha do leilão só sobrevive enquanto ainda dá para leiloar.
+  if (!(minha && estado?.fase !== "leiloando" && estado?.leilao_disponivel?.pode)) leilaoNaMao = false;
 
   if (!decisao) {
     if (decisaoAberta()) fecharDecisao();
@@ -1221,13 +1320,19 @@ botaoVenderBonus.addEventListener("click", () => {
   atualizarModalDecisao();
 });
 
-botaoLeiloar.addEventListener("click", () => {
+/** Abre a escolha do que leiloar: antes de rolar, pelo botão embaixo do
+    JOGAR, ou no meio de uma decisão, pelo botão dentro da janela dela. */
+function abrirEscolhaDoLeilao() {
   if (ocupado) return;
   som.tocar("clique");
   bonusNaMao = false;
   leilaoNaMao = true;
   atualizarModalDecisao();
-});
+  pintarJogar();
+}
+
+botaoLeiloar.addEventListener("click", abrirEscolhaDoLeilao);
+for (const botao of botoesLeiloarNaDecisao) botao.addEventListener("click", abrirEscolhaDoLeilao);
 
 botaoVerLeilao.addEventListener("click", () => {
   som.tocar("clique");
@@ -1310,8 +1415,8 @@ function textoDoLeilao() {
   const quem = l.so_abaixo_de == null
     ? "Qualquer jogador"
     : `Quem está abaixo de ${porcento(l.so_abaixo_de)} da média da mesa`;
-  const frequencia = (l.rodadas_entre || 1) > 1 ? `um a cada ${l.rodadas_entre} rodadas` : "um por rodada";
-  return `${quem} pode pôr uma propriedade em leilão no começo da vez, antes de rolar (${frequencia}). `
+  const frequencia = (l.rodadas_entre || 1) > 1 ? `uma vez a cada ${l.rodadas_entre} rodadas` : "uma vez por rodada";
+  return `${quem} pode pôr uma propriedade em leilão a qualquer momento da própria vez, até no meio de uma decisão (${frequencia}). `
     + `A mesa dá lances por ${l.segundos} segundos e o maior leva, pagando mais ${porcento(l.imposto_sobre_tabela)} `
     + `do valor de tabela de imposto para o Coletor. Sem lance, o banco compra por ${porcento(l.compra_do_banco)} do valor.`;
 }
@@ -1371,7 +1476,11 @@ function mostrarInfoCasa(indice) {
       }
       if (dono?.sou_eu && estado.leilao_disponivel) {
         const { pode, motivo } = estado.leilao_disponivel;
-        detalhes.push(linhaInfoCasa("Leilão", pode ? "Você pode leiloar agora: botão LEILOAR PROPRIEDADE, embaixo do JOGAR." : motivo, true));
+        detalhes.push(linhaInfoCasa(
+          "Leilão",
+          pode ? "Você pode leiloar agora: botão LEILOAR, embaixo do JOGAR ou dentro da janela da decisão." : motivo,
+          true,
+        ));
       }
       if (propriedade.custo_melhoria !== null) {
         detalhes.push(linhaInfoCasa(
@@ -1540,7 +1649,8 @@ async function encenarLanceDeOutro(resposta) {
     teleportarPeao(peao, movimento.de);
 
     const quem = resposta.partida.jogadores.find((j) => j.jogador_id === movimento.jogador_id);
-    await encenarDados(`${quem?.nome || "Alguém"} tirou`, movimento.dados, movimento.jogador_id);
+    // Jogada do modo dev não tem dados: o peão só anda.
+    if (!movimento.dev) await encenarDados(`${quem?.nome || "Alguém"} tirou`, movimento.dados, movimento.jogador_id);
 
     await andarPeao(movimento);
     await espera(MS_APOS_CHEGAR);
@@ -1792,6 +1902,117 @@ document.querySelector("#chat-fechar").addEventListener("click", () => {
   abrirChat(false);
 });
 
+// --- modo dev ---------------------------------------------------------------
+
+/* Trapaças de teste: /dev on no chat abre o painel, /dev off fecha. Quem
+   decide se valem é o servidor (MODO_DEV em server/config.py); a tela só
+   abre o painel quando ele avisa que sim. O comando não vai para a mesa,
+   mas cada trapaça vai, como [dev]. */
+
+function tratarComando(texto) {
+  const comando = texto.trim().toLowerCase().match(/^\/dev\s+(on|off)$/);
+  if (!comando) return false;
+  if (comando[1] === "off") {
+    abrirModoDev(false);
+    toast("Modo dev desligado.", "ok");
+  } else if (!devDisponivel) {
+    som.tocar("erro");
+    toast("O modo dev está desligado neste servidor.", "erro");
+  } else if (espectador) {
+    som.tocar("erro");
+    toast("Quem assiste não usa o modo dev.", "erro");
+  } else {
+    abrirModoDev(true);
+    toast("Modo dev ligado: caixa, ir para e andar.", "ok");
+  }
+  return true;
+}
+
+function abrirModoDev(aberto) {
+  painelDev.hidden = !aberto;
+  if (!aberto) return;
+  if (!seletorCasaDev.options.length) {
+    seletorCasaDev.replaceChildren(...tabuleiro.casas.map((casa) => {
+      const opcao = elemento("option", "", `${casa.i} · ${casa.nome}`);
+      opcao.value = String(casa.i);
+      return opcao;
+    }));
+  }
+  campoCaixaDev.value = String(euNaMesa()?.caixa ?? 0);
+  pintarJogar();
+}
+
+/** Ir e Andar trocam a rolagem: só na minha vez, antes de rolar. */
+function pintarModoDev(podeRolar) {
+  if (painelDev.hidden) return;
+  if (!devDisponivel || espectador) {
+    painelDev.hidden = true;
+    return;
+  }
+  const emAndamento = !["sorteio_ordem", "encerrada"].includes(estado.fase);
+  formCaixaDev.querySelector("button").disabled = ocupado || !emAndamento;
+  formIrDev.querySelector("button").disabled = ocupado || !podeRolar;
+  formAndarDev.querySelector("button").disabled = ocupado || !podeRolar;
+}
+
+/** Manda a trapaça; Ir e Andar encenam o peão andando, como no JOGAR. */
+async function acaoDev(pedido, anda) {
+  if (ocupado) return;
+  ocupado = true;
+  pintarJogar();
+  som.tocar("clique");
+  try {
+    const resposta = await pedido();
+    if (anda) {
+      fecharAnuncio();
+      const movimento = resposta.partida.ultimo_movimento;
+      ultimoLanceVisto = movimento.lance;
+      await andarPeao(movimento);
+      await espera(MS_APOS_CHEGAR);
+      aplicar(resposta);
+      contarJogada(movimento);
+    } else {
+      aplicar(resposta);
+    }
+  } catch (erro) {
+    som.tocar("erro");
+    toast(erro.message, "erro");
+  } finally {
+    ocupado = false;
+    if (estado) pintarJogar();
+  }
+}
+
+formCaixaDev.addEventListener("submit", (evento) => {
+  evento.preventDefault();
+  const valor = Number(campoCaixaDev.value);
+  if (!Number.isInteger(valor) || valor < 0) {
+    toast("Informe um valor inteiro, sem centavos.", "erro");
+    return;
+  }
+  acaoDev(() => api.devCaixa(codigo, valor), false);
+});
+
+formIrDev.addEventListener("submit", (evento) => {
+  evento.preventDefault();
+  acaoDev(() => api.devIr(codigo, Number(seletorCasaDev.value)), true);
+});
+
+formAndarDev.addEventListener("submit", (evento) => {
+  evento.preventDefault();
+  const passos = Number(campoPassosDev.value);
+  if (!Number.isInteger(passos) || passos < 1) {
+    toast("Informe quantas casas andar.", "erro");
+    return;
+  }
+  acaoDev(() => api.devAndar(codigo, passos), true);
+});
+
+document.querySelector("#dev-fechar").addEventListener("click", () => {
+  som.tocar("voltar");
+  abrirModoDev(false);
+});
+
 // --- o que recolhe: legenda e menu de opções ---------------------------------
 
 /* A mesa limpa é o padrão: a legenda e as opções começam recolhidas, cada
@@ -1996,6 +2217,10 @@ async function atualizar() {
       pararConsulta();
       toast(erro.status === 403 ? erro.message : "A partida foi encerrada.", "erro");
       setTimeout(() => (location.href = "/"), 1600);
+    } else if (!(erro instanceof ErroDaApi)) {
+      // Rede caída a próxima consulta resolve; erro da própria tela, não —
+      // calado, ele some e a mesa só "não mostra" alguma coisa.
+      console.error(erro);
     }
   } finally {
     consultando = false;

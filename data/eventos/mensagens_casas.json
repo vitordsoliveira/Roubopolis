@@ -1,5 +1,13 @@
 {
-  "_sobre": "Frases de sátira das janelas das casas de evento. A chave é o tipo da linha que o motor escreve no log (engine/partida.py, `_log`); a tela escolhe uma frase pelo número da linha, então a mesa inteira lê a mesma. Só texto: os valores ficam em data/balanceamento/padrao.json.",
+  "_sobre": "Frases de sátira das janelas das casas de evento e do aluguel pago. A chave é o tipo da linha que o motor escreve no log (engine/partida.py, `_log`); a tela escolhe uma frase pelo número da linha, então a mesa inteira lê a mesma. Só texto: os valores ficam em data/balanceamento/padrao.json.",
+
+  "aluguel": [
+    "O aluguel chegou antes do salário. Como sempre.",
+    "O dono mandou um abraço, o boleto e um lembrete do reajuste.",
+    "Na vila, todo mundo é inquilino de alguém.",
+    "Pagou o aluguel e ficou com a impressão de que é o imóvel que mora nele.",
+    "Morar é um direito. Pagar aluguel em São Paulo é esporte radical."
+  ],
 
   "ganho": [
     "Ninguém viu, ninguém sabe. Na vila, isso se chama renda extra.",

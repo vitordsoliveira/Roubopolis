@@ -31,8 +31,12 @@ function elemento(tag, classe, texto) {
  * @param {HTMLElement} opcoes.status  "3 mensagens" ou "Chat indisponível"
  * @param {(jogadorId: number) => (string | null)} [opcoes.corDe]  cor do nome de cada autor
  * @param {(novas: object[]) => void} [opcoes.aoChegar]  mensagens que ainda não estavam na tela
+ * @param {(texto: string) => boolean} [opcoes.aoComando]  comando da própria tela (/dev on):
+ *   devolvendo true, o texto é tratado ali e não vai para a mesa
  */
-export function montarChat({ codigo, lista, formulario, campo, status, corDe = () => null, aoChegar = () => {} }) {
+export function montarChat({
+  codigo, lista, formulario, campo, status, corDe = () => null, aoChegar = () => {}, aoComando = () => false,
+}) {
   let consulta = null;
   /** Maior id já desenhado. `null` até a primeira leitura. */
   let ultimoId = null;
@@ -79,6 +83,10 @@ export function montarChat({ codigo, lista, formulario, campo, status, corDe = (
     evento.preventDefault();
     const texto = campo.value.trim();
     if (!texto) return;
+    if (aoComando(texto)) {
+      campo.value = "";
+      return;
+    }
     campo.disabled = true;
     try {
       await api.enviarChat(codigo, texto);

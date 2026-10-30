@@ -324,6 +324,44 @@
   from { transform: scale(0.3) rotate(-30deg); opacity: 0; }
 }
 
+/* --- leiloar no meio de uma decisão ------------------------------------------
+
+   Dentro da janela da compra, da liquidação e das casas de evento: a
+   decisão espera o leilão e volta depois, com o caixa novo. */
+
+.leiloar-na-decisao {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 7px 14px;
+  border: 2px solid var(--verde-neon);
+  background: #0e2408;
+  color: var(--verde-neon);
+  font-family: var(--fonte-hud);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.leiloar-na-decisao:hover,
+.leiloar-na-decisao:focus-visible {
+  background: #173d0c;
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.leiloar-na-decisao:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.leiloar-na-decisao .icone-pixel {
+  width: auto;
+  height: 18px;
+}
+
 /* --- o botão embaixo do JOGAR ----------------------------------------------- */
 
 .jogar__extra--leilao {

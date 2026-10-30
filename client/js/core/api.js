@@ -220,6 +220,13 @@ export const api = {
     pedir(`/api/partidas/${codigo}/leilao`, { metodo: "POST", corpo: { casa } }),
   darLance: (codigo, valor) =>
     pedir(`/api/partidas/${codigo}/leilao/lance`, { metodo: "POST", corpo: { valor } }),
+  // --- modo dev: só com MODO_DEV ligado no servidor (server/config.py) ------
+  devCaixa: (codigo, valor) =>
+    pedir(`/api/partidas/${codigo}/dev/caixa`, { metodo: "POST", corpo: { valor } }),
+  devAndar: (codigo, passos) =>
+    pedir(`/api/partidas/${codigo}/dev/andar`, { metodo: "POST", corpo: { passos } }),
+  devIr: (codigo, casa) =>
+    pedir(`/api/partidas/${codigo}/dev/ir`, { metodo: "POST", corpo: { casa } }),
   /** Abandona a partida: o jogador sai da roda e a vez passa. */
   sairDaPartida: (codigo) => pedir(`/api/partidas/${codigo}/sair`, { metodo: "POST", corpo: {} }),
 
